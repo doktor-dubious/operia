@@ -21,7 +21,8 @@ import {
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
-import { allNav, brandIcon as BrandIcon, coreNav, productNav, settingsNav } from '@/lib/nav'
+import { allNav, coreNav, productNav, settingsNav } from '@/lib/nav'
+import { BrandLogo } from '@/components/brand-logo'
 
 // To navigationstilstande (brugervalg under Indstillinger):
 //  - classic: fast sidemenu med al funktionalitet synlig, ikoner til venstre.
@@ -77,7 +78,7 @@ function ClassicSidebar() {
     <Sidebar collapsible="icon" className="select-none">
       <SidebarHeader>
         <div className="flex h-10 items-center gap-2 px-2">
-          <BrandIcon className="h-5 w-5 shrink-0 text-primary" />
+          <BrandLogo className="h-5 w-5 shrink-0" />
           <span className="text-[13px] font-semibold group-data-[collapsible=icon]:hidden">
             {t('app.name')}
           </span>
@@ -146,7 +147,7 @@ function ModernRail() {
   return (
     <aside className="flex w-12 shrink-0 select-none flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-2">
       <Link to="/" aria-label={t('app.name')} className="p-2">
-        <BrandIcon className="h-5 w-5 text-primary" />
+        <BrandLogo className="h-5 w-5" />
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

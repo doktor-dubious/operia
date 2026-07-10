@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
-  Boxes,
   CalendarRange,
   LayoutDashboard,
   Lock,
@@ -49,4 +48,3 @@ export const settingsNav: NavItem = {
 
 export const allNav = [...coreNav, ...productNav, settingsNav]
 
-export const brandIcon = Boxes

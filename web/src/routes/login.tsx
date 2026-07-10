@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { brandIcon as BrandIcon } from '@/lib/nav'
+import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/login')({
@@ -38,7 +38,7 @@ function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl">
-            <BrandIcon className="h-6 w-6 text-primary" />
+            <BrandLogo className="h-6 w-6" />
             {t('app.name')}
           </CardTitle>
           <CardDescription>{t('app.tagline')}</CardDescription>
