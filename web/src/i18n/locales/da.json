@@ -7,18 +7,90 @@
     "dashboard": "Overblik",
     "parcels": "Pakker",
     "employees": "Medarbejdere",
-    "settings": "Indstillinger"
+    "locations": "Placeringer",
+    "settings": "Indstillinger",
+    "assets": "Aktiver",
+    "lockers": "Smarte skabe",
+    "iot": "IoT-sensorer",
+    "shipping": "Forsendelse",
+    "routes": "Ruteplanlægning",
+    "booking": "Lokalebooking",
+    "groupCore": "Pakker",
+    "groupProducts": "Øvrige produkter",
+    "theme": "Tema",
+    "language": "Sprog"
   },
   "auth": {
     "email": "E-mail",
     "password": "Adgangskode",
     "signIn": "Log ind",
-    "signOut": "Log ud"
+    "signOut": "Log ud",
+    "signInError": "Login mislykkedes. Kontrollér e-mail og adgangskode."
+  },
+  "theme": {
+    "system": "Følg systemet",
+    "light": "Lys",
+    "dark": "Mørk"
+  },
+  "settings": {
+    "title": "Indstillinger",
+    "appearance": "Udseende",
+    "navMode": "Navigation",
+    "navModeClassic": "Klassisk (fast sidemenu)",
+    "navModeModern": "Moderne (menu nederst til venstre)",
+    "themeLabel": "Tema",
+    "languageLabel": "Sprog"
+  },
+  "dashboard": {
+    "title": "Overblik",
+    "statusUnassigned": "Uden modtager",
+    "statusRegistered": "Registreret",
+    "statusInStorage": "På lager",
+    "statusInTransit": "Undervejs",
+    "statusInLocker": "I skab",
+    "statusDelivered": "Udleveret",
+    "statusRejected": "Afvist",
+    "statusReturned": "Returneret",
+    "openParcels": "Åbne pakker",
+    "noData": "Ingen data endnu"
+  },
+  "parcels": {
+    "title": "Pakker",
+    "barcode": "Stregkode",
+    "receiver": "Modtager",
+    "department": "Afdeling",
+    "status": "Status",
+    "location": "Placering",
+    "registeredAt": "Modtaget",
+    "empty": "Ingen pakker endnu — de dukker op her når intake starter."
+  },
+  "employees": {
+    "title": "Medarbejdere",
+    "name": "Navn",
+    "initials": "Initialer",
+    "department": "Afdeling",
+    "email": "E-mail",
+    "active": "Aktiv",
+    "empty": "Ingen medarbejdere endnu — importér medarbejderkartoteket (Flow 0)."
+  },
+  "locations": {
+    "title": "Placeringer",
+    "name": "Navn",
+    "barcode": "Stregkode",
+    "active": "Aktiv",
+    "empty": "Ingen placeringer endnu."
+  },
+  "products": {
+    "comingSoon": "Dette produkt er på vej.",
+    "notEnabled": "Produktet er ikke aktiveret for jeres virksomhed."
   },
   "common": {
     "loading": "Indlæser…",
     "save": "Gem",
     "cancel": "Annullér",
-    "search": "Søg"
+    "search": "Søg",
+    "yes": "Ja",
+    "no": "Nej",
+    "error": "Noget gik galt"
   }
 }

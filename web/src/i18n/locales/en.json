@@ -7,18 +7,90 @@
     "dashboard": "Dashboard",
     "parcels": "Parcels",
     "employees": "Employees",
-    "settings": "Settings"
+    "locations": "Locations",
+    "settings": "Settings",
+    "assets": "Assets",
+    "lockers": "Smart lockers",
+    "iot": "IoT sensors",
+    "shipping": "Shipping",
+    "routes": "Route planning",
+    "booking": "Room booking",
+    "groupCore": "Parcels",
+    "groupProducts": "Other products",
+    "theme": "Theme",
+    "language": "Language"
   },
   "auth": {
     "email": "Email",
     "password": "Password",
     "signIn": "Sign in",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signInError": "Sign-in failed. Check your email and password."
+  },
+  "theme": {
+    "system": "Follow system",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "navMode": "Navigation",
+    "navModeClassic": "Classic (fixed sidebar)",
+    "navModeModern": "Modern (menu in bottom left)",
+    "themeLabel": "Theme",
+    "languageLabel": "Language"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "statusUnassigned": "Unassigned",
+    "statusRegistered": "Registered",
+    "statusInStorage": "In storage",
+    "statusInTransit": "In transit",
+    "statusInLocker": "In locker",
+    "statusDelivered": "Delivered",
+    "statusRejected": "Rejected",
+    "statusReturned": "Returned",
+    "openParcels": "Open parcels",
+    "noData": "No data yet"
+  },
+  "parcels": {
+    "title": "Parcels",
+    "barcode": "Barcode",
+    "receiver": "Receiver",
+    "department": "Department",
+    "status": "Status",
+    "location": "Location",
+    "registeredAt": "Received",
+    "empty": "No parcels yet — they will appear here once intake starts."
+  },
+  "employees": {
+    "title": "Employees",
+    "name": "Name",
+    "initials": "Initials",
+    "department": "Department",
+    "email": "Email",
+    "active": "Active",
+    "empty": "No employees yet — import the employee directory (Flow 0)."
+  },
+  "locations": {
+    "title": "Locations",
+    "name": "Name",
+    "barcode": "Barcode",
+    "active": "Active",
+    "empty": "No locations yet."
+  },
+  "products": {
+    "comingSoon": "This product is on the way.",
+    "notEnabled": "This product is not enabled for your company."
   },
   "common": {
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
-    "search": "Search"
+    "search": "Search",
+    "yes": "Yes",
+    "no": "No",
+    "error": "Something went wrong"
   }
 }

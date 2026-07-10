@@ -30,7 +30,18 @@ supabase link --project-ref rjlxmdfmktucunxehtqz # DB-password: SUPABASE_DB_PASS
 supabase migration new <navn>                    # al skemaændring som migrationsfiler — aldrig dashboard
 supabase db push                                 # kør migrationer mod linked projekt
 supabase start                                   # lokal stack (Docker) til udvikling
+supabase db reset --local                        # genkør migrationer + seed lokalt
 ```
+
+Migrationerne dækker: tenancy-kernen (companies/app_users/user_roles/platform_admins + RLS-
+helpers), entitlements (produkt-/featurekataloger med udløb), medarbejderkartotek
+(departments/employees) og pakker (storage_locations, handling_classes, parcels med status-
+state-machine samt append-only, immutabel `parcel_events`-hændelseslog).
+
+**Lokal udvikling**: `supabase/seed.sql` (køres kun af `db reset`, aldrig af `db push`) opretter
+demo-virksomheden "DCA Demo A/S" med login **demo@operia.local / operia123**. `web/.env` peger
+som udgangspunkt på den lokale stack — skift til det rigtige projekt (kommenteret i filen) når
+migrationerne er pushet.
 
 **Service role-nøglen må aldrig i repo eller chat.** Anon-nøglen er offentlig by design
 (RLS beskytter data).
@@ -39,6 +50,11 @@ supabase start                                   # lokal stack (Docker) til udvi
 
 Vite + React + TypeScript, Tailwind v4 + shadcn/ui, TanStack Router (filbaserede routes i
 `src/routes/`) + TanStack Query, i18next (dansk først, engelsk fallback).
+
+Design: farveskema og dropdown-stil er portet fra compliance-circle (se CLAUDE.md).
+**To navigationstilstande** vælges under Indstillinger: *klassisk* (fast sidemenu) eller
+*moderne* (menu i dropdown nederst til venstre — få ikoner, ikoner til højre). **Tema** følger
+systemet som standard og kan overstyres til lys/mørk.
 
 ```bash
 cd web
