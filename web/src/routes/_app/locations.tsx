@@ -146,9 +146,11 @@ function LocationDetailPane({
         {tab === 'details' && (
           <div className="flex flex-col gap-5">
             <Field label="ID">
-              <div className="flex items-center gap-1">
-                <Input value={row.id} disabled className="font-mono text-xs" />
-                <CopyButton value={row.id} label={t('locationDetail.copyId')} />
+              <div className="relative">
+                <Input value={row.id} disabled className="pr-10 font-mono text-xs" />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                  <CopyButton value={row.id} label={t('locationDetail.copyId')} />
+                </div>
               </div>
             </Field>
             <Field label={t('locations.name')}>
