@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -67,6 +62,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "app_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carriers: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carriers_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -398,6 +428,7 @@ export type Database = {
       parcels: {
         Row: {
           barcode: string | null
+          carrier_id: string | null
           company_id: string
           condition_note: string | null
           condition_photo_path: string | null
@@ -419,6 +450,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          carrier_id?: string | null
           company_id: string
           condition_note?: string | null
           condition_photo_path?: string | null
@@ -440,6 +472,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          carrier_id?: string | null
           company_id?: string
           condition_note?: string | null
           condition_photo_path?: string | null
@@ -460,6 +493,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "parcels_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcels_company_id_fkey"
             columns: ["company_id"]
@@ -775,3 +815,4 @@ export const Constants = {
     },
   },
 } as const
+

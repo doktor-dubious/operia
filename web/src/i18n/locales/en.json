@@ -154,5 +154,36 @@
     "allowLeave": "May be left",
     "description": "Description",
     "empty": "No handling classes yet."
+  },
+  "receive": {
+    "company": "Company",
+    "barcode": "Barcode",
+    "barcodePlaceholder": "Scan or type barcode",
+    "duplicateWarning": "An open parcel with this barcode already exists.",
+    "receiver": "Receiver",
+    "receiverPlaceholder": "Search by name or initials…",
+    "noReceiverMatch": "No match",
+    "unassignedHint": "No receiver selected — the parcel will be registered as 'unassigned'.",
+    "department": "Department",
+    "carrier": "Carrier",
+    "handling": "Handling",
+    "location": "Location",
+    "photo": "Condition photo",
+    "uploadPhoto": "Upload file",
+    "useCamera": "Use webcam",
+    "takePhoto": "Take photo",
+    "removePhoto": "Remove",
+    "cameraError": "Could not start the camera.",
+    "note": "Note",
+    "notePlaceholder": "e.g. dented corner, opened packaging…",
+    "saved": "Parcel {{barcode}} received",
+    "sessionList": "Received this session",
+    "sessionEmpty": "No parcels received in this session yet.",
+    "noCompany": "No company available — create a company first."
+  },
+  "carriersPage": {
+    "name": "Name",
+    "active": "Active",
+    "empty": "No carriers yet."
   }
 }

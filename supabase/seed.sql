@@ -85,3 +85,15 @@ insert into public.parcels (company_id, barcode, receiver_employee_id, departmen
 -- En pakke gennem hele flowet til 'delivered' (via gyldige overgange)
 update public.parcels set status = 'in_transit' where barcode = 'PKG-0004';
 update public.parcels set status = 'delivered' where barcode = 'PKG-0004';
+
+-- Fragtfirmaer + håndteringsklasser til demo-virksomheden
+insert into public.carriers (company_id, name) values
+  ('11111111-1111-1111-1111-111111111111', 'GLS'),
+  ('11111111-1111-1111-1111-111111111111', 'PostNord'),
+  ('11111111-1111-1111-1111-111111111111', 'DHL'),
+  ('11111111-1111-1111-1111-111111111111', 'UPS');
+
+insert into public.handling_classes (company_id, name, allow_proxy_collection, allow_leave_at_location, description) values
+  ('11111111-1111-1111-1111-111111111111', 'Standard', true, true, 'Almindelige pakker'),
+  ('11111111-1111-1111-1111-111111111111', 'Personlig overdragelse', false, false, 'Skal udleveres direkte til modtageren'),
+  ('11111111-1111-1111-1111-111111111111', 'Køl', false, false, 'Temperaturfølsom — hurtig udlevering');

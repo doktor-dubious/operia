@@ -154,5 +154,36 @@
     "allowLeave": "Må efterlades",
     "description": "Beskrivelse",
     "empty": "Ingen håndteringsklasser endnu."
+  },
+  "receive": {
+    "company": "Virksomhed",
+    "barcode": "Stregkode",
+    "barcodePlaceholder": "Scan eller skriv stregkode",
+    "duplicateWarning": "Der findes allerede en åben pakke med denne stregkode.",
+    "receiver": "Modtager",
+    "receiverPlaceholder": "Søg på navn eller initialer…",
+    "noReceiverMatch": "Ingen match",
+    "unassignedHint": "Ingen modtager valgt — pakken registreres som 'uden modtager'.",
+    "department": "Afdeling",
+    "carrier": "Fragtfirma",
+    "handling": "Håndtering",
+    "location": "Placering",
+    "photo": "Foto af tilstand",
+    "uploadPhoto": "Upload fil",
+    "useCamera": "Brug webcam",
+    "takePhoto": "Tag foto",
+    "removePhoto": "Fjern",
+    "cameraError": "Kunne ikke starte kameraet.",
+    "note": "Note",
+    "notePlaceholder": "fx: hjørne stødt, åbnet emballage…",
+    "saved": "Pakke {{barcode}} modtaget",
+    "sessionList": "Modtaget i denne session",
+    "sessionEmpty": "Ingen pakker modtaget endnu i denne session.",
+    "noCompany": "Ingen virksomhed tilgængelig — opret en virksomhed først."
+  },
+  "carriersPage": {
+    "name": "Navn",
+    "active": "Aktiv",
+    "empty": "Ingen fragtfirmaer endnu."
   }
 }
