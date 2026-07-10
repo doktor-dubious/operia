@@ -53,9 +53,10 @@
     "themeMode": "Tematilstand",
     "themeModeDescription": "Vælg hvordan Operia ser ud for dig. Vælg ét tema, eller synkronisér med dit system.",
     "navModeDescription": "Klassisk fast sidemenu, eller menu i dropdown nederst til venstre.",
-    "languageDescription": "Sprog i brugerfladen.",
+    "languageDescription": "Vælg sproget i brugerfladen",
     "saved": "Gemt",
-    "saveError": "Kunne ikke gemme — prøv igen."
+    "saveError": "Kunne ikke gemme — prøv igen.",
+    "languageChoiceDescription": "Gælder hele brugerfladen. Dansk er standard."
   },
   "dashboard": {
     "title": "Overblik",

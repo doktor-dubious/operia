@@ -4,13 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useTheme } from '@/components/theme-provider'
 import { useUiSettings, type NavMode } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
@@ -100,16 +93,18 @@ function ThemeThumb({ variant }: { variant: 'light' | 'dark' }) {
   )
 }
 
-function ThemeCard({
-  value,
+// Genbrugeligt valgkort: miniature-illustration øverst, radiomarkør + label
+// nederst. Bruges til tema, navigation og sprog.
+function SelectionCard({
   label,
   selected,
   onSelect,
+  children,
 }: {
-  value: 'system' | 'dark' | 'light'
   label: string
   selected: boolean
   onSelect: () => void
+  children: React.ReactNode
 }) {
   return (
     <button
@@ -121,28 +116,11 @@ function ThemeCard({
         selected ? 'border-foreground' : 'border-border hover:border-foreground/30',
       )}
     >
-      <div className="relative h-24 overflow-hidden border-b border-border">
-        {value === 'light' && <ThemeThumb variant="light" />}
-        {value === 'dark' && <ThemeThumb variant="dark" />}
-        {value === 'system' && (
-          <>
-            <div className="absolute inset-0">
-              <ThemeThumb variant="dark" />
-            </div>
-            {/* Diagonal deling: lys øverst/venstre, mørk nederst/højre */}
-            <div
-              className="absolute inset-0"
-              style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}
-            >
-              <ThemeThumb variant="light" />
-            </div>
-          </>
-        )}
-      </div>
+      <div className="relative h-24 overflow-hidden border-b border-border">{children}</div>
       <div className="flex items-center gap-2 bg-panel px-3 py-2">
         <span
           className={cn(
-            'flex h-3 w-3 items-center justify-center rounded-full border',
+            'flex h-3 w-3 shrink-0 items-center justify-center rounded-full border',
             selected ? 'border-foreground' : 'border-muted-foreground',
           )}
         >
@@ -152,6 +130,91 @@ function ThemeCard({
       </div>
     </button>
   )
+}
+
+function ThemeCardThumb({ value }: { value: 'system' | 'dark' | 'light' }) {
+  if (value === 'system') {
+    return (
+      <>
+        <div className="absolute inset-0">
+          <ThemeThumb variant="dark" />
+        </div>
+        {/* Diagonal deling: lys øverst/venstre, mørk nederst/højre */}
+        <div className="absolute inset-0" style={{ clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}>
+          <ThemeThumb variant="light" />
+        </div>
+      </>
+    )
+  }
+  return <ThemeThumb variant={value} />
+}
+
+// ── Navigations-miniaturer (temabevidste via tokens) ───────────────────────
+
+function NavThumb({ variant }: { variant: 'classic' | 'modern' }) {
+  return (
+    <div className="flex h-full w-full bg-background">
+      {variant === 'classic' ? (
+        <div className="flex w-1/4 flex-col gap-1 border-r border-border p-1.5">
+          <span className="h-1 w-full rounded-full bg-foreground/40" />
+          <span className="h-1 w-4/5 rounded-full bg-foreground/15" />
+          <span className="h-1 w-full rounded-full bg-foreground/15" />
+          <span className="h-1 w-3/5 rounded-full bg-foreground/15" />
+        </div>
+      ) : (
+        <div className="relative w-[14%] border-r border-border">
+          {/* Menu der folder ud fra avataren nederst til venstre */}
+          <span className="absolute bottom-1 left-1 h-2 w-2 rounded-full bg-foreground/40" />
+          <div className="absolute bottom-4 left-1 z-10 flex w-10 flex-col gap-1 rounded-sm border border-border bg-panel p-1 shadow-sm">
+            <span className="h-0.5 w-3/4 rounded-full bg-foreground/40" />
+            <span className="h-0.5 w-full rounded-full bg-foreground/15" />
+            <span className="h-0.5 w-2/3 rounded-full bg-foreground/15" />
+          </div>
+        </div>
+      )}
+      <div className="flex flex-1 flex-col gap-1 p-1.5">
+        <div className="flex items-center gap-1">
+          <span className="h-1.5 w-5 rounded-full bg-status-good-to-neutral" />
+          <span className="h-1.5 w-6 rounded-full bg-foreground/15" />
+        </div>
+        <div className="flex flex-col gap-1 rounded-sm border border-border p-1.5">
+          <span className="h-1 w-3/4 rounded-full bg-foreground/15" />
+          <div className="flex items-center gap-1">
+            <span className="h-1 w-1/3 rounded-full bg-foreground/15" />
+            <span className="h-1 w-4 rounded-full bg-status-neutral" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Flag-illustrationer til sprogvalg ──────────────────────────────────────
+
+function DannebrogFlag() {
+  return (
+    <svg viewBox="0 0 37 28" className="h-12 w-16 rounded-sm border border-border shadow-sm">
+      <rect width="37" height="28" fill="#C8102E" />
+      <rect x="11" width="5" height="28" fill="#fff" />
+      <rect y="11.5" width="37" height="5" fill="#fff" />
+    </svg>
+  )
+}
+
+function UnionJackFlag() {
+  return (
+    <svg viewBox="0 0 60 40" className="h-12 w-16 rounded-sm border border-border shadow-sm">
+      <rect width="60" height="40" fill="#012169" />
+      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="8" />
+      <path d="M0,0 L60,40 M60,0 L0,40" stroke="#C8102E" strokeWidth="3.2" />
+      <path d="M30,0 V40 M0,20 H60" stroke="#fff" strokeWidth="13" />
+      <path d="M30,0 V40 M0,20 H60" stroke="#C8102E" strokeWidth="8" />
+    </svg>
+  )
+}
+
+function FlagThumb({ children }: { children: React.ReactNode }) {
+  return <div className="flex h-full w-full items-center justify-center bg-background">{children}</div>
 }
 
 // ── Siden ──────────────────────────────────────────────────────────────────
@@ -227,53 +290,70 @@ function SettingsPage() {
             wide
           >
             <div className="grid grid-cols-2 gap-3">
-              <ThemeCard
-                value="system"
-                label={t('theme.system')}
-                selected={theme === 'system'}
-                onSelect={() => setTheme('system')}
-              />
-              <ThemeCard
-                value="dark"
-                label={t('theme.dark')}
-                selected={theme === 'dark'}
-                onSelect={() => setTheme('dark')}
-              />
-              <ThemeCard
-                value="light"
-                label={t('theme.light')}
-                selected={theme === 'light'}
-                onSelect={() => setTheme('light')}
-              />
+              {(['system', 'dark', 'light'] as const).map((value) => (
+                <SelectionCard
+                  key={value}
+                  label={t(`theme.${value}`)}
+                  selected={theme === value}
+                  onSelect={() => setTheme(value)}
+                >
+                  <ThemeCardThumb value={value} />
+                </SelectionCard>
+              ))}
             </div>
           </PanelRow>
-          <PanelRow label={t('settings.navMode')} description={t('settings.navModeDescription')}>
-            <Select value={navMode} onValueChange={(v) => setNavMode(v as NavMode)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="classic">{t('settings.navModeClassic')}</SelectItem>
-                <SelectItem value="modern">{t('settings.navModeModern')}</SelectItem>
-              </SelectContent>
-            </Select>
+          <PanelRow
+            label={t('settings.navMode')}
+            description={t('settings.navModeDescription')}
+            wide
+          >
+            <div className="grid grid-cols-2 gap-3">
+              {(['classic', 'modern'] as const).map((value) => (
+                <SelectionCard
+                  key={value}
+                  label={t(value === 'classic' ? 'settings.navModeClassic' : 'settings.navModeModern')}
+                  selected={navMode === value}
+                  onSelect={() => setNavMode(value as NavMode)}
+                >
+                  <NavThumb variant={value} />
+                </SelectionCard>
+              ))}
+            </div>
           </PanelRow>
+        </Panel>
+      </section>
+
+      <section className="mt-10">
+        <SectionHeader
+          title={t('settings.languageLabel')}
+          subtitle={t('settings.languageDescription')}
+        />
+        <Panel>
           <PanelRow
             label={t('settings.languageLabel')}
-            description={t('settings.languageDescription')}
+            description={t('settings.languageChoiceDescription')}
+            wide
           >
-            <Select
-              value={i18n.resolvedLanguage ?? 'da'}
-              onValueChange={(v) => i18n.changeLanguage(v)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="da">Dansk</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <SelectionCard
+                label="Dansk"
+                selected={(i18n.resolvedLanguage ?? 'da') === 'da'}
+                onSelect={() => i18n.changeLanguage('da')}
+              >
+                <FlagThumb>
+                  <DannebrogFlag />
+                </FlagThumb>
+              </SelectionCard>
+              <SelectionCard
+                label="English"
+                selected={i18n.resolvedLanguage === 'en'}
+                onSelect={() => i18n.changeLanguage('en')}
+              >
+                <FlagThumb>
+                  <UnionJackFlag />
+                </FlagThumb>
+              </SelectionCard>
+            </div>
           </PanelRow>
         </Panel>
       </section>

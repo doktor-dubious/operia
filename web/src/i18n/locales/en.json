@@ -53,9 +53,10 @@
     "themeMode": "Theme mode",
     "themeModeDescription": "Choose how Operia looks to you. Select a single theme, or sync with your system.",
     "navModeDescription": "Classic fixed sidebar, or a dropdown menu in the bottom left.",
-    "languageDescription": "Interface language.",
+    "languageDescription": "Choose the interface language",
     "saved": "Saved",
-    "saveError": "Could not save — try again."
+    "saveError": "Could not save — try again.",
+    "languageChoiceDescription": "Applies to the whole interface. Danish is the default."
   },
   "dashboard": {
     "title": "Dashboard",
