@@ -72,6 +72,22 @@ function loadStars(storageKey: string): Set<string> {
   }
 }
 
+type PersistedState = {
+  query: string
+  sort: SortState
+  page: number
+  selected: string[]
+  onlySelected: boolean
+}
+
+function loadTableState(storageKey: string): Partial<PersistedState> {
+  try {
+    return JSON.parse(localStorage.getItem(`operia-table-${storageKey}`) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
 export function DataTable<Row extends { id: string }>({
   rows,
   columns,
@@ -90,12 +106,13 @@ export function DataTable<Row extends { id: string }>({
   onDelete?: (ids: string[]) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<SortState>(null)
-  const [page, setPage] = useState(1)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [initial] = useState(() => loadTableState(storageKey))
+  const [query, setQuery] = useState(initial.query ?? '')
+  const [sort, setSort] = useState<SortState>(initial.sort ?? null)
+  const [page, setPage] = useState(initial.page ?? 1)
+  const [selected, setSelected] = useState<Set<string>>(new Set(initial.selected ?? []))
   const [stars, setStars] = useState<Set<string>>(() => loadStars(storageKey))
-  const [onlySelected, setOnlySelected] = useState(false)
+  const [onlySelected, setOnlySelected] = useState(initial.onlySelected ?? false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteAck, setDeleteAck] = useState(false)
   const [deleteWord, setDeleteWord] = useState('')
@@ -104,6 +121,11 @@ export function DataTable<Row extends { id: string }>({
   useEffect(() => {
     localStorage.setItem(`operia-stars-${storageKey}`, JSON.stringify([...stars]))
   }, [stars, storageKey])
+
+  useEffect(() => {
+    const state: PersistedState = { query, sort, page, selected: [...selected], onlySelected }
+    localStorage.setItem(`operia-table-${storageKey}`, JSON.stringify(state))
+  }, [query, sort, page, selected, onlySelected, storageKey])
 
   // Rækker der er forsvundet (slettet/omfiltreret) skal ikke spøge i valget
   useEffect(() => {
