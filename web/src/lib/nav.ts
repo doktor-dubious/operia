@@ -23,6 +23,7 @@ import {
   Ship,
   Tag,
   Truck,
+  Upload,
   UserCog,
   Users,
 } from 'lucide-react'
@@ -73,6 +74,7 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'locations', href: '/locations', icon: MapPin },
       { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
       { labelKey: 'carriers', href: '/carriers', icon: Truck },
+      { labelKey: 'import', href: '/import', icon: Upload },
     ],
   },
   {

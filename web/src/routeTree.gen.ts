@@ -16,6 +16,7 @@ import { Route as AppStatsRouteImport } from './routes/_app/stats'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppLocationsRouteImport } from './routes/_app/locations'
+import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppHandlingClassesRouteImport } from './routes/_app/handling-classes'
 import { Route as AppEmployeesRouteImport } from './routes/_app/employees'
 import { Route as AppDepartmentsRouteImport } from './routes/_app/departments'
@@ -66,6 +67,11 @@ const AppReportsRoute = AppReportsRouteImport.update({
 const AppLocationsRoute = AppLocationsRouteImport.update({
   id: '/locations',
   path: '/locations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportRoute = AppImportRouteImport.update({
+  id: '/import',
+  path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
 const AppHandlingClassesRoute = AppHandlingClassesRouteImport.update({
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
+  '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
+  '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
   '/_app/handling-classes': typeof AppHandlingClassesRoute
+  '/_app/import': typeof AppImportRoute
   '/_app/locations': typeof AppLocationsRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/employees'
     | '/handling-classes'
+    | '/import'
     | '/locations'
     | '/reports'
     | '/settings'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/employees'
     | '/handling-classes'
+    | '/import'
     | '/locations'
     | '/reports'
     | '/settings'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/_app/departments'
     | '/_app/employees'
     | '/_app/handling-classes'
+    | '/_app/import'
     | '/_app/locations'
     | '/_app/reports'
     | '/_app/settings'
@@ -364,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/locations'
       fullPath: '/locations'
       preLoaderRoute: typeof AppLocationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/import': {
+      id: '/_app/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/handling-classes': {
@@ -493,6 +512,7 @@ interface AppRouteChildren {
   AppDepartmentsRoute: typeof AppDepartmentsRoute
   AppEmployeesRoute: typeof AppEmployeesRoute
   AppHandlingClassesRoute: typeof AppHandlingClassesRoute
+  AppImportRoute: typeof AppImportRoute
   AppLocationsRoute: typeof AppLocationsRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -518,6 +538,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDepartmentsRoute: AppDepartmentsRoute,
   AppEmployeesRoute: AppEmployeesRoute,
   AppHandlingClassesRoute: AppHandlingClassesRoute,
+  AppImportRoute: AppImportRoute,
   AppLocationsRoute: AppLocationsRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,

@@ -91,9 +91,9 @@ notification templates, reminders.
 - **Locations, handling classes, carriers: app-owned** — managers CRUD them freely; no external
   source exists.
 - **Companies/entitlements: DCA-owned** — platform-admin screens only.
-- **Flow 0 roadmap**: pilot-grade in-app "upload CSV" screen FIRST (validation, æ/ø/å, upsert
-  semantics, Manager alerts), full SFTP/email ingestion pipeline later (needs a component outside
-  Supabase).
+- **Flow 0 roadmap**: pilot-grade in-app "upload CSV" screen ✔ built (2026-07-10, `/import`:
+  three-step upload → dry-run preview → apply, logged in `import_runs`); full SFTP/email ingestion
+  pipeline later (needs a component outside Supabase) reusing the same upsert semantics.
 
 ## Domain vocabulary (from the spec)
 

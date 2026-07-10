@@ -246,6 +246,7 @@ export type Database = {
           id: string
           initials: string | null
           is_active: boolean
+          is_manual: boolean
           language: string
           phone: string | null
           updated_at: string
@@ -261,6 +262,7 @@ export type Database = {
           id?: string
           initials?: string | null
           is_active?: boolean
+          is_manual?: boolean
           language?: string
           phone?: string | null
           updated_at?: string
@@ -276,6 +278,7 @@ export type Database = {
           id?: string
           initials?: string | null
           is_active?: boolean
+          is_manual?: boolean
           language?: string
           phone?: string | null
           updated_at?: string
@@ -361,6 +364,74 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "handling_classes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_runs: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          created_count: number
+          deactivated_count: number
+          departments_created: number
+          errors: Json
+          file_name: string | null
+          id: string
+          kind: string
+          rejected_count: number
+          rows_total: number
+          skipped_manual_count: number
+          status: string
+          unchanged_count: number
+          updated_count: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          created_count?: number
+          deactivated_count?: number
+          departments_created?: number
+          errors?: Json
+          file_name?: string | null
+          id?: string
+          kind?: string
+          rejected_count?: number
+          rows_total?: number
+          skipped_manual_count?: number
+          status: string
+          unchanged_count?: number
+          updated_count?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          created_count?: number
+          deactivated_count?: number
+          departments_created?: number
+          errors?: Json
+          file_name?: string | null
+          id?: string
+          kind?: string
+          rejected_count?: number
+          rows_total?: number
+          skipped_manual_count?: number
+          status?: string
+          unchanged_count?: number
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_runs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

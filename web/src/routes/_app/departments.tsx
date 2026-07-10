@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -117,6 +118,7 @@ function DepartmentsPage() {
   const { companyId, companies, setCompanyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
   const { data: access } = useAccess()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -162,14 +164,19 @@ function DepartmentsPage() {
         searchText={(row) => row.name}
         storageKey="departments-list"
         toolbar={
-          <CompanyPicker
-            companies={companies}
-            value={companyId}
-            onChange={(id) => {
-              setActiveId(null)
-              setCompanyId(id)
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate({ to: '/import' })}>
+              <Upload className="size-4" /> {t('importPage.importButton')}
+            </Button>
+            <CompanyPicker
+              companies={companies}
+              value={companyId}
+              onChange={(id) => {
+                setActiveId(null)
+                setCompanyId(id)
+              }}
+            />
+          </div>
         }
         onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
         activeRowId={activeId}
