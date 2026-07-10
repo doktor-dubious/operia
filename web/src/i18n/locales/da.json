@@ -292,5 +292,28 @@
     "deleteWarning": "Handlingen kan ikke fortrydes.",
     "deleteAcknowledge": "Jeg forstår, at afdelingen slettes permanent.",
     "deletedToast": "Afdelingen \"{{name}}\" er slettet"
+  },
+  "handlingClassDetail": {
+    "newTitle": "Ny håndteringsklasse",
+    "createdToast": "Håndteringsklassen \"{{name}}\" er oprettet",
+    "delete": "Slet håndteringsklasse",
+    "deleteDescription": "Fjerner klassen permanent. Pakker der peger på den mister kun håndteringsfeltet.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at håndteringsklassen slettes permanent.",
+    "deletedToast": "Håndteringsklassen \"{{name}}\" er slettet"
+  },
+  "carrierDetail": {
+    "newTitle": "Nyt fragtfirma",
+    "createdToast": "Fragtfirmaet \"{{name}}\" er oprettet",
+    "delete": "Slet fragtfirma",
+    "deleteDescription": "Fjerner fragtfirmaet permanent. Pakker der peger på det mister kun fragtfeltet.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at fragtfirmaet slettes permanent.",
+    "deletedToast": "Fragtfirmaet \"{{name}}\" er slettet",
+    "activate": "Aktivér",
+    "deactivate": "Deaktivér",
+    "deactivateDescription": "Inaktive fragtfirmaer kan ikke vælges ved modtagelse; historikken bevares."
   }
 }

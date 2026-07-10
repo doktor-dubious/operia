@@ -292,5 +292,28 @@
     "deleteWarning": "This action cannot be undone.",
     "deleteAcknowledge": "I understand that the department is deleted permanently.",
     "deletedToast": "Department \"{{name}}\" deleted"
+  },
+  "handlingClassDetail": {
+    "newTitle": "New handling class",
+    "createdToast": "Handling class \"{{name}}\" created",
+    "delete": "Delete handling class",
+    "deleteDescription": "Removes the class permanently. Parcels pointing to it only lose the handling field.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the handling class is deleted permanently.",
+    "deletedToast": "Handling class \"{{name}}\" deleted"
+  },
+  "carrierDetail": {
+    "newTitle": "New carrier",
+    "createdToast": "Carrier \"{{name}}\" created",
+    "delete": "Delete carrier",
+    "deleteDescription": "Removes the carrier permanently. Parcels pointing to it only lose the carrier field.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the carrier is deleted permanently.",
+    "deletedToast": "Carrier \"{{name}}\" deleted",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "deactivateDescription": "Inactive carriers cannot be picked at intake; history is kept."
   }
 }
