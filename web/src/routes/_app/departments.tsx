@@ -4,22 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
+import { CompanyPicker } from '@/components/company-picker'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { useAccess } from '@/hooks/use-access'
+import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/departments')({
@@ -33,13 +27,15 @@ const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'medium' })
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-function useRows() {
+function useRows(companyId: string | null) {
   return useQuery({
-    queryKey: ['departments-list'],
+    queryKey: ['departments-list', companyId],
+    enabled: !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
         .select('id, name, created_at, employees (count)')
+        .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
       return data
@@ -118,23 +114,31 @@ function DepartmentDetailPane({
 
 function DepartmentsPage() {
   const { t } = useTranslation()
-  const { data, isPending } = useRows()
+  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { data, isPending } = useRows(companyId)
   const { data: access } = useAccess()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteAck, setDeleteAck] = useState(false)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['departments-list'] })
 
   const deleteRows = async (ids: string[]) => {
-    const { error } = await supabase.from('departments').delete().in('id', ids)
+    const { data: deleted, error } = await supabase
+      .from('departments')
+      .delete()
+      .in('id', ids)
+      .select('id')
     if (error) throw error
+    if ((deleted?.length ?? 0) !== ids.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste (delvist) sletning')
+    }
     if (activeId && ids.includes(activeId)) setActiveId(null)
     await refresh()
   }
 
-  if (isPending) return <Skeleton className="h-40 w-full" />
+  if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
   const columns: ColumnDef<Row>[] = [
     { key: 'name', header: t('departments.name'), sortable: true, sortValue: (r) => r.name },
@@ -157,6 +161,16 @@ function DepartmentsPage() {
         entityLabel={t('nav.departments').toLowerCase()}
         searchText={(row) => row.name}
         storageKey="departments-list"
+        toolbar={
+          <CompanyPicker
+            companies={companies}
+            value={companyId}
+            onChange={(id) => {
+              setActiveId(null)
+              setCompanyId(id)
+            }}
+          />
+        }
         onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
         activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
@@ -170,53 +184,18 @@ function DepartmentsPage() {
         />
       )}
       {activeRow && (
-        <Dialog
+        <ConfirmDeleteDialog
           open={deleteOpen}
-          onOpenChange={(next) => {
-            if (!next) setDeleteAck(false)
-            setDeleteOpen(next)
+          onOpenChange={setDeleteOpen}
+          title={t('departmentDetail.deleteTitle', { name: activeRow.name })}
+          description={t('departmentDetail.deleteWarning')}
+          acknowledgeText={t('departmentDetail.deleteAcknowledge')}
+          confirmLabel={t('departmentDetail.delete')}
+          onConfirm={async () => {
+            await deleteRows([activeRow.id])
+            toast.success(t('departmentDetail.deletedToast', { name: activeRow.name }))
           }}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-destructive">
-                {t('departmentDetail.deleteTitle', { name: activeRow.name })}
-              </DialogTitle>
-              <DialogDescription>{t('departmentDetail.deleteWarning')}</DialogDescription>
-            </DialogHeader>
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-destructive/40 p-3 text-sm">
-              <Checkbox
-                checked={deleteAck}
-                onCheckedChange={(checked) => setDeleteAck(checked === true)}
-                className="mt-0.5"
-              />
-              <span>{t('departmentDetail.deleteAcknowledge')}</span>
-            </label>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={!deleteAck}
-                onClick={async () => {
-                  try {
-                    await deleteRows([activeRow.id])
-                    toast.success(
-                      t('departmentDetail.deletedToast', { name: activeRow.name }),
-                    )
-                    setDeleteOpen(false)
-                  } catch (error) {
-                    console.error('Sletning fejlede:', error)
-                    toast.error(t('common.error'))
-                  }
-                }}
-              >
-                {t('departmentDetail.delete')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        />
       )}
     </div>
   )

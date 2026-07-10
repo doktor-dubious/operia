@@ -21,7 +21,10 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { CopyButton } from '@/components/copy-button'
 import { Field } from '@/components/detail-field'
+import { CompanyPicker } from '@/components/company-picker'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { useAccess } from '@/hooks/use-access'
+import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/employees')({
@@ -39,13 +42,15 @@ const ANONYMIZE_WORDS = ['anonymiser', 'anonymize']
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-function useRows() {
+function useRows(companyId: string | null) {
   return useQuery({
-    queryKey: ['employees'],
+    queryKey: ['employees', companyId],
+    enabled: !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('employees')
         .select('id, full_name, initials, email, phone, employee_no, language, is_active, department:departments (name)')
+        .eq('company_id', companyId!)
         .order('full_name')
       if (error) throw error
       return data
@@ -71,10 +76,19 @@ function AnonymizeDialog({
 
   const confirmed = ack && ANONYMIZE_WORDS.includes(word.trim().toLowerCase())
 
+  // Én lukkevej: nulstiller altid ack/ord
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setAck(false)
+      setWord('')
+    }
+    onOpenChange(next)
+  }
+
   const run = async () => {
     setBusy(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('employees')
         .update({
           full_name: t('employeesActions.anonymizedName'),
@@ -85,10 +99,16 @@ function AnonymizeDialog({
           is_active: false,
         })
         .in('id', ids)
+        .select('id')
       if (error) throw error
+      if ((data?.length ?? 0) !== ids.length) {
+        // RLS afviste (nogle af) skrivningerne — må ikke ligne succes
+        toast.error(t('common.noPermission'))
+        return
+      }
       toast.success(t('employeesActions.anonymizedToast', { count: ids.length }))
       onDone()
-      onOpenChange(false)
+      handleOpenChange(false)
     } catch (error) {
       console.error('Anonymisering fejlede:', error)
       toast.error(t('common.error'))
@@ -98,16 +118,7 @@ function AnonymizeDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          setAck(false)
-          setWord('')
-        }
-        onOpenChange(next)
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-destructive">
@@ -136,7 +147,7 @@ function AnonymizeDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
           <Button variant="destructive" disabled={!confirmed || busy} onClick={run}>
@@ -263,7 +274,8 @@ function EmployeeDetailPane({
 
 function EmployeesPage() {
   const { t } = useTranslation()
-  const { data, isPending } = useRows()
+  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { data, isPending } = useRows(companyId)
   const { data: access } = useAccess()
   const queryClient = useQueryClient()
   const [anonymizeIds, setAnonymizeIds] = useState<string[]>([])
@@ -271,15 +283,22 @@ function EmployeesPage() {
   const [clearSelection, setClearSelection] = useState<(() => void) | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteAck, setDeleteAck] = useState(false)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['employees'] })
 
   const deactivate = async (ids: string[], clear: () => void) => {
-    const { error } = await supabase.from('employees').update({ is_active: false }).in('id', ids)
+    const { data: updated, error } = await supabase
+      .from('employees')
+      .update({ is_active: false })
+      .in('id', ids)
+      .select('id')
     if (error) {
       console.error('Deaktivering fejlede:', error)
       toast.error(t('common.error'))
+      return
+    }
+    if ((updated?.length ?? 0) !== ids.length) {
+      toast.error(t('common.noPermission'))
       return
     }
     toast.success(t('employeesActions.deactivatedToast', { count: ids.length }))
@@ -289,12 +308,20 @@ function EmployeesPage() {
 
   // Hård sletning kun for platform-admins (oprydning i testdata)
   const deleteRows = async (ids: string[]) => {
-    const { error } = await supabase.from('employees').delete().in('id', ids)
+    const { data: deleted, error } = await supabase
+      .from('employees')
+      .delete()
+      .in('id', ids)
+      .select('id')
     if (error) throw error
+    if ((deleted?.length ?? 0) !== ids.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste (delvist) sletning')
+    }
     await refresh()
   }
 
-  if (isPending) return <Skeleton className="h-40 w-full" />
+  if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
   const columns: ColumnDef<Row>[] = [
     { key: 'full_name', header: t('employees.name'), sortable: true, sortValue: (r) => r.full_name },
@@ -318,6 +345,16 @@ function EmployeesPage() {
             .join(' ')
         }
         storageKey="employees"
+        toolbar={
+          <CompanyPicker
+            companies={companies}
+            value={companyId}
+            onChange={(id) => {
+              setActiveId(null)
+              setCompanyId(id)
+            }}
+          />
+        }
         onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
         activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
@@ -365,54 +402,19 @@ function EmployeesPage() {
         />
       )}
       {activeRow && (
-        <Dialog
+        <ConfirmDeleteDialog
           open={deleteOpen}
-          onOpenChange={(next) => {
-            if (!next) setDeleteAck(false)
-            setDeleteOpen(next)
+          onOpenChange={setDeleteOpen}
+          title={t('employeeDetail.deleteTitle', { name: activeRow.full_name })}
+          description={t('employeeDetail.deleteWarning')}
+          acknowledgeText={t('employeeDetail.deleteAcknowledge')}
+          confirmLabel={t('employeeDetail.delete')}
+          onConfirm={async () => {
+            await deleteRows([activeRow.id])
+            toast.success(t('employeeDetail.deletedToast', { name: activeRow.full_name }))
+            setActiveId(null)
           }}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-destructive">
-                {t('employeeDetail.deleteTitle', { name: activeRow.full_name })}
-              </DialogTitle>
-              <DialogDescription>{t('employeeDetail.deleteWarning')}</DialogDescription>
-            </DialogHeader>
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-destructive/40 p-3 text-sm">
-              <Checkbox
-                checked={deleteAck}
-                onCheckedChange={(checked) => setDeleteAck(checked === true)}
-                className="mt-0.5"
-              />
-              <span>{t('employeeDetail.deleteAcknowledge')}</span>
-            </label>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={!deleteAck}
-                onClick={async () => {
-                  try {
-                    await deleteRows([activeRow.id])
-                    toast.success(
-                      t('employeeDetail.deletedToast', { name: activeRow.full_name }),
-                    )
-                    setDeleteOpen(false)
-                    setActiveId(null)
-                  } catch (error) {
-                    console.error('Sletning fejlede:', error)
-                    toast.error(t('common.error'))
-                  }
-                }}
-              >
-                {t('employeeDetail.delete')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        />
       )}
       <AnonymizeDialog
         ids={anonymizeIds}

@@ -5,18 +5,19 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CompanyPicker } from '@/components/company-picker'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -28,18 +29,24 @@ export const Route = createFileRoute('/_app/carriers')({
   component: CarriersPage,
 })
 
-// Fragtfirmaer er app-ejet stamdata: redigerbart detaljepanel som placeringer
-// — Detaljer (id/navn), Handlinger (aktivér/deaktivér, slet) + "+ Ny"-modal.
+// Fragtfirmaer (app-ejet stamdata). Bemærkninger fra review:
+//  - Alle skrivninger tjekker antal berørte rækker (RLS-afviste opdateringer
+//    returnerer 0 rækker uden fejl — det må aldrig ligne succes).
+//  - Forespørgslen er altid virksomheds-scopet; platform-admins vælger
+//    virksomhed i værktøjslinjen i stedet for at se en blandet liste.
+//  - Slet i panelet bruger samme ord-beskyttede dialog som bulk-slet.
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-function useRows() {
+function useRows(companyId: string | null) {
   return useQuery({
-    queryKey: ['carriers'],
+    queryKey: ['carriers', companyId],
+    enabled: !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('carriers')
         .select('id, name, is_active')
+        .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
       return data
@@ -52,21 +59,19 @@ function CarrierDetailPane({
   onClose,
   onDirtyChange,
   onDeleted,
+  refresh,
 }: {
   row: Row
   onClose: () => void
   onDirtyChange: (dirty: boolean) => void
   onDeleted: () => void
+  refresh: () => void
 }) {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
   const [tab, setTab] = useState('details')
   const [name, setName] = useState(row.name)
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteAck, setDeleteAck] = useState(false)
-
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['carriers'] })
 
   const dirty = name !== row.name
 
@@ -78,26 +83,44 @@ function CarrierDetailPane({
 
   const save = async (fields: Partial<Row>) => {
     setSaving(true)
-    const { error } = await supabase.from('carriers').update(fields).eq('id', row.id)
+    const { data, error } = await supabase
+      .from('carriers')
+      .update(fields)
+      .eq('id', row.id)
+      .select('id')
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme fragtfirma:', error)
       toast.error(t('common.error'))
-      return
+      return false
+    }
+    if (!data?.length) {
+      // RLS afviste skrivningen (fx parcel handler uden manager-rolle)
+      toast.error(t('common.noPermission'))
+      return false
     }
     toast.success(t('settings.saved'))
     refresh()
+    return true
+  }
+
+  const saveName = async () => {
+    const trimmed = name.trim()
+    if (await save({ name: trimmed })) setName(trimmed)
   }
 
   const remove = async () => {
-    const { error } = await supabase.from('carriers').delete().eq('id', row.id)
-    if (error) {
-      console.error('Sletning fejlede:', error)
-      toast.error(t('common.error'))
-      return
+    const { data, error } = await supabase
+      .from('carriers')
+      .delete()
+      .eq('id', row.id)
+      .select('id')
+    if (error) throw error
+    if (!data?.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste sletning')
     }
     toast.success(t('carrierDetail.deletedToast', { name: row.name }))
-    setDeleteOpen(false)
     onDeleted()
     refresh()
   }
@@ -172,48 +195,21 @@ function CarrierDetailPane({
           >
             {t('common.cancel')}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => save({ name: name.trim() })}
-            disabled={saving || !name.trim()}
-          >
+          <Button size="sm" onClick={saveName} disabled={saving || !name.trim()}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>
       )}
 
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteOpen}
-        onOpenChange={(next) => {
-          if (!next) setDeleteAck(false)
-          setDeleteOpen(next)
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">
-              {t('carrierDetail.deleteTitle', { name: row.name })}
-            </DialogTitle>
-            <DialogDescription>{t('carrierDetail.deleteWarning')}</DialogDescription>
-          </DialogHeader>
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-destructive/40 p-3 text-sm">
-            <Checkbox
-              checked={deleteAck}
-              onCheckedChange={(checked) => setDeleteAck(checked === true)}
-              className="mt-0.5"
-            />
-            <span>{t('carrierDetail.deleteAcknowledge')}</span>
-          </label>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" disabled={!deleteAck} onClick={remove}>
-              {t('carrierDetail.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setDeleteOpen}
+        title={t('carrierDetail.deleteTitle', { name: row.name })}
+        description={t('carrierDetail.deleteWarning')}
+        acknowledgeText={t('carrierDetail.deleteAcknowledge')}
+        confirmLabel={t('carrierDetail.delete')}
+        onConfirm={remove}
+      />
     </>
   )
 }
@@ -221,16 +217,24 @@ function CarrierDetailPane({
 function NewCarrierDialog({
   open,
   onOpenChange,
+  companyId,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  companyId: string | null
   onCreated: () => void
 }) {
   const { t } = useTranslation()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Én lukkevej: nulstiller altid feltet (review-fund: genåbning viste
+  // forrige navn, fordi create/annullér gik uden om nulstillingen).
+  const handleOpenChange = (next: boolean) => {
+    if (!next) setName('')
+    onOpenChange(next)
+  }
 
   const create = async () => {
     if (!companyId || !name.trim()) return
@@ -246,37 +250,15 @@ function NewCarrierDialog({
     }
     toast.success(t('carrierDetail.createdToast', { name: name.trim() }))
     onCreated()
-    onOpenChange(false)
+    handleOpenChange(false)
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setName('')
-        onOpenChange(next)
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t('carrierDetail.newTitle')}</DialogTitle>
         </DialogHeader>
-        {companies.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <Label className="text-label">{t('receive.company')}</Label>
-            <select
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-              value={companyId ?? ''}
-              onChange={(e) => setCompanyId(e.target.value)}
-            >
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="new-carrier-name" className="text-label">
             {t('carriersPage.name')}
@@ -289,7 +271,7 @@ function NewCarrierDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
           <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
@@ -303,7 +285,8 @@ function NewCarrierDialog({
 
 function CarriersPage() {
   const { t } = useTranslation()
-  const { data, isPending } = useRows()
+  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { data, isPending } = useRows(companyId)
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [paneDirty, setPaneDirty] = useState(false)
@@ -318,13 +301,21 @@ function CarriersPage() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['carriers'] })
 
   const deleteRows = async (ids: string[]) => {
-    const { error } = await supabase.from('carriers').delete().in('id', ids)
+    const { data: deleted, error } = await supabase
+      .from('carriers')
+      .delete()
+      .in('id', ids)
+      .select('id')
     if (error) throw error
+    if ((deleted?.length ?? 0) !== ids.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste (delvist) sletning')
+    }
     if (activeId && ids.includes(activeId)) setActiveId(null)
     await refresh()
   }
 
-  if (isPending) return <Skeleton className="h-40 w-full" />
+  if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
   const columns: ColumnDef<Row>[] = [
     { key: 'name', header: t('carriersPage.name'), sortable: true, sortValue: (r) => r.name },
@@ -342,9 +333,19 @@ function CarriersPage() {
         searchText={(row) => row.name}
         storageKey="carriers"
         toolbar={
-          <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
-            <Plus className="size-4" /> {t('common.new')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+              <Plus className="size-4" /> {t('common.new')}
+            </Button>
+            <CompanyPicker
+              companies={companies}
+              value={companyId}
+              onChange={(id) => {
+                setActiveId(null)
+                setCompanyId(id)
+              }}
+            />
+          </div>
         }
         onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}
         activeRowId={activeId}
@@ -357,9 +358,15 @@ function CarriersPage() {
           onClose={() => guarded(() => setActiveId(null))}
           onDirtyChange={setPaneDirty}
           onDeleted={() => setActiveId(null)}
+          refresh={refresh}
         />
       )}
-      <NewCarrierDialog open={newOpen} onOpenChange={setNewOpen} onCreated={refresh} />
+      <NewCarrierDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        companyId={companyId}
+        onCreated={refresh}
+      />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

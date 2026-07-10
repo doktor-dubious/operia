@@ -97,3 +97,13 @@ insert into public.handling_classes (company_id, name, allow_proxy_collection, a
   ('11111111-1111-1111-1111-111111111111', 'Standard', true, true, 'Almindelige pakker'),
   ('11111111-1111-1111-1111-111111111111', 'Personlig overdragelse', false, false, 'Skal udleveres direkte til modtageren'),
   ('11111111-1111-1111-1111-111111111111', 'Køl', false, false, 'Temperaturfølsom — hurtig udlevering');
+
+-- Testbruger UDEN manager-rolle (handler@operia.local / operia123) — til at
+-- teste at RLS-afviste skrivninger vises som manglende rettigheder.
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new, email_change_token_current)
+values ('99999999-9999-9999-9999-999999999999','00000000-0000-0000-0000-000000000000','authenticated','authenticated','handler@operia.local', crypt('operia123', gen_salt('bf')), now(),'{"provider":"email","providers":["email"]}','{}',now(),now(),'','','','','');
+insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(),'99999999-9999-9999-9999-999999999999','99999999-9999-9999-9999-999999999999','email','{"sub":"99999999-9999-9999-9999-999999999999","email":"handler@operia.local"}',now(),now(),now());
+insert into public.app_users (user_id, company_id, full_name, email)
+values ('99999999-9999-9999-9999-999999999999','11111111-1111-1111-1111-111111111111','Test Handler','handler@operia.local');
+insert into public.user_roles (user_id, role) values ('99999999-9999-9999-9999-999999999999','parcel_handler');

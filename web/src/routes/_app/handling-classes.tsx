@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { CompanyPicker } from '@/components/company-picker'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -35,13 +37,15 @@ export const Route = createFileRoute('/_app/handling-classes')({
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-function useRows() {
+function useRows(companyId: string | null) {
   return useQuery({
-    queryKey: ['handling-classes'],
+    queryKey: ['handling-classes', companyId],
+    enabled: !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('handling_classes')
         .select('id, name, allow_proxy_collection, allow_leave_at_location, description')
+        .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
       return data
@@ -86,7 +90,6 @@ function HandlingClassDetailPane({
   const [allowLeave, setAllowLeave] = useState(row.allow_leave_at_location)
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteAck, setDeleteAck] = useState(false)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['handling-classes'] })
 
@@ -104,7 +107,7 @@ function HandlingClassDetailPane({
 
   const saveAll = async () => {
     setSaving(true)
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('handling_classes')
       .update({
         name: name.trim(),
@@ -113,12 +116,21 @@ function HandlingClassDetailPane({
         allow_leave_at_location: allowLeave,
       })
       .eq('id', row.id)
+      .select('id')
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme håndteringsklasse:', error)
       toast.error(t('common.error'))
       return
     }
+    if (!data?.length) {
+      // RLS afviste skrivningen — 0 rækker uden fejl må aldrig ligne succes
+      toast.error(t('common.noPermission'))
+      return
+    }
+    // normalisér lokal state til det gemte, ellers forbliver panelet "dirty"
+    setName(name.trim())
+    setDescription(description.trim())
     toast.success(t('settings.saved'))
     refresh()
   }
@@ -131,14 +143,17 @@ function HandlingClassDetailPane({
   }
 
   const remove = async () => {
-    const { error } = await supabase.from('handling_classes').delete().eq('id', row.id)
-    if (error) {
-      console.error('Sletning fejlede:', error)
-      toast.error(t('common.error'))
-      return
+    const { data, error } = await supabase
+      .from('handling_classes')
+      .delete()
+      .eq('id', row.id)
+      .select('id')
+    if (error) throw error
+    if (!data?.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste sletning')
     }
     toast.success(t('handlingClassDetail.deletedToast', { name: row.name }))
-    setDeleteOpen(false)
     onDeleted()
     refresh()
   }
@@ -218,38 +233,15 @@ function HandlingClassDetailPane({
         </div>
       )}
 
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteOpen}
-        onOpenChange={(next) => {
-          if (!next) setDeleteAck(false)
-          setDeleteOpen(next)
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-destructive">
-              {t('handlingClassDetail.deleteTitle', { name: row.name })}
-            </DialogTitle>
-            <DialogDescription>{t('handlingClassDetail.deleteWarning')}</DialogDescription>
-          </DialogHeader>
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-destructive/40 p-3 text-sm">
-            <Checkbox
-              checked={deleteAck}
-              onCheckedChange={(checked) => setDeleteAck(checked === true)}
-              className="mt-0.5"
-            />
-            <span>{t('handlingClassDetail.deleteAcknowledge')}</span>
-          </label>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="destructive" disabled={!deleteAck} onClick={remove}>
-              {t('handlingClassDetail.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setDeleteOpen}
+        title={t('handlingClassDetail.deleteTitle', { name: row.name })}
+        description={t('handlingClassDetail.deleteWarning')}
+        acknowledgeText={t('handlingClassDetail.deleteAcknowledge')}
+        confirmLabel={t('handlingClassDetail.delete')}
+        onConfirm={remove}
+      />
     </>
   )
 }
@@ -257,17 +249,27 @@ function HandlingClassDetailPane({
 function NewHandlingClassDialog({
   open,
   onOpenChange,
+  companyId,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  companyId: string | null
   onCreated: () => void
 }) {
   const { t } = useTranslation()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Én lukkevej: nulstiller altid felterne
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setName('')
+      setDescription('')
+    }
+    onOpenChange(next)
+  }
 
   const create = async () => {
     if (!companyId || !name.trim()) return
@@ -285,40 +287,15 @@ function NewHandlingClassDialog({
     }
     toast.success(t('handlingClassDetail.createdToast', { name: name.trim() }))
     onCreated()
-    onOpenChange(false)
+    handleOpenChange(false)
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          setName('')
-          setDescription('')
-        }
-        onOpenChange(next)
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t('handlingClassDetail.newTitle')}</DialogTitle>
         </DialogHeader>
-        {companies.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <Label className="text-label">{t('receive.company')}</Label>
-            <select
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-              value={companyId ?? ''}
-              onChange={(e) => setCompanyId(e.target.value)}
-            >
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="new-hc-name" className="text-label">
             {t('handlingClasses.name')}
@@ -337,7 +314,7 @@ function NewHandlingClassDialog({
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
           <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
@@ -351,7 +328,8 @@ function NewHandlingClassDialog({
 
 function HandlingClassesPage() {
   const { t } = useTranslation()
-  const { data, isPending } = useRows()
+  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { data, isPending } = useRows(companyId)
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [paneDirty, setPaneDirty] = useState(false)
@@ -366,13 +344,21 @@ function HandlingClassesPage() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['handling-classes'] })
 
   const deleteRows = async (ids: string[]) => {
-    const { error } = await supabase.from('handling_classes').delete().in('id', ids)
+    const { data: deleted, error } = await supabase
+      .from('handling_classes')
+      .delete()
+      .in('id', ids)
+      .select('id')
     if (error) throw error
+    if ((deleted?.length ?? 0) !== ids.length) {
+      toast.error(t('common.noPermission'))
+      throw new Error('RLS afviste (delvist) sletning')
+    }
     if (activeId && ids.includes(activeId)) setActiveId(null)
     await refresh()
   }
 
-  if (isPending) return <Skeleton className="h-40 w-full" />
+  if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
   const columns: ColumnDef<Row>[] = [
     { key: 'name', header: t('handlingClasses.name'), sortable: true, sortValue: (r) => r.name },
@@ -392,9 +378,19 @@ function HandlingClassesPage() {
         searchText={(row) => [row.name, row.description].filter(Boolean).join(' ')}
         storageKey="handling-classes"
         toolbar={
-          <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
-            <Plus className="size-4" /> {t('common.new')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+              <Plus className="size-4" /> {t('common.new')}
+            </Button>
+            <CompanyPicker
+              companies={companies}
+              value={companyId}
+              onChange={(id) => {
+                setActiveId(null)
+                setCompanyId(id)
+              }}
+            />
+          </div>
         }
         onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}
         activeRowId={activeId}
@@ -409,7 +405,7 @@ function HandlingClassesPage() {
           onDeleted={() => setActiveId(null)}
         />
       )}
-      <NewHandlingClassDialog open={newOpen} onOpenChange={setNewOpen} onCreated={refresh} />
+      <NewHandlingClassDialog open={newOpen} onOpenChange={setNewOpen} companyId={companyId} onCreated={refresh} />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
