@@ -210,6 +210,9 @@ function ReceivePage() {
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [saving, setSaving] = useState(false)
   const [sessionList, setSessionList] = useState<SessionEntry[]>([])
+  // Remount-nøgle: EmployeePicker har intern skrivetilstand, som skal nulstilles
+  // sammen med formularen — ellers står et forældet navn tilbage i feltet.
+  const [formKey, setFormKey] = useState(0)
   const barcodeRef = useRef<HTMLInputElement>(null)
 
   // Modtagervalg auto-udfylder afdeling (spec Flow 1)
@@ -245,6 +248,7 @@ function ReceivePage() {
     setLocationId(NONE)
     setNote('')
     setPhoto(null)
+    setFormKey((k) => k + 1)
     barcodeRef.current?.focus()
   }
 
@@ -361,7 +365,7 @@ function ReceivePage() {
             </div>
             <div className="flex flex-col gap-2">
               <Label>{t('receive.receiver')}</Label>
-              <EmployeePicker companyId={companyId} value={receiver} onChange={pickReceiver} />
+              <EmployeePicker key={formKey} companyId={companyId} value={receiver} onChange={pickReceiver} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
