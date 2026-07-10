@@ -1,6 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react'
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -8,13 +7,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'
+import { AnimateIcon } from '@/components/animate-ui/icons/icon'
+import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard'
+import { LogOut } from '@/components/animate-ui/icons/log-out'
+import { Moon } from '@/components/animate-ui/icons/moon'
+import { Settings } from '@/components/animate-ui/icons/settings'
+import { Sun } from '@/components/animate-ui/icons/sun'
+import { SunMoon } from '@/components/animate-ui/icons/sun-moon'
 import { useTheme } from '@/components/theme-provider'
 import { coreNav, productNav, settingsNav } from '@/lib/nav'
 import { supabase } from '@/lib/supabase'
 
 // Menuindhold i compliance-circle-stil: overvejende tekst uden ikoner; de få
-// ikoner sidder til HØJRE via DropdownMenuShortcut (ml-auto). Sektions-
-// overskrifter er små, dæmpede og uppercase.
+// ikoner er animate-ui-ikoner til HØJRE via DropdownMenuShortcut, og
+// <AnimateIcon animateOnHover> lader dem animere når punktet hoveres.
+// Sektionsoverskrifter er små, dæmpede og uppercase.
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -28,17 +35,19 @@ function ThemeRow() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
-  const Icon = theme === 'system' ? Monitor : theme === 'light' ? Sun : Moon
+  const Icon = theme === 'system' ? SunMoon : theme === 'light' ? Sun : Moon
   return (
-    <DropdownMenuLabel
-      className="flex cursor-pointer font-normal text-muted-foreground"
-      onClick={() => setTheme(next)}
-    >
-      {t('nav.theme')} · {t(`theme.${theme}`)}
-      <span className="ml-auto">
-        <Icon className="h-4 w-4" />
-      </span>
-    </DropdownMenuLabel>
+    <AnimateIcon animateOnHover asChild>
+      <DropdownMenuLabel
+        className="flex cursor-pointer font-normal text-muted-foreground"
+        onClick={() => setTheme(next)}
+      >
+        {t('nav.theme')} · {t(`theme.${theme}`)}
+        <span className="ml-auto">
+          <Icon size={16} />
+        </span>
+      </DropdownMenuLabel>
+    </AnimateIcon>
   )
 }
 
@@ -57,12 +66,14 @@ export function UserNavDropdownContent({ includeNav }: { includeNav: boolean }) 
     <DropdownMenuContent side="top" align="start" className="mb-1 w-56 font-normal">
       {includeNav && (
         <>
-          <DropdownMenuItem className="cursor-pointer" onClick={() => go('/')}>
-            {t('nav.dashboard')}
-            <DropdownMenuShortcut>
-              <LayoutDashboard className="h-4 w-4" />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
+          <AnimateIcon animateOnHover asChild>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => go('/')}>
+              {t('nav.dashboard')}
+              <DropdownMenuShortcut>
+                <LayoutDashboard size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </AnimateIcon>
           <DropdownMenuSeparator />
           <SectionLabel>{t('nav.groupCore')}</SectionLabel>
           {coreNav
@@ -91,19 +102,23 @@ export function UserNavDropdownContent({ includeNav }: { includeNav: boolean }) 
         </>
       )}
       <ThemeRow />
-      <DropdownMenuItem className="cursor-pointer" onClick={() => go(settingsNav.href)}>
-        {t('nav.settings')}
-        <DropdownMenuShortcut>
-          <Settings className="h-4 w-4" />
-        </DropdownMenuShortcut>
-      </DropdownMenuItem>
+      <AnimateIcon animateOnHover asChild>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => go(settingsNav.href)}>
+          {t('nav.settings')}
+          <DropdownMenuShortcut>
+            <Settings size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </AnimateIcon>
       <DropdownMenuSeparator />
-      <DropdownMenuItem className="cursor-pointer" onClick={signOut}>
-        {t('auth.signOut')}
-        <DropdownMenuShortcut>
-          <LogOut className="h-4 w-4" />
-        </DropdownMenuShortcut>
-      </DropdownMenuItem>
+      <AnimateIcon animateOnHover asChild>
+        <DropdownMenuItem className="cursor-pointer" onClick={signOut}>
+          {t('auth.signOut')}
+          <DropdownMenuShortcut>
+            <LogOut size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </AnimateIcon>
     </DropdownMenuContent>
   )
 }
