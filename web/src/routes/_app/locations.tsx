@@ -69,6 +69,12 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['storage-locations'] })
 
+  const dirty =
+    name !== row.name ||
+    description !== (row.description ?? '') ||
+    notes !== (row.notes ?? '') ||
+    barcode !== (row.barcode ?? '')
+
   const save = async (fields: Partial<Row>) => {
     setSaving(true)
     const { error } = await supabase.from('storage_locations').update(fields).eq('id', row.id)
@@ -80,6 +86,21 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
     }
     toast.success(t('settings.saved'))
     refresh()
+  }
+
+  const saveAll = () =>
+    save({
+      name: name.trim(),
+      description: description.trim() || null,
+      notes: notes.trim() || null,
+      barcode: barcode.trim() || null,
+    })
+
+  const cancel = () => {
+    setName(row.name)
+    setDescription(row.description ?? '')
+    setNotes(row.notes ?? '')
+    setBarcode(row.barcode ?? '')
   }
 
   const toggleActive = async () => {
@@ -129,21 +150,6 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
             <Field label={t('locationDetail.notes')}>
               <Textarea value={notes} rows={3} onChange={(e) => setNotes(e.target.value)} />
             </Field>
-            <div>
-              <Button
-                size="sm"
-                disabled={saving || !name.trim()}
-                onClick={() =>
-                  save({
-                    name: name.trim(),
-                    description: description.trim() || null,
-                    notes: notes.trim() || null,
-                  })
-                }
-              >
-                {saving ? t('common.loading') : t('common.save')}
-              </Button>
-            </div>
           </div>
         )}
         {tab === 'data' && (
@@ -156,15 +162,6 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
                 onChange={(e) => setBarcode(e.target.value)}
               />
             </Field>
-            <div>
-              <Button
-                size="sm"
-                disabled={saving}
-                onClick={() => save({ barcode: barcode.trim() || null })}
-              >
-                {saving ? t('common.loading') : t('common.save')}
-              </Button>
-            </div>
           </div>
         )}
         {tab === 'actions' && (
@@ -200,6 +197,17 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
           </div>
         )}
       </DetailTabs>
+
+      {dirty && (
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-auto flex justify-end gap-3 border-t border-border bg-background px-6 py-3">
+          <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
+            {t('common.cancel')}
+          </Button>
+          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim()}>
+            {saving ? t('common.loading') : t('common.saveChanges')}
+          </Button>
+        </div>
+      )}
 
       <Dialog
         open={deleteOpen}
@@ -273,7 +281,7 @@ function LocationsPage() {
   const activeRow = data?.find((row) => row.id === activeId) ?? null
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-h-full flex-col gap-6">
       <DataTable
         rows={data ?? []}
         columns={columns}

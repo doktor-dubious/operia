@@ -141,7 +141,8 @@
     "search": "Search",
     "yes": "Yes",
     "no": "No",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "saveChanges": "Save Changes"
   },
   "departments": {
     "name": "Name",

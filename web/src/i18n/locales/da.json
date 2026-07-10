@@ -141,7 +141,8 @@
     "search": "Søg",
     "yes": "Ja",
     "no": "Nej",
-    "error": "Noget gik galt"
+    "error": "Noget gik galt",
+    "saveChanges": "Gem ændringer"
   },
   "departments": {
     "name": "Navn",
