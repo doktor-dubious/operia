@@ -1,26 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DataTable, type ColumnDef } from '@/components/data-table'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/departments')({
   component: DepartmentsPage,
 })
 
-function DepartmentsPage() {
-  const { t } = useTranslation()
+type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-  const { data, isPending } = useQuery({
-    queryKey: ['departments'],
+function useRows() {
+  return useQuery({
+    queryKey: ['departments-list'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
@@ -30,31 +23,34 @@ function DepartmentsPage() {
       return data
     },
   })
+}
+
+function DepartmentsPage() {
+  const { t } = useTranslation()
+  const { data, isPending } = useRows()
+
+  const queryClient = useQueryClient()
+  const deleteRows = async (ids: string[]) => {
+    const { error } = await supabase.from('departments').delete().in('id', ids)
+    if (error) throw error
+    await queryClient.invalidateQueries({ queryKey: ['departments-list'] })
+  }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
 
-  if (!data?.length) {
-    return <p className="text-sm text-muted-foreground">{t('departments.empty')}</p>
-  }
+  const columns: ColumnDef<Row>[] = [
+    { key: 'name', header: t('departments.name'), sortable: true, sortValue: (r) => r.name },
+    { key: 'count', header: t('departments.employeeCount'), sortable: true, sortValue: (r) => r.employees?.[0]?.count ?? 0, render: (r) => r.employees?.[0]?.count ?? 0 },
+  ]
 
   return (
-    <div className="overflow-x-auto rounded-md border bg-panel">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t('departments.name')}</TableHead>
-            <TableHead>{t('departments.employeeCount')}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((dept) => (
-            <TableRow key={dept.id} className="hover:bg-table-row-hover">
-              <TableCell>{dept.name}</TableCell>
-              <TableCell>{dept.employees?.[0]?.count ?? 0}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      rows={data ?? []}
+      columns={columns}
+      entityLabel={t('nav.departments').toLowerCase()}
+      searchText={(row) => row.name}
+      storageKey="departments-list"
+      onDelete={deleteRows}
+    />
   )
 }

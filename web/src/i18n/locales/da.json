@@ -185,5 +185,23 @@
     "name": "Navn",
     "active": "Aktiv",
     "empty": "Ingen fragtfirmaer endnu."
+  },
+  "dataTable": {
+    "search": "Søg…",
+    "noRows": "Ingen rækker matcher.",
+    "showing": "Viser {{from}}–{{to}} af {{total}} {{entity}}",
+    "previous": "Forrige",
+    "next": "Næste",
+    "selected": "Valgt {{count}} af {{total}} {{entity}}",
+    "showOnlySelected": "Vis kun valgte",
+    "deleteSelected": "Slet valgte",
+    "deleteTitle": "Slet {{count}} {{entity}}",
+    "deleteDescription": "Du er ved at slette {{count}} {{entity}}. Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at dette sletter de valgte {{entity}} og alle tilhørende data permanent.",
+    "typeToConfirm": "Skriv \"slet\" for at bekræfte",
+    "deleteWord": "slet",
+    "deleted": "{{count}} {{entity}} slettet",
+    "selectAll": "Vælg alle",
+    "selectStarred": "Stjernemarkerede"
   }
 }

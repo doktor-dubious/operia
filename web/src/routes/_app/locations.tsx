@@ -1,25 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DataTable, type ColumnDef } from '@/components/data-table'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/locations')({
   component: LocationsPage,
 })
 
-function LocationsPage() {
-  const { t } = useTranslation()
+type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
-  const { data, isPending } = useQuery({
+function useRows() {
+  return useQuery({
     queryKey: ['storage-locations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,33 +23,35 @@ function LocationsPage() {
       return data
     },
   })
+}
+
+function LocationsPage() {
+  const { t } = useTranslation()
+  const { data, isPending } = useRows()
+
+  const queryClient = useQueryClient()
+  const deleteRows = async (ids: string[]) => {
+    const { error } = await supabase.from('storage_locations').delete().in('id', ids)
+    if (error) throw error
+    await queryClient.invalidateQueries({ queryKey: ['storage-locations'] })
+  }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
 
-  if (!data?.length) {
-    return <p className="text-sm text-muted-foreground">{t('locations.empty')}</p>
-  }
+  const columns: ColumnDef<Row>[] = [
+    { key: 'name', header: t('locations.name'), sortable: true, sortValue: (r) => r.name },
+    { key: 'barcode', header: t('locations.barcode'), sortable: true, sortValue: (r) => r.barcode, render: (r) => <span className="font-mono text-xs">{r.barcode ?? '—'}</span> },
+    { key: 'is_active', header: t('locations.active'), sortable: true, sortValue: (r) => (r.is_active ? 1 : 0), render: (r) => (r.is_active ? t('common.yes') : t('common.no')) },
+  ]
 
   return (
-    <div className="overflow-x-auto rounded-md border bg-panel">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t('locations.name')}</TableHead>
-            <TableHead>{t('locations.barcode')}</TableHead>
-            <TableHead>{t('locations.active')}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((location) => (
-            <TableRow key={location.id} className="hover:bg-table-row-hover">
-              <TableCell>{location.name}</TableCell>
-              <TableCell className="font-mono text-xs">{location.barcode ?? '—'}</TableCell>
-              <TableCell>{location.is_active ? t('common.yes') : t('common.no')}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      rows={data ?? []}
+      columns={columns}
+      entityLabel={t('nav.locations').toLowerCase()}
+      searchText={(row) => [row.name, row.barcode].filter(Boolean).join(' ')}
+      storageKey="storage-locations"
+      onDelete={deleteRows}
+    />
   )
 }

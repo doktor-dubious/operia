@@ -185,5 +185,23 @@
     "name": "Name",
     "active": "Active",
     "empty": "No carriers yet."
+  },
+  "dataTable": {
+    "search": "Search…",
+    "noRows": "No rows match.",
+    "showing": "Showing {{from}}–{{to}} of {{total}} {{entity}}",
+    "previous": "Previous",
+    "next": "Next",
+    "selected": "Selected {{count}} of {{total}} {{entity}}",
+    "showOnlySelected": "Show only selected",
+    "deleteSelected": "Delete selected",
+    "deleteTitle": "Delete {{count}} {{entity}}",
+    "deleteDescription": "You are about to delete {{count}} {{entity}}. This action cannot be undone.",
+    "deleteAcknowledge": "I understand that this will permanently delete the selected {{entity}} and all associated data.",
+    "typeToConfirm": "Type \"delete\" to confirm",
+    "deleteWord": "delete",
+    "deleted": "{{count}} {{entity}} deleted",
+    "selectAll": "Select all",
+    "selectStarred": "Starred"
   }
 }
