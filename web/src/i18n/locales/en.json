@@ -254,5 +254,10 @@
     "deleteWarning": "This action cannot be undone.",
     "deleteAcknowledge": "I understand that the location is deleted permanently.",
     "deletedToast": "Location \"{{name}}\" deleted"
+  },
+  "unsaved": {
+    "title": "Unsaved changes",
+    "description": "You have unsaved changes in the detail pane. Discard them?",
+    "discard": "Discard changes"
   }
 }

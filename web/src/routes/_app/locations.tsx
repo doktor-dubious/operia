@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -55,7 +55,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void }) {
+function LocationDetailPane({
+  row,
+  onClose,
+  onDirtyChange,
+}: {
+  row: Row
+  onClose: () => void
+  onDirtyChange: (dirty: boolean) => void
+}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState('details')
@@ -74,6 +82,12 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
     description !== (row.description ?? '') ||
     notes !== (row.notes ?? '') ||
     barcode !== (row.barcode ?? '')
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+    return () => onDirtyChange(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty])
 
   const save = async (fields: Partial<Row>) => {
     setSaving(true)
@@ -250,6 +264,14 @@ function LocationsPage() {
   const { data, isPending } = useRows()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [paneDirty, setPaneDirty] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+
+  // Skift/luk med ugemte ændringer kræver bekræftelse
+  const guarded = (action: () => void) => {
+    if (paneDirty) setPendingAction(() => action)
+    else action()
+  }
 
   const deleteRows = async (ids: string[]) => {
     const { error } = await supabase.from('storage_locations').delete().in('id', ids)
@@ -289,16 +311,39 @@ function LocationsPage() {
         searchText={(row) => [row.name, row.barcode].filter(Boolean).join(' ')}
         storageKey="storage-locations"
         onDelete={deleteRows}
-        onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
+        onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}
         activeRowId={activeId}
       />
       {activeRow && (
         <LocationDetailPane
           key={activeRow.id}
           row={activeRow}
-          onClose={() => setActiveId(null)}
+          onClose={() => guarded(() => setActiveId(null))}
+          onDirtyChange={setPaneDirty}
         />
       )}
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('unsaved.title')}</DialogTitle>
+            <DialogDescription>{t('unsaved.description')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAction(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                pendingAction?.()
+                setPendingAction(null)
+              }}
+            >
+              {t('unsaved.discard')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

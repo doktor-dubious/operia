@@ -254,5 +254,10 @@
     "deleteWarning": "Handlingen kan ikke fortrydes.",
     "deleteAcknowledge": "Jeg forstår, at placeringen slettes permanent.",
     "deletedToast": "Placeringen \"{{name}}\" er slettet"
+  },
+  "unsaved": {
+    "title": "Ugemte ændringer",
+    "description": "Du har ugemte ændringer i detaljepanelet. Vil du kassere dem?",
+    "discard": "Kassér ændringer"
   }
 }
