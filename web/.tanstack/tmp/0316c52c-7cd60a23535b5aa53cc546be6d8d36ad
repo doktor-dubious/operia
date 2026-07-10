@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ParcelStatusBadge } from '@/components/parcel-status-badge'
 import { supabase } from '@/lib/supabase'
 
-export const Route = createFileRoute('/_app/parcels')({
+export const Route = createFileRoute('/_app/parcels/')({
   component: ParcelsPage,
 })
 

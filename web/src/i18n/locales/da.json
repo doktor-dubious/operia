@@ -19,7 +19,27 @@
     "groupProducts": "Øvrige produkter",
     "theme": "Tema",
     "language": "Sprog",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "groupParcels": "Pakker",
+    "groupMasterData": "Stamdata",
+    "groupSystem": "System",
+    "groupPlatform": "DCA Logic",
+    "receive": "Modtag pakke",
+    "handout": "Udlever pakke",
+    "reports": "Rapporter",
+    "stats": "Statistik",
+    "departments": "Afdelinger",
+    "handlingClasses": "Håndteringsklasser",
+    "carriers": "Fragtfirmaer",
+    "users": "Brugere",
+    "emailTemplates": "E-mail-skabeloner",
+    "labelTemplates": "Label-skabeloner",
+    "companySettings": "Firmaindstillinger",
+    "customers": "Kunder",
+    "entitlements": "Produkter & funktioner",
+    "branding": "Branding",
+    "billing": "Fakturering",
+    "integrations": "Integrationer"
   },
   "auth": {
     "email": "E-mail",
@@ -122,5 +142,17 @@
     "yes": "Ja",
     "no": "Nej",
     "error": "Noget gik galt"
+  },
+  "departments": {
+    "name": "Navn",
+    "employeeCount": "Medarbejdere",
+    "empty": "Ingen afdelinger endnu."
+  },
+  "handlingClasses": {
+    "name": "Navn",
+    "allowProxy": "Proxy-afhentning",
+    "allowLeave": "Må efterlades",
+    "description": "Beskrivelse",
+    "empty": "Ingen håndteringsklasser endnu."
   }
 }

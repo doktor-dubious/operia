@@ -15,9 +15,11 @@ import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard'
 import { LogOut } from '@/components/animate-ui/icons/log-out'
 import { Sparkles } from '@/components/animate-ui/icons/sparkles'
 import { User } from '@/components/animate-ui/icons/user'
+import { flushPreferences } from '@/components/preferences-sync'
 import { useTheme } from '@/components/theme-provider'
 import { useSession } from '@/hooks/use-session'
-import { coreNav, productNav } from '@/lib/nav'
+import { visibleNavGroups } from '@/lib/nav'
+import { useAccess } from '@/hooks/use-access'
 import { supabase } from '@/lib/supabase'
 
 // Brugermenu struktureret som Supabase Studios (uden "Feature previews" og
@@ -55,10 +57,13 @@ export function UserNavDropdownContent({
   const navigate = useNavigate()
   const { session } = useSession()
   const { theme, setTheme } = useTheme()
+  const { data: access } = useAccess()
 
   const go = (href: string) => navigate({ to: href })
 
   const signOut = async () => {
+    // Gem eventuelle usynkroniserede præferencer, mens sessionen stadig er gyldig.
+    await flushPreferences()
     await supabase.auth.signOut()
     navigate({ to: '/login' })
   }
@@ -79,30 +84,25 @@ export function UserNavDropdownContent({
               </DropdownMenuShortcut>
             </DropdownMenuItem>
           </AnimateIcon>
-          <DropdownMenuSeparator />
-          <NavSectionLabel>{t('nav.groupCore')}</NavSectionLabel>
-          {coreNav
-            .filter((item) => item.href !== '/')
-            .map((item) => (
-              <DropdownMenuItem
-                key={item.href}
-                className="cursor-pointer text-xs font-[450] text-foreground-light"
-                onClick={() => go(item.href)}
-              >
-                {t(`nav.${item.labelKey}`)}
-              </DropdownMenuItem>
-            ))}
-          <DropdownMenuSeparator />
-          <NavSectionLabel>{t('nav.groupProducts')}</NavSectionLabel>
-          {productNav.map((item) => (
-            <DropdownMenuItem
-              key={item.href}
-              className="cursor-pointer text-xs font-[450] text-foreground-light"
-              onClick={() => go(item.href)}
-            >
-              {t(`nav.${item.labelKey}`)}
-            </DropdownMenuItem>
-          ))}
+          {visibleNavGroups(access).map((group) => {
+            const items = group.items.filter((item) => item.href !== '/')
+            if (!items.length) return null
+            return (
+              <div key={group.labelKey}>
+                <DropdownMenuSeparator />
+                <NavSectionLabel>{t(`nav.${group.labelKey}`)}</NavSectionLabel>
+                {items.map((item) => (
+                  <DropdownMenuItem
+                    key={item.href}
+                    className="cursor-pointer text-xs font-[450] text-foreground-light"
+                    onClick={() => go(item.href)}
+                  >
+                    {t(`nav.${item.labelKey}`)}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            )
+          })}
           <DropdownMenuSeparator />
         </>
       )}

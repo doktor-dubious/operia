@@ -21,7 +21,8 @@ import {
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
-import { allNav, coreNav, productNav, settingsNav } from '@/lib/nav'
+import { allNavItems, settingsNav, visibleNavGroups } from '@/lib/nav'
+import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
 
 // To navigationstilstande (brugervalg under Indstillinger):
@@ -68,11 +69,8 @@ function ClassicSidebar() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const initial = useUserInitial()
-
-  const groups = [
-    { labelKey: 'groupCore', items: coreNav },
-    { labelKey: 'groupProducts', items: productNav },
-  ]
+  const { data: access } = useAccess()
+  const groups = visibleNavGroups(access)
 
   return (
     <Sidebar collapsible="icon" className="select-none">
@@ -218,8 +216,10 @@ function PageHeader() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const active =
-    allNav.find((item) => item.href === pathname) ??
-    allNav.find((item) => item.href !== '/' && pathname.startsWith(item.href))
+    allNavItems.find((item) => item.href === pathname) ??
+    [...allNavItems]
+      .sort((a, b) => b.href.length - a.href.length)
+      .find((item) => item.href !== '/' && pathname.startsWith(item.href))
   return (
     <header className="flex h-10 shrink-0 items-center border-b border-border px-6">
       <h1 className="text-[13px] font-semibold">

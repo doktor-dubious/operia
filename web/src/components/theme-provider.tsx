@@ -3,7 +3,8 @@ import { createContext, useContext, useEffect, useState } from 'react'
 // Tema følger OS ('system') som standard og kan overstyres til lys/mørk.
 // Skifter .dark-klassen på <html> — matcher @custom-variant dark i index.css.
 
-type Theme = 'system' | 'light' | 'dark'
+export const THEMES = ['system', 'light', 'dark'] as const
+export type Theme = (typeof THEMES)[number]
 
 type ThemeContextValue = {
   theme: Theme

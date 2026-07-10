@@ -5,7 +5,8 @@ import { createContext, useContext, useState } from 'react'
 // (som compliance-circle/gorm.ai). localStorage er lokal cache til hurtig
 // første-maling; kontoens gemte valg anvendes ved login (PreferencesSync).
 
-export type NavMode = 'classic' | 'modern'
+export const NAV_MODES = ['classic', 'modern'] as const
+export type NavMode = (typeof NAV_MODES)[number]
 
 type UiSettingsContextValue = {
   navMode: NavMode

@@ -19,7 +19,27 @@
     "groupProducts": "Other products",
     "theme": "Theme",
     "language": "Language",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "groupParcels": "Parcels",
+    "groupMasterData": "Master data",
+    "groupSystem": "System",
+    "groupPlatform": "DCA Logic",
+    "receive": "Receive parcel",
+    "handout": "Hand out parcel",
+    "reports": "Reports",
+    "stats": "Statistics",
+    "departments": "Departments",
+    "handlingClasses": "Handling classes",
+    "carriers": "Carriers",
+    "users": "Users",
+    "emailTemplates": "Email templates",
+    "labelTemplates": "Label templates",
+    "companySettings": "Company settings",
+    "customers": "Customers",
+    "entitlements": "Products & features",
+    "branding": "Branding",
+    "billing": "Billing",
+    "integrations": "Integrations"
   },
   "auth": {
     "email": "Email",
@@ -122,5 +142,17 @@
     "yes": "Yes",
     "no": "No",
     "error": "Something went wrong"
+  },
+  "departments": {
+    "name": "Name",
+    "employeeCount": "Employees",
+    "empty": "No departments yet."
+  },
+  "handlingClasses": {
+    "name": "Name",
+    "allowProxy": "Proxy collection",
+    "allowLeave": "May be left",
+    "description": "Description",
+    "empty": "No handling classes yet."
   }
 }

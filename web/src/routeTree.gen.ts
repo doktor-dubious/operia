@@ -12,11 +12,27 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppStatsRouteImport } from './routes/_app/stats'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
-import { Route as AppParcelsRouteImport } from './routes/_app/parcels'
+import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppLocationsRouteImport } from './routes/_app/locations'
+import { Route as AppHandlingClassesRouteImport } from './routes/_app/handling-classes'
 import { Route as AppEmployeesRouteImport } from './routes/_app/employees'
+import { Route as AppDepartmentsRouteImport } from './routes/_app/departments'
+import { Route as AppCarriersRouteImport } from './routes/_app/carriers'
+import { Route as AppParcelsIndexRouteImport } from './routes/_app/parcels.index'
+import { Route as AppSystemUsersRouteImport } from './routes/_app/system.users'
+import { Route as AppSystemLabelTemplatesRouteImport } from './routes/_app/system.label-templates'
+import { Route as AppSystemEmailTemplatesRouteImport } from './routes/_app/system.email-templates'
+import { Route as AppSystemCompanyRouteImport } from './routes/_app/system.company'
 import { Route as AppProductsProductKeyRouteImport } from './routes/_app/products.$productKey'
+import { Route as AppPlatformIntegrationsRouteImport } from './routes/_app/platform.integrations'
+import { Route as AppPlatformEntitlementsRouteImport } from './routes/_app/platform.entitlements'
+import { Route as AppPlatformCustomersRouteImport } from './routes/_app/platform.customers'
+import { Route as AppPlatformBrandingRouteImport } from './routes/_app/platform.branding'
+import { Route as AppPlatformBillingRouteImport } from './routes/_app/platform.billing'
+import { Route as AppParcelsReceiveRouteImport } from './routes/_app/parcels.receive'
+import { Route as AppParcelsHandoutRouteImport } from './routes/_app/parcels.handout'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -32,14 +48,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppStatsRoute = AppStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
-const AppParcelsRoute = AppParcelsRouteImport.update({
-  id: '/parcels',
-  path: '/parcels',
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLocationsRoute = AppLocationsRouteImport.update({
@@ -47,9 +68,49 @@ const AppLocationsRoute = AppLocationsRouteImport.update({
   path: '/locations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHandlingClassesRoute = AppHandlingClassesRouteImport.update({
+  id: '/handling-classes',
+  path: '/handling-classes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppEmployeesRoute = AppEmployeesRouteImport.update({
   id: '/employees',
   path: '/employees',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDepartmentsRoute = AppDepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCarriersRoute = AppCarriersRouteImport.update({
+  id: '/carriers',
+  path: '/carriers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppParcelsIndexRoute = AppParcelsIndexRouteImport.update({
+  id: '/parcels/',
+  path: '/parcels/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSystemUsersRoute = AppSystemUsersRouteImport.update({
+  id: '/system/users',
+  path: '/system/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSystemLabelTemplatesRoute = AppSystemLabelTemplatesRouteImport.update({
+  id: '/system/label-templates',
+  path: '/system/label-templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSystemEmailTemplatesRoute = AppSystemEmailTemplatesRouteImport.update({
+  id: '/system/email-templates',
+  path: '/system/email-templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSystemCompanyRoute = AppSystemCompanyRouteImport.update({
+  id: '/system/company',
+  path: '/system/company',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsProductKeyRoute = AppProductsProductKeyRouteImport.update({
@@ -57,65 +118,196 @@ const AppProductsProductKeyRoute = AppProductsProductKeyRouteImport.update({
   path: '/products/$productKey',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPlatformIntegrationsRoute = AppPlatformIntegrationsRouteImport.update({
+  id: '/platform/integrations',
+  path: '/platform/integrations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlatformEntitlementsRoute = AppPlatformEntitlementsRouteImport.update({
+  id: '/platform/entitlements',
+  path: '/platform/entitlements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlatformCustomersRoute = AppPlatformCustomersRouteImport.update({
+  id: '/platform/customers',
+  path: '/platform/customers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlatformBrandingRoute = AppPlatformBrandingRouteImport.update({
+  id: '/platform/branding',
+  path: '/platform/branding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlatformBillingRoute = AppPlatformBillingRouteImport.update({
+  id: '/platform/billing',
+  path: '/platform/billing',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppParcelsReceiveRoute = AppParcelsReceiveRouteImport.update({
+  id: '/parcels/receive',
+  path: '/parcels/receive',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppParcelsHandoutRoute = AppParcelsHandoutRouteImport.update({
+  id: '/parcels/handout',
+  path: '/parcels/handout',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/carriers': typeof AppCarriersRoute
+  '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
+  '/handling-classes': typeof AppHandlingClassesRoute
   '/locations': typeof AppLocationsRoute
-  '/parcels': typeof AppParcelsRoute
+  '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
+  '/stats': typeof AppStatsRoute
+  '/parcels/handout': typeof AppParcelsHandoutRoute
+  '/parcels/receive': typeof AppParcelsReceiveRoute
+  '/platform/billing': typeof AppPlatformBillingRoute
+  '/platform/branding': typeof AppPlatformBrandingRoute
+  '/platform/customers': typeof AppPlatformCustomersRoute
+  '/platform/entitlements': typeof AppPlatformEntitlementsRoute
+  '/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
+  '/system/company': typeof AppSystemCompanyRoute
+  '/system/email-templates': typeof AppSystemEmailTemplatesRoute
+  '/system/label-templates': typeof AppSystemLabelTemplatesRoute
+  '/system/users': typeof AppSystemUsersRoute
+  '/parcels/': typeof AppParcelsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/carriers': typeof AppCarriersRoute
+  '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
+  '/handling-classes': typeof AppHandlingClassesRoute
   '/locations': typeof AppLocationsRoute
-  '/parcels': typeof AppParcelsRoute
+  '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
+  '/stats': typeof AppStatsRoute
   '/': typeof AppIndexRoute
+  '/parcels/handout': typeof AppParcelsHandoutRoute
+  '/parcels/receive': typeof AppParcelsReceiveRoute
+  '/platform/billing': typeof AppPlatformBillingRoute
+  '/platform/branding': typeof AppPlatformBrandingRoute
+  '/platform/customers': typeof AppPlatformCustomersRoute
+  '/platform/entitlements': typeof AppPlatformEntitlementsRoute
+  '/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
+  '/system/company': typeof AppSystemCompanyRoute
+  '/system/email-templates': typeof AppSystemEmailTemplatesRoute
+  '/system/label-templates': typeof AppSystemLabelTemplatesRoute
+  '/system/users': typeof AppSystemUsersRoute
+  '/parcels': typeof AppParcelsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/carriers': typeof AppCarriersRoute
+  '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
+  '/_app/handling-classes': typeof AppHandlingClassesRoute
   '/_app/locations': typeof AppLocationsRoute
-  '/_app/parcels': typeof AppParcelsRoute
+  '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/stats': typeof AppStatsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/parcels/handout': typeof AppParcelsHandoutRoute
+  '/_app/parcels/receive': typeof AppParcelsReceiveRoute
+  '/_app/platform/billing': typeof AppPlatformBillingRoute
+  '/_app/platform/branding': typeof AppPlatformBrandingRoute
+  '/_app/platform/customers': typeof AppPlatformCustomersRoute
+  '/_app/platform/entitlements': typeof AppPlatformEntitlementsRoute
+  '/_app/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/_app/products/$productKey': typeof AppProductsProductKeyRoute
+  '/_app/system/company': typeof AppSystemCompanyRoute
+  '/_app/system/email-templates': typeof AppSystemEmailTemplatesRoute
+  '/_app/system/label-templates': typeof AppSystemLabelTemplatesRoute
+  '/_app/system/users': typeof AppSystemUsersRoute
+  '/_app/parcels/': typeof AppParcelsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/carriers'
+    | '/departments'
     | '/employees'
+    | '/handling-classes'
     | '/locations'
-    | '/parcels'
+    | '/reports'
     | '/settings'
+    | '/stats'
+    | '/parcels/handout'
+    | '/parcels/receive'
+    | '/platform/billing'
+    | '/platform/branding'
+    | '/platform/customers'
+    | '/platform/entitlements'
+    | '/platform/integrations'
     | '/products/$productKey'
+    | '/system/company'
+    | '/system/email-templates'
+    | '/system/label-templates'
+    | '/system/users'
+    | '/parcels/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/carriers'
+    | '/departments'
     | '/employees'
+    | '/handling-classes'
     | '/locations'
-    | '/parcels'
+    | '/reports'
     | '/settings'
+    | '/stats'
     | '/'
+    | '/parcels/handout'
+    | '/parcels/receive'
+    | '/platform/billing'
+    | '/platform/branding'
+    | '/platform/customers'
+    | '/platform/entitlements'
+    | '/platform/integrations'
     | '/products/$productKey'
+    | '/system/company'
+    | '/system/email-templates'
+    | '/system/label-templates'
+    | '/system/users'
+    | '/parcels'
   id:
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/carriers'
+    | '/_app/departments'
     | '/_app/employees'
+    | '/_app/handling-classes'
     | '/_app/locations'
-    | '/_app/parcels'
+    | '/_app/reports'
     | '/_app/settings'
+    | '/_app/stats'
     | '/_app/'
+    | '/_app/parcels/handout'
+    | '/_app/parcels/receive'
+    | '/_app/platform/billing'
+    | '/_app/platform/branding'
+    | '/_app/platform/customers'
+    | '/_app/platform/entitlements'
+    | '/_app/platform/integrations'
     | '/_app/products/$productKey'
+    | '/_app/system/company'
+    | '/_app/system/email-templates'
+    | '/_app/system/label-templates'
+    | '/_app/system/users'
+    | '/_app/parcels/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -146,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/stats': {
+      id: '/_app/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof AppStatsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -153,11 +352,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/parcels': {
-      id: '/_app/parcels'
-      path: '/parcels'
-      fullPath: '/parcels'
-      preLoaderRoute: typeof AppParcelsRouteImport
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/locations': {
@@ -167,11 +366,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLocationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/handling-classes': {
+      id: '/_app/handling-classes'
+      path: '/handling-classes'
+      fullPath: '/handling-classes'
+      preLoaderRoute: typeof AppHandlingClassesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/employees': {
       id: '/_app/employees'
       path: '/employees'
       fullPath: '/employees'
       preLoaderRoute: typeof AppEmployeesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/departments': {
+      id: '/_app/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof AppDepartmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/carriers': {
+      id: '/_app/carriers'
+      path: '/carriers'
+      fullPath: '/carriers'
+      preLoaderRoute: typeof AppCarriersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/parcels/': {
+      id: '/_app/parcels/'
+      path: '/parcels'
+      fullPath: '/parcels/'
+      preLoaderRoute: typeof AppParcelsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/system/users': {
+      id: '/_app/system/users'
+      path: '/system/users'
+      fullPath: '/system/users'
+      preLoaderRoute: typeof AppSystemUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/system/label-templates': {
+      id: '/_app/system/label-templates'
+      path: '/system/label-templates'
+      fullPath: '/system/label-templates'
+      preLoaderRoute: typeof AppSystemLabelTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/system/email-templates': {
+      id: '/_app/system/email-templates'
+      path: '/system/email-templates'
+      fullPath: '/system/email-templates'
+      preLoaderRoute: typeof AppSystemEmailTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/system/company': {
+      id: '/_app/system/company'
+      path: '/system/company'
+      fullPath: '/system/company'
+      preLoaderRoute: typeof AppSystemCompanyRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/products/$productKey': {
@@ -181,25 +436,106 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsProductKeyRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/platform/integrations': {
+      id: '/_app/platform/integrations'
+      path: '/platform/integrations'
+      fullPath: '/platform/integrations'
+      preLoaderRoute: typeof AppPlatformIntegrationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/platform/entitlements': {
+      id: '/_app/platform/entitlements'
+      path: '/platform/entitlements'
+      fullPath: '/platform/entitlements'
+      preLoaderRoute: typeof AppPlatformEntitlementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/platform/customers': {
+      id: '/_app/platform/customers'
+      path: '/platform/customers'
+      fullPath: '/platform/customers'
+      preLoaderRoute: typeof AppPlatformCustomersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/platform/branding': {
+      id: '/_app/platform/branding'
+      path: '/platform/branding'
+      fullPath: '/platform/branding'
+      preLoaderRoute: typeof AppPlatformBrandingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/platform/billing': {
+      id: '/_app/platform/billing'
+      path: '/platform/billing'
+      fullPath: '/platform/billing'
+      preLoaderRoute: typeof AppPlatformBillingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/parcels/receive': {
+      id: '/_app/parcels/receive'
+      path: '/parcels/receive'
+      fullPath: '/parcels/receive'
+      preLoaderRoute: typeof AppParcelsReceiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/parcels/handout': {
+      id: '/_app/parcels/handout'
+      path: '/parcels/handout'
+      fullPath: '/parcels/handout'
+      preLoaderRoute: typeof AppParcelsHandoutRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCarriersRoute: typeof AppCarriersRoute
+  AppDepartmentsRoute: typeof AppDepartmentsRoute
   AppEmployeesRoute: typeof AppEmployeesRoute
+  AppHandlingClassesRoute: typeof AppHandlingClassesRoute
   AppLocationsRoute: typeof AppLocationsRoute
-  AppParcelsRoute: typeof AppParcelsRoute
+  AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppStatsRoute: typeof AppStatsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppParcelsHandoutRoute: typeof AppParcelsHandoutRoute
+  AppParcelsReceiveRoute: typeof AppParcelsReceiveRoute
+  AppPlatformBillingRoute: typeof AppPlatformBillingRoute
+  AppPlatformBrandingRoute: typeof AppPlatformBrandingRoute
+  AppPlatformCustomersRoute: typeof AppPlatformCustomersRoute
+  AppPlatformEntitlementsRoute: typeof AppPlatformEntitlementsRoute
+  AppPlatformIntegrationsRoute: typeof AppPlatformIntegrationsRoute
   AppProductsProductKeyRoute: typeof AppProductsProductKeyRoute
+  AppSystemCompanyRoute: typeof AppSystemCompanyRoute
+  AppSystemEmailTemplatesRoute: typeof AppSystemEmailTemplatesRoute
+  AppSystemLabelTemplatesRoute: typeof AppSystemLabelTemplatesRoute
+  AppSystemUsersRoute: typeof AppSystemUsersRoute
+  AppParcelsIndexRoute: typeof AppParcelsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCarriersRoute: AppCarriersRoute,
+  AppDepartmentsRoute: AppDepartmentsRoute,
   AppEmployeesRoute: AppEmployeesRoute,
+  AppHandlingClassesRoute: AppHandlingClassesRoute,
   AppLocationsRoute: AppLocationsRoute,
-  AppParcelsRoute: AppParcelsRoute,
+  AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppStatsRoute: AppStatsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppParcelsHandoutRoute: AppParcelsHandoutRoute,
+  AppParcelsReceiveRoute: AppParcelsReceiveRoute,
+  AppPlatformBillingRoute: AppPlatformBillingRoute,
+  AppPlatformBrandingRoute: AppPlatformBrandingRoute,
+  AppPlatformCustomersRoute: AppPlatformCustomersRoute,
+  AppPlatformEntitlementsRoute: AppPlatformEntitlementsRoute,
+  AppPlatformIntegrationsRoute: AppPlatformIntegrationsRoute,
   AppProductsProductKeyRoute: AppProductsProductKeyRoute,
+  AppSystemCompanyRoute: AppSystemCompanyRoute,
+  AppSystemEmailTemplatesRoute: AppSystemEmailTemplatesRoute,
+  AppSystemLabelTemplatesRoute: AppSystemLabelTemplatesRoute,
+  AppSystemUsersRoute: AppSystemUsersRoute,
+  AppParcelsIndexRoute: AppParcelsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

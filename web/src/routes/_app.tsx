@@ -26,7 +26,7 @@ function AppLayout() {
 
   return (
     <>
-      <PreferencesSync />
+      <PreferencesSync session={session} />
       <AppShell>
         <Outlet />
       </AppShell>

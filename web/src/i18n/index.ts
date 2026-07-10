@@ -5,6 +5,10 @@ import da from './locales/da.json'
 import en from './locales/en.json'
 
 // Dansk først, engelsk som fallback (spec §multi-language).
+// Fælles kilde til understøttede sprog — bruges også af PreferencesSync,
+// så et nyt sprog kun skal tilføjes ét sted.
+export const SUPPORTED_LANGUAGES = ['da', 'en'] as const
+
 // Per-tenant tekst-overrides (app_labels) skal lægges som et lag OVENPÅ disse
 // bundter — fx via i18next `postProcessor` eller et ekstra namespace pr. tenant —
 // aldrig ved at redigere sprogfilerne.
@@ -17,7 +21,7 @@ i18n
       en: { translation: en },
     },
     fallbackLng: 'da',
-    supportedLngs: ['da', 'en'],
+    supportedLngs: SUPPORTED_LANGUAGES,
     interpolation: { escapeValue: false },
   })
 
