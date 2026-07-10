@@ -29,7 +29,7 @@
     "signInError": "Login mislykkedes. Kontrollér e-mail og adgangskode."
   },
   "theme": {
-    "system": "Følg systemet",
+    "system": "System",
     "light": "Lys",
     "dark": "Mørk"
   },

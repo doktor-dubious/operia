@@ -127,13 +127,13 @@ export function UserNavDropdownContent({
         value={theme}
         onValueChange={(v) => setTheme(v as 'system' | 'light' | 'dark')}
       >
-        <DropdownMenuRadioItem className="cursor-pointer" value="system">
+        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="system">
           {t('theme.system')}
         </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer" value="dark">
+        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="dark">
           {t('theme.dark')}
         </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer" value="light">
+        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="light">
           {t('theme.light')}
         </DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>

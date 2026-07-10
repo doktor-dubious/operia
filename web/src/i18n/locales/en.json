@@ -29,7 +29,7 @@
     "signInError": "Sign-in failed. Check your email and password."
   },
   "theme": {
-    "system": "Follow system",
+    "system": "System",
     "light": "Light",
     "dark": "Dark"
   },
