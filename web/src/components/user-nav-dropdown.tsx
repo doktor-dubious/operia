@@ -65,14 +65,14 @@ export function UserNavDropdownContent({
 
   return (
     <DropdownMenuContent side={side} align={align} className="my-1 w-64 font-normal">
-      <DropdownMenuLabel className="truncate font-normal">
+      <DropdownMenuLabel className="truncate text-[13px] font-[450] text-foreground">
         {session?.user.email ?? t('app.name')}
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       {includeNav && (
         <>
           <AnimateIcon animateOnHover asChild>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => go('/')}>
+            <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light" onClick={() => go('/')}>
               {t('nav.dashboard')}
               <DropdownMenuShortcut>
                 <LayoutDashboard size={16} />
@@ -86,7 +86,7 @@ export function UserNavDropdownContent({
             .map((item) => (
               <DropdownMenuItem
                 key={item.href}
-                className="cursor-pointer"
+                className="cursor-pointer text-xs font-[450] text-foreground-light"
                 onClick={() => go(item.href)}
               >
                 {t(`nav.${item.labelKey}`)}
@@ -97,7 +97,7 @@ export function UserNavDropdownContent({
           {productNav.map((item) => (
             <DropdownMenuItem
               key={item.href}
-              className="cursor-pointer"
+              className="cursor-pointer text-xs font-[450] text-foreground-light"
               onClick={() => go(item.href)}
             >
               {t(`nav.${item.labelKey}`)}
@@ -107,14 +107,14 @@ export function UserNavDropdownContent({
         </>
       )}
       <AnimateIcon animateOnHover asChild>
-        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => go('/settings')}>
+        <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light gap-2" onClick={() => go('/settings')}>
           <User size={14} className="text-muted-foreground" />
           {t('menu.account')}
         </DropdownMenuItem>
       </AnimateIcon>
       <AnimateIcon animateOnHover asChild>
         <DropdownMenuItem
-          className="cursor-pointer gap-2"
+          className="cursor-pointer text-xs font-[450] text-foreground-light gap-2"
           onClick={() => toast.info(t('common.comingSoon'))}
         >
           <Sparkles size={14} className="text-muted-foreground" />
@@ -127,19 +127,19 @@ export function UserNavDropdownContent({
         value={theme}
         onValueChange={(v) => setTheme(v as 'system' | 'light' | 'dark')}
       >
-        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="system">
+        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="system">
           {t('theme.system')}
         </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="dark">
+        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="dark">
           {t('theme.dark')}
         </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer pl-4" value="light">
+        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="light">
           {t('theme.light')}
         </DropdownMenuRadioItem>
       </DropdownMenuRadioGroup>
       <DropdownMenuSeparator />
       <AnimateIcon animateOnHover asChild>
-        <DropdownMenuItem className="cursor-pointer" onClick={signOut}>
+        <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light" onClick={signOut}>
           {t('auth.signOut')}
           <DropdownMenuShortcut>
             <LogOut size={16} />
