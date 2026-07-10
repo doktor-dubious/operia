@@ -1,6 +1,7 @@
 import { Navigate, Outlet, createFileRoute } from '@tanstack/react-router'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AppShell } from '@/components/app-shell'
+import { PreferencesSync } from '@/components/preferences-sync'
 import { useSession } from '@/hooks/use-session'
 
 // Pathless layout-route: alt under _app kræver login og får app-skallen.
@@ -24,8 +25,11 @@ function AppLayout() {
   }
 
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <>
+      <PreferencesSync />
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </>
   )
 }

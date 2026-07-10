@@ -2,8 +2,8 @@ import { createContext, useContext, useState } from 'react'
 
 // Navigationstilstand: 'classic' = klassisk sidemenu med al funktionalitet
 // synlig; 'modern' = navigation samlet i dropdown-menu nederst til venstre
-// (som compliance-circle/gorm.ai). Brugervalg — gemmes lokalt indtil en
-// per-bruger-indstilling lander i databasen.
+// (som compliance-circle/gorm.ai). localStorage er lokal cache til hurtig
+// første-maling; kontoens gemte valg anvendes ved login (PreferencesSync).
 
 export type NavMode = 'classic' | 'modern'
 
