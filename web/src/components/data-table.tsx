@@ -99,6 +99,7 @@ export function DataTable<Row extends { id: string }>({
   selectionActions,
   onRowClick,
   activeRowId,
+  toolbar,
 }: {
   rows: Row[]
   columns: ColumnDef<Row>[]
@@ -110,6 +111,7 @@ export function DataTable<Row extends { id: string }>({
   selectionActions?: (ctx: { ids: string[]; clear: () => void }) => React.ReactNode
   onRowClick?: (row: Row) => void
   activeRowId?: string | null
+  toolbar?: React.ReactNode
 }) {
   const { t } = useTranslation()
   const [initial] = useState(() => loadTableState(storageKey))
@@ -228,7 +230,8 @@ export function DataTable<Row extends { id: string }>({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <div>{toolbar}</div>
         <div className="relative w-64">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input

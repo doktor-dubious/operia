@@ -142,7 +142,8 @@
     "yes": "Yes",
     "no": "No",
     "error": "Something went wrong",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "new": "New"
   },
   "departments": {
     "name": "Name",
@@ -253,7 +254,9 @@
     "deleteTitle": "Delete \"{{name}}\"",
     "deleteWarning": "This action cannot be undone.",
     "deleteAcknowledge": "I understand that the location is deleted permanently.",
-    "deletedToast": "Location \"{{name}}\" deleted"
+    "deletedToast": "Location \"{{name}}\" deleted",
+    "newTitle": "New location",
+    "createdToast": "Location \"{{name}}\" created"
   },
   "unsaved": {
     "title": "Unsaved changes",

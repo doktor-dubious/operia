@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -14,12 +15,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { CopyButton } from '@/components/copy-button'
 import { Field } from '@/components/detail-field'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
+import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/locations')({
@@ -252,12 +255,110 @@ function LocationDetailPane({
   )
 }
 
+function NewLocationDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCreated: () => void
+}) {
+  const { t } = useTranslation()
+  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const [name, setName] = useState('')
+  const [barcode, setBarcode] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const create = async () => {
+    if (!companyId || !name.trim()) return
+    setBusy(true)
+    const { error } = await supabase.from('storage_locations').insert({
+      company_id: companyId,
+      name: name.trim(),
+      barcode: barcode.trim() || null,
+    })
+    setBusy(false)
+    if (error) {
+      console.error('Kunne ikke oprette placering:', error)
+      toast.error(t('common.error'))
+      return
+    }
+    toast.success(t('locationDetail.createdToast', { name: name.trim() }))
+    onCreated()
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          setName('')
+          setBarcode('')
+        }
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('locationDetail.newTitle')}</DialogTitle>
+        </DialogHeader>
+        {companies.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label className="text-label">{t('receive.company')}</Label>
+            <select
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              value={companyId ?? ''}
+              onChange={(e) => setCompanyId(e.target.value)}
+            >
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="new-loc-name" className="text-label">{t('locations.name')}</Label>
+          <Input
+            id="new-loc-name"
+            value={name}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="new-loc-barcode" className="text-label">{t('locations.barcode')}</Label>
+          <Input
+            id="new-loc-barcode"
+            value={barcode}
+            className="font-mono"
+            placeholder={t('locationDetail.barcodePlaceholder')}
+            onChange={(e) => setBarcode(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
+            {busy ? t('common.loading') : t('common.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function LocationsPage() {
   const { t } = useTranslation()
   const { data, isPending } = useRows()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [paneDirty, setPaneDirty] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
 
   // Skift/luk med ugemte ændringer kræver bekræftelse
@@ -303,6 +404,11 @@ function LocationsPage() {
         entityLabel={t('nav.locations').toLowerCase()}
         searchText={(row) => [row.name, row.barcode].filter(Boolean).join(' ')}
         storageKey="storage-locations"
+        toolbar={
+          <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+            <Plus className="size-4" /> {t('common.new')}
+          </Button>
+        }
         onDelete={deleteRows}
         onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}
         activeRowId={activeId}
@@ -315,6 +421,11 @@ function LocationsPage() {
           onDirtyChange={setPaneDirty}
         />
       )}
+      <NewLocationDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        onCreated={() => queryClient.invalidateQueries({ queryKey: ['storage-locations'] })}
+      />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

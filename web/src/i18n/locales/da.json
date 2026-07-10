@@ -142,7 +142,8 @@
     "yes": "Ja",
     "no": "Nej",
     "error": "Noget gik galt",
-    "saveChanges": "Gem ændringer"
+    "saveChanges": "Gem ændringer",
+    "new": "Ny"
   },
   "departments": {
     "name": "Navn",
@@ -253,7 +254,9 @@
     "deleteTitle": "Slet \"{{name}}\"",
     "deleteWarning": "Handlingen kan ikke fortrydes.",
     "deleteAcknowledge": "Jeg forstår, at placeringen slettes permanent.",
-    "deletedToast": "Placeringen \"{{name}}\" er slettet"
+    "deletedToast": "Placeringen \"{{name}}\" er slettet",
+    "newTitle": "Ny placering",
+    "createdToast": "Placeringen \"{{name}}\" er oprettet"
   },
   "unsaved": {
     "title": "Ugemte ændringer",
