@@ -5,12 +5,18 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import { ThemeProvider } from '@/components/theme-provider'
 import { UiSettingsProvider } from '@/components/ui-settings-provider'
+import { NotFoundPage, RouteErrorPage } from '@/components/error-page'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import './i18n'
 import './index.css'
 
 const queryClient = new QueryClient()
 
-const router = createRouter({ routeTree })
+const router = createRouter({
+  routeTree,
+  defaultErrorComponent: RouteErrorPage,
+  defaultNotFoundComponent: NotFoundPage,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -22,9 +28,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
       <UiSettingsProvider>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
+        <TooltipProvider>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </TooltipProvider>
       </UiSettingsProvider>
     </ThemeProvider>
   </StrictMode>,

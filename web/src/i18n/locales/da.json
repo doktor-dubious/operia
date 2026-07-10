@@ -84,6 +84,14 @@
     "comingSoon": "Dette produkt er på vej.",
     "notEnabled": "Produktet er ikke aktiveret for jeres virksomhed."
   },
+  "errors": {
+    "title": "Noget gik galt",
+    "description": "Der opstod en uventet fejl. Prøv igen — hjælper det ikke, så kontakt support.",
+    "retry": "Prøv igen",
+    "home": "Til forsiden",
+    "notFoundTitle": "Siden findes ikke",
+    "notFoundDescription": "Adressen findes ikke eller er flyttet."
+  },
   "common": {
     "loading": "Indlæser…",
     "save": "Gem",

@@ -84,6 +84,14 @@
     "comingSoon": "This product is on the way.",
     "notEnabled": "This product is not enabled for your company."
   },
+  "errors": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Try again — if it persists, contact support.",
+    "retry": "Try again",
+    "home": "Go to start page",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The address does not exist or has moved."
+  },
   "common": {
     "loading": "Loading…",
     "save": "Save",
