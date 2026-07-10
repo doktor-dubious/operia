@@ -30,7 +30,7 @@ export function DetailTabs({
   }, [active, tabs])
 
   return (
-    <div className="-mx-6 border-t border-border">
+    <div className="border-t border-border">
       <div className="relative flex items-center border-b border-border">
         {tabs.map((tab) => (
           <button
@@ -67,7 +67,7 @@ export function DetailTabs({
         />
       </div>
       {/* key-remount + fade-in giver den lille overgangsforsinkelse ved faneskift */}
-      <div key={active} className="animate-in fade-in px-6 py-6 duration-300">
+      <div key={active} className="animate-in fade-in py-6 duration-300">
         {children}
       </div>
     </div>
