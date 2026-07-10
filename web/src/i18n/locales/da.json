@@ -272,6 +272,12 @@
     "language": "Sprog",
     "active": "Aktiv",
     "deactivateDescription": "Inaktive medarbejdere kan ikke vælges som modtagere; historikken bevares.",
-    "anonymizeDescription": "Blanker persondata permanent (GDPR). Rækken og pakkehistorikken bevares."
+    "anonymizeDescription": "Blanker persondata permanent (GDPR). Rækken og pakkehistorikken bevares.",
+    "delete": "Slet medarbejder",
+    "deleteDescription": "Fjerner medarbejderen permanent. Kun til oprydning i testdata — brug normalt Deaktivér eller Anonymisér.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at medarbejderen slettes permanent.",
+    "deletedToast": "Medarbejderen \"{{name}}\" er slettet"
   }
 }

@@ -155,11 +155,13 @@ function EmployeeDetailPane({
   onClose,
   onDeactivate,
   onAnonymize,
+  onDelete,
 }: {
   row: Row
   onClose: () => void
   onDeactivate: () => void
   onAnonymize: () => void
+  onDelete?: () => void // kun platform-admins (testdata-oprydning)
 }) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('details')
@@ -238,6 +240,21 @@ function EmployeeDetailPane({
               {t('employeesActions.anonymize')}
             </Button>
           </div>
+          {onDelete && (
+            <div className="flex items-center justify-between rounded-md border border-destructive/40 p-4">
+              <div>
+                <p className="text-[13px] font-[450] text-destructive">
+                  {t('employeeDetail.delete')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('employeeDetail.deleteDescription')}
+                </p>
+              </div>
+              <Button size="sm" variant="destructive" onClick={onDelete}>
+                {t('employeeDetail.delete')}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </DetailTabs>
@@ -253,6 +270,8 @@ function EmployeesPage() {
   const [anonymizeOpen, setAnonymizeOpen] = useState(false)
   const [clearSelection, setClearSelection] = useState<(() => void) | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteAck, setDeleteAck] = useState(false)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['employees'] })
 
@@ -342,7 +361,58 @@ function EmployeesPage() {
             setClearSelection(null)
             setAnonymizeOpen(true)
           }}
+          onDelete={access?.isPlatformAdmin ? () => setDeleteOpen(true) : undefined}
         />
+      )}
+      {activeRow && (
+        <Dialog
+          open={deleteOpen}
+          onOpenChange={(next) => {
+            if (!next) setDeleteAck(false)
+            setDeleteOpen(next)
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive">
+                {t('employeeDetail.deleteTitle', { name: activeRow.full_name })}
+              </DialogTitle>
+              <DialogDescription>{t('employeeDetail.deleteWarning')}</DialogDescription>
+            </DialogHeader>
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-destructive/40 p-3 text-sm">
+              <Checkbox
+                checked={deleteAck}
+                onCheckedChange={(checked) => setDeleteAck(checked === true)}
+                className="mt-0.5"
+              />
+              <span>{t('employeeDetail.deleteAcknowledge')}</span>
+            </label>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={!deleteAck}
+                onClick={async () => {
+                  try {
+                    await deleteRows([activeRow.id])
+                    toast.success(
+                      t('employeeDetail.deletedToast', { name: activeRow.full_name }),
+                    )
+                    setDeleteOpen(false)
+                    setActiveId(null)
+                  } catch (error) {
+                    console.error('Sletning fejlede:', error)
+                    toast.error(t('common.error'))
+                  }
+                }}
+              >
+                {t('employeeDetail.delete')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
       <AnonymizeDialog
         ids={anonymizeIds}

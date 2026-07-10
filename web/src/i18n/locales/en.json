@@ -272,6 +272,12 @@
     "language": "Language",
     "active": "Active",
     "deactivateDescription": "Inactive employees cannot be picked as receivers; history is kept.",
-    "anonymizeDescription": "Blanks personal data permanently (GDPR). The row and parcel history are kept."
+    "anonymizeDescription": "Blanks personal data permanently (GDPR). The row and parcel history are kept.",
+    "delete": "Delete employee",
+    "deleteDescription": "Removes the employee permanently. Test-data cleanup only — normally use Deactivate or Anonymize.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the employee is deleted permanently.",
+    "deletedToast": "Employee \"{{name}}\" deleted"
   }
 }
