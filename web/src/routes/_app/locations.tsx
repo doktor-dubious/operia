@@ -48,7 +48,7 @@ function useRows() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex max-w-xl flex-col gap-2">
+    <div className="flex max-w-2xl flex-col gap-2">
       <Label>{label}</Label>
       {children}
     </div>
@@ -179,7 +179,7 @@ function LocationDetailPane({
           </div>
         )}
         {tab === 'actions' && (
-          <div className="flex max-w-xl flex-col gap-4">
+          <div className="flex max-w-2xl flex-col gap-4">
             <div className="flex items-center justify-between rounded-md border p-4">
               <div>
                 <p className="text-[13px] font-[450]">
@@ -213,7 +213,7 @@ function LocationDetailPane({
       </DetailTabs>
 
       {dirty && (
-        <div className="sticky bottom-4 z-10 mt-auto flex justify-end gap-3 rounded-lg border border-border bg-panel px-4 py-3 shadow-lg">
+        <div className="sticky bottom-0 z-10 -mx-6 mt-auto flex justify-end gap-3 border-t border-border px-6 py-3">
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
