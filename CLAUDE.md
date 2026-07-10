@@ -39,18 +39,25 @@ notification templates, reminders.
 - **Android**: Kotlin + Jetpack Compose + supabase-kt (deliberately not React Native).
   Opens in Android Studio; no Java/Gradle on this dev machine.
 
-## Design direction (agreed 2026-07-10)
+## Design direction (agreed 2026-07-10, revised same day)
 
-- **Color scheme and dropdown-menu style come from
-  `/home/rune/workspace/projects/compliance-circle`** (with
-  `/home/rune/workspace/projects/gorm.ai` as secondary layout reference). Do not invent a new
-  palette; port compliance-circle's tokens.
+- **Colors, typography and (classic) sidemenu metrics come from Supabase Studio's theme**
+  (hue 159 OKLCH engine, resolved to static tokens in `web/src/index.css`; dark background
+  `#131413`, highlighted text `oklch(.95 .00275 159)`, non-highlighted `oklch(.684 .00275 159)`).
+  Font: **Inter**, 13px base, weight 500 on menu items/buttons. Radius scale 4/6/8px.
+  Sidebar: 240px, compact muted items that highlight on hover, uppercase section labels.
+  Header: page title left; top-right area with small borderless ghost icon buttons
+  (Feedback, Search so far) + user menu. Toasts: **shadcn Sonner**, top-right.
+- **From `/home/rune/workspace/projects/compliance-circle`** (secondary ref
+  `/home/rune/workspace/projects/gorm.ai`): the bottom-left dropdown pattern (**few icons,
+  icons on the RIGHT via DropdownMenuShortcut**, animate-ui icons with `animateOnHover`),
+  the default button (colors + hover effect radius 3px→8px, styled via
+  `button[data-variant="default"]` in index.css), and the status palette for parcel badges.
 - **Two navigation modes, user-configurable** (`classic` | `modern`):
-  - *Classic*: traditional always-visible sidebar with all functionality (like the old prototype).
-  - *Modern*: navigation collapsed into a dropdown menu opened from the **bottom-left** (like
-    compliance-circle/gorm.ai). Dropdown style: **few icons, icons on the RIGHT side of items**.
-- **Theme**: defaults to **system**, with user override to light/dark (the reference apps default
-  to dark — Operia must not).
+  - *Classic*: always-visible sidebar with all functionality, Supabase Studio styling.
+  - *Modern*: navigation collapsed into the bottom-left dropdown.
+- **Theme**: defaults to **system**, user override to light/dark. Both themes fully defined.
+- **User dropdown**: must NOT contain "Feature preview" or "Timezone" items (explicitly excluded).
 - **UI language is Danish first**, English fallback. Per-tenant text overrides (`app_labels`
   concept) layer **on top of** i18n resources at lookup time — never edited into locale files.
 

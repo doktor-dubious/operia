@@ -18,7 +18,8 @@
     "groupCore": "Parcels",
     "groupProducts": "Other products",
     "theme": "Theme",
-    "language": "Language"
+    "language": "Language",
+    "feedback": "Feedback"
   },
   "auth": {
     "email": "Email",

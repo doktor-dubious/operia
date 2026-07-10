@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ChevronUp } from 'lucide-react'
+import { ChevronUp, MessageCircle, Search } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -55,6 +55,13 @@ function UserTrigger({ name }: { name: string }) {
   )
 }
 
+// Sidemenu-styling efter Supabase Studio: 240px bred, kompakte punkter
+// (13px, vægt 500), dæmpet tekst der bliver fremhævet på hover/aktiv med
+// diskret baggrunds-highlight, uppercase sektionsoverskrifter.
+const menuItemClass =
+  'h-7 gap-2 rounded-md px-3 text-[13px] font-medium text-muted-foreground ' +
+  'hover:text-foreground data-[active=true]:text-foreground [&_svg]:size-4'
+
 function ClassicSidebar() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -67,10 +74,10 @@ function ClassicSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="select-none">
-      <SidebarHeader className="rounded-none">
+      <SidebarHeader>
         <div className="flex h-10 items-center gap-2 px-2">
           <BrandIcon className="h-5 w-5 shrink-0 text-primary" />
-          <span className="text-sm font-semibold group-data-[collapsible=icon]:hidden">
+          <span className="text-[13px] font-semibold group-data-[collapsible=icon]:hidden">
             {t('app.name')}
           </span>
         </div>
@@ -78,16 +85,18 @@ function ClassicSidebar() {
       <SidebarContent>
         {groups.map((group) => (
           <SidebarGroup key={group.labelKey}>
-            <SidebarGroupLabel>{t(`nav.${group.labelKey}`)}</SidebarGroupLabel>
+            <SidebarGroupLabel className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              {t(`nav.${group.labelKey}`)}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
                       isActive={pathname === item.href}
                       tooltip={t(`nav.${item.labelKey}`)}
-                      className="rounded-none"
+                      className={menuItemClass}
                     >
                       <Link to={item.href}>
                         <item.icon />
@@ -102,13 +111,13 @@ function ClassicSidebar() {
         ))}
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === settingsNav.href}
                   tooltip={t('nav.settings')}
-                  className="rounded-none"
+                  className={menuItemClass}
                 >
                   <Link to={settingsNav.href}>
                     <settingsNav.icon />
@@ -157,6 +166,52 @@ function ModernRail() {
   )
 }
 
+// Top/højre-området som i Supabase Studio: små ghost-ikonknapper uden kant
+// (foreløbig Feedback og Søg — flere kan komme til) + brugermenuen.
+function HeaderActions() {
+  const { t } = useTranslation()
+  const initial = useUserInitial()
+  return (
+    <div className="ml-auto flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        aria-label={t('nav.feedback')}
+        title={t('nav.feedback')}
+      >
+        <MessageCircle className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+        aria-label={t('common.search')}
+        title={t('common.search')}
+      >
+        <Search className="size-4" />
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 cursor-pointer"
+            aria-label="Menu"
+          >
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="bg-muted-foreground/20 text-[10px]">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <UserNavDropdownContent includeNav={false} side="bottom" align="end" />
+      </DropdownMenu>
+    </div>
+  )
+}
+
 function PageHeader() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -165,9 +220,10 @@ function PageHeader() {
     allNav.find((item) => item.href !== '/' && pathname.startsWith(item.href))
   return (
     <header className="flex h-10 shrink-0 items-center border-b border-border px-6">
-      <h1 className="text-base font-semibold">
+      <h1 className="text-[13px] font-semibold">
         {active ? t(`nav.${active.labelKey}`) : t('app.name')}
       </h1>
+      <HeaderActions />
     </header>
   )
 }
@@ -188,7 +244,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider style={{ '--sidebar-width': '240px' } as React.CSSProperties}>
       <ClassicSidebar />
       <SidebarInset>
         <PageHeader />

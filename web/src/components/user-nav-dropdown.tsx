@@ -51,7 +51,15 @@ function ThemeRow() {
   )
 }
 
-export function UserNavDropdownContent({ includeNav }: { includeNav: boolean }) {
+export function UserNavDropdownContent({
+  includeNav,
+  side = 'top',
+  align = 'start',
+}: {
+  includeNav: boolean
+  side?: 'top' | 'bottom'
+  align?: 'start' | 'end'
+}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
@@ -63,7 +71,7 @@ export function UserNavDropdownContent({ includeNav }: { includeNav: boolean }) 
   }
 
   return (
-    <DropdownMenuContent side="top" align="start" className="mb-1 w-56 font-normal">
+    <DropdownMenuContent side={side} align={align} className="my-1 w-56 font-normal">
       {includeNav && (
         <>
           <AnimateIcon animateOnHover asChild>

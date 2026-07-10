@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { UiSettingsProvider } from '@/components/ui-settings-provider'
 import { NotFoundPage, RouteErrorPage } from '@/components/error-page'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 import './i18n'
 import './index.css'
 
@@ -31,6 +32,8 @@ createRoot(document.getElementById('root')!).render(
         <TooltipProvider>
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} />
+            {/* Toasts (Sonner) — top/højre som i Supabase Studio */}
+            <Toaster position="top-right" />
           </QueryClientProvider>
         </TooltipProvider>
       </UiSettingsProvider>

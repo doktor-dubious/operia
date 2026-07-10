@@ -18,7 +18,8 @@
     "groupCore": "Pakker",
     "groupProducts": "Øvrige produkter",
     "theme": "Tema",
-    "language": "Sprog"
+    "language": "Sprog",
+    "feedback": "Feedback"
   },
   "auth": {
     "email": "E-mail",
