@@ -235,5 +235,23 @@
     "anonymizeAcknowledge": "Jeg forstår, at persondata slettes permanent og ikke kan gendannes.",
     "typeToConfirm": "Skriv \"anonymiser\" for at bekræfte",
     "anonymizeWord": "anonymiser"
+  },
+  "locationDetail": {
+    "tabDetails": "Detaljer",
+    "tabData": "Data",
+    "tabActions": "Handlinger",
+    "copyId": "Kopiér ID",
+    "description": "Beskrivelse",
+    "notes": "Noter",
+    "barcodePlaceholder": "fx LOC-A1",
+    "activate": "Aktivér",
+    "deactivate": "Deaktivér",
+    "deactivateDescription": "Inaktive placeringer kan ikke vælges ved modtagelse, men historikken bevares.",
+    "delete": "Slet placering",
+    "deleteDescription": "Fjerner placeringen permanent. Pakker der peger på den mister kun placeringsfeltet.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at placeringen slettes permanent.",
+    "deletedToast": "Placeringen \"{{name}}\" er slettet"
   }
 }

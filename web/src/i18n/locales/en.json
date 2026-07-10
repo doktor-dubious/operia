@@ -235,5 +235,23 @@
     "anonymizeAcknowledge": "I understand that personal data is deleted permanently and cannot be recovered.",
     "typeToConfirm": "Type \"anonymize\" to confirm",
     "anonymizeWord": "anonymize"
+  },
+  "locationDetail": {
+    "tabDetails": "Details",
+    "tabData": "Data",
+    "tabActions": "Actions",
+    "copyId": "Copy ID",
+    "description": "Description",
+    "notes": "Notes",
+    "barcodePlaceholder": "e.g. LOC-A1",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "deactivateDescription": "Inactive locations cannot be picked at intake, but history is kept.",
+    "delete": "Delete location",
+    "deleteDescription": "Removes the location permanently. Parcels pointing to it only lose the location field.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the location is deleted permanently.",
+    "deletedToast": "Location \"{{name}}\" deleted"
   }
 }

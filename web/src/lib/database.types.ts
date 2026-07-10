@@ -587,27 +587,33 @@ export type Database = {
           barcode: string | null
           company_id: string
           created_at: string
+          description: string | null
           id: string
           is_active: boolean
           name: string
+          notes: string | null
           updated_at: string
         }
         Insert: {
           barcode?: string | null
           company_id: string
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
           updated_at?: string
         }
         Update: {
           barcode?: string | null
           company_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
           updated_at?: string
         }
         Relationships: [

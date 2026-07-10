@@ -97,6 +97,8 @@ export function DataTable<Row extends { id: string }>({
   storageKey,
   onDelete,
   selectionActions,
+  onRowClick,
+  activeRowId,
 }: {
   rows: Row[]
   columns: ColumnDef<Row>[]
@@ -106,6 +108,8 @@ export function DataTable<Row extends { id: string }>({
   storageKey: string
   onDelete?: (ids: string[]) => Promise<void>
   selectionActions?: (ctx: { ids: string[]; clear: () => void }) => React.ReactNode
+  onRowClick?: (row: Row) => void
+  activeRowId?: string | null
 }) {
   const { t } = useTranslation()
   const [initial] = useState(() => loadTableState(storageKey))
@@ -322,14 +326,19 @@ export function DataTable<Row extends { id: string }>({
               pageRows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-table-row-hover"
+                  className={cn(
+                    'hover:bg-table-row-hover',
+                    onRowClick && 'cursor-pointer',
+                    activeRowId === row.id && 'bg-accent',
+                  )}
                   data-state={selected.has(row.id) ? 'selected' : undefined}
+                  onClick={() => onRowClick?.(row)}
                   onContextMenu={(e) => {
                     e.preventDefault()
                     toggleStar(row.id)
                   }}
                 >
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selected.has(row.id)}
                       onCheckedChange={() => toggleRow(row.id)}
@@ -341,7 +350,7 @@ export function DataTable<Row extends { id: string }>({
                       {col.render ? col.render(row) : ((row as Record<string, unknown>)[col.key] as React.ReactNode) ?? '—'}
                     </TableCell>
                   ))}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       className="cursor-pointer p-1 align-middle"
