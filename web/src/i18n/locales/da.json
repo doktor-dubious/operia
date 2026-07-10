@@ -40,7 +40,22 @@
     "navModeClassic": "Klassisk (fast sidemenu)",
     "navModeModern": "Moderne (menu nederst til venstre)",
     "themeLabel": "Tema",
-    "languageLabel": "Sprog"
+    "languageLabel": "Sprog",
+    "preferences": "Præferencer",
+    "preferencesSubtitle": "Administrér din kontoprofil",
+    "profileSection": "Profiloplysninger",
+    "firstName": "Fornavn",
+    "lastName": "Efternavn",
+    "username": "Brugernavn",
+    "usernameDescription": "Visningsnavn i hele systemet",
+    "emailDescription": "Bruges til kontonotifikationer",
+    "appearanceSubtitle": "Vælg hvordan Operia ser ud og opfører sig",
+    "themeMode": "Tematilstand",
+    "themeModeDescription": "Vælg hvordan Operia ser ud for dig. Vælg ét tema, eller synkronisér med dit system.",
+    "navModeDescription": "Klassisk fast sidemenu, eller menu i dropdown nederst til venstre.",
+    "languageDescription": "Sprog i brugerfladen.",
+    "saved": "Gemt",
+    "saveError": "Kunne ikke gemme — prøv igen."
   },
   "dashboard": {
     "title": "Overblik",

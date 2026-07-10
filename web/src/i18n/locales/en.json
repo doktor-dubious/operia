@@ -40,7 +40,22 @@
     "navModeClassic": "Classic (fixed sidebar)",
     "navModeModern": "Modern (menu in bottom left)",
     "themeLabel": "Theme",
-    "languageLabel": "Language"
+    "languageLabel": "Language",
+    "preferences": "Preferences",
+    "preferencesSubtitle": "Manage your account profile",
+    "profileSection": "Profile information",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "username": "Username",
+    "usernameDescription": "Display name used across the system",
+    "emailDescription": "Used for account notifications",
+    "appearanceSubtitle": "Choose how Operia looks and behaves",
+    "themeMode": "Theme mode",
+    "themeModeDescription": "Choose how Operia looks to you. Select a single theme, or sync with your system.",
+    "navModeDescription": "Classic fixed sidebar, or a dropdown menu in the bottom left.",
+    "languageDescription": "Interface language.",
+    "saved": "Saved",
+    "saveError": "Could not save — try again."
   },
   "dashboard": {
     "title": "Dashboard",
