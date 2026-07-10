@@ -1,0 +1,26 @@
+# CI: typecheck + build (og lint) af web-appen på hvert push/PR mod main.
+# Fanger typefejl før de lander — vite build kræver ingen hemmeligheder
+# (VITE_*-værdier læses først ved runtime).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
