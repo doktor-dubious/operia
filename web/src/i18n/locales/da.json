@@ -85,6 +85,10 @@
     "comingSoon": "Dette produkt er på vej.",
     "notEnabled": "Produktet er ikke aktiveret for jeres virksomhed."
   },
+  "menu": {
+    "account": "Konto",
+    "changelog": "Changelog"
+  },
   "errors": {
     "title": "Noget gik galt",
     "description": "Der opstod en uventet fejl. Prøv igen — hjælper det ikke, så kontakt support.",
@@ -95,6 +99,7 @@
   },
   "common": {
     "loading": "Indlæser…",
+    "comingSoon": "På vej — ikke bygget endnu.",
     "save": "Gem",
     "cancel": "Annullér",
     "search": "Søg",

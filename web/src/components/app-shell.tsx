@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sidebar'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
+import { useSession } from '@/hooks/use-session'
 import { allNav, brandIcon as BrandIcon, coreNav, productNav, settingsNav } from '@/lib/nav'
 
 // To navigationstilstande (brugervalg under Indstillinger):
@@ -29,9 +30,9 @@ import { allNav, brandIcon as BrandIcon, coreNav, productNav, settingsNav } from
 //             bevidst skarpkantet (rounded-none) som i compliance-circle.
 
 function useUserInitial() {
-  // Indtil app_users-profilen hentes: initial fra e-mailen i sessionens JWT.
-  // Holdes simpel — profilopslag kommer med dashboardets datafase.
-  return 'O'
+  // Initial fra e-mailen i sessionen; profilnavn (app_users) kommer senere.
+  const { session } = useSession()
+  return session?.user.email?.[0]?.toUpperCase() ?? 'O'
 }
 
 function UserTrigger({ name }: { name: string }) {

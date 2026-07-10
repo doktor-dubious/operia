@@ -1,53 +1,44 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard'
 import { LogOut } from '@/components/animate-ui/icons/log-out'
-import { Moon } from '@/components/animate-ui/icons/moon'
-import { Settings } from '@/components/animate-ui/icons/settings'
-import { Sun } from '@/components/animate-ui/icons/sun'
-import { SunMoon } from '@/components/animate-ui/icons/sun-moon'
+import { Sparkles } from '@/components/animate-ui/icons/sparkles'
+import { User } from '@/components/animate-ui/icons/user'
 import { useTheme } from '@/components/theme-provider'
-import { coreNav, productNav, settingsNav } from '@/lib/nav'
+import { useSession } from '@/hooks/use-session'
+import { coreNav, productNav } from '@/lib/nav'
 import { supabase } from '@/lib/supabase'
 
-// Menuindhold i compliance-circle-stil: overvejende tekst uden ikoner; de få
-// ikoner er animate-ui-ikoner til HØJRE via DropdownMenuShortcut, og
-// <AnimateIcon animateOnHover> lader dem animere når punktet hoveres.
-// Sektionsoverskrifter er små, dæmpede og uppercase.
+// Brugermenu struktureret som Supabase Studios (uden "Feature previews" og
+// "Timezone" — bevidst udeladt): e-mail-header, Konto/Changelog med små
+// dæmpede ikoner til venstre, tema som radiogruppe, log ud nederst.
+// Nav-delen (moderne tilstand) beholder compliance-circle-stilen: tekst uden
+// ikoner; de få ikoner til højre via DropdownMenuShortcut, animeret på hover.
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <DropdownMenuLabel className="text-[10px] font-normal uppercase tracking-tight text-muted-foreground/60">
+    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
       {children}
     </DropdownMenuLabel>
   )
 }
 
-function ThemeRow() {
-  const { t } = useTranslation()
-  const { theme, setTheme } = useTheme()
-  const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
-  const Icon = theme === 'system' ? SunMoon : theme === 'light' ? Sun : Moon
+function NavSectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <AnimateIcon animateOnHover asChild>
-      <DropdownMenuLabel
-        className="flex cursor-pointer font-normal text-muted-foreground"
-        onClick={() => setTheme(next)}
-      >
-        {t('nav.theme')} · {t(`theme.${theme}`)}
-        <span className="ml-auto">
-          <Icon size={16} />
-        </span>
-      </DropdownMenuLabel>
-    </AnimateIcon>
+    <DropdownMenuLabel className="text-[10px] font-normal uppercase tracking-tight text-muted-foreground/60">
+      {children}
+    </DropdownMenuLabel>
   )
 }
 
@@ -62,6 +53,8 @@ export function UserNavDropdownContent({
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { session } = useSession()
+  const { theme, setTheme } = useTheme()
 
   const go = (href: string) => navigate({ to: href })
 
@@ -71,7 +64,11 @@ export function UserNavDropdownContent({
   }
 
   return (
-    <DropdownMenuContent side={side} align={align} className="my-1 w-56 font-normal">
+    <DropdownMenuContent side={side} align={align} className="my-1 w-64 font-normal">
+      <DropdownMenuLabel className="truncate font-normal">
+        {session?.user.email ?? t('app.name')}
+      </DropdownMenuLabel>
+      <DropdownMenuSeparator />
       {includeNav && (
         <>
           <AnimateIcon animateOnHover asChild>
@@ -83,7 +80,7 @@ export function UserNavDropdownContent({
             </DropdownMenuItem>
           </AnimateIcon>
           <DropdownMenuSeparator />
-          <SectionLabel>{t('nav.groupCore')}</SectionLabel>
+          <NavSectionLabel>{t('nav.groupCore')}</NavSectionLabel>
           {coreNav
             .filter((item) => item.href !== '/')
             .map((item) => (
@@ -96,7 +93,7 @@ export function UserNavDropdownContent({
               </DropdownMenuItem>
             ))}
           <DropdownMenuSeparator />
-          <SectionLabel>{t('nav.groupProducts')}</SectionLabel>
+          <NavSectionLabel>{t('nav.groupProducts')}</NavSectionLabel>
           {productNav.map((item) => (
             <DropdownMenuItem
               key={item.href}
@@ -109,15 +106,37 @@ export function UserNavDropdownContent({
           <DropdownMenuSeparator />
         </>
       )}
-      <ThemeRow />
       <AnimateIcon animateOnHover asChild>
-        <DropdownMenuItem className="cursor-pointer" onClick={() => go(settingsNav.href)}>
-          {t('nav.settings')}
-          <DropdownMenuShortcut>
-            <Settings size={16} />
-          </DropdownMenuShortcut>
+        <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => go('/settings')}>
+          <User size={14} className="text-muted-foreground" />
+          {t('menu.account')}
         </DropdownMenuItem>
       </AnimateIcon>
+      <AnimateIcon animateOnHover asChild>
+        <DropdownMenuItem
+          className="cursor-pointer gap-2"
+          onClick={() => toast.info(t('common.comingSoon'))}
+        >
+          <Sparkles size={14} className="text-muted-foreground" />
+          {t('menu.changelog')}
+        </DropdownMenuItem>
+      </AnimateIcon>
+      <DropdownMenuSeparator />
+      <SectionLabel>{t('nav.theme')}</SectionLabel>
+      <DropdownMenuRadioGroup
+        value={theme}
+        onValueChange={(v) => setTheme(v as 'system' | 'light' | 'dark')}
+      >
+        <DropdownMenuRadioItem className="cursor-pointer" value="system">
+          {t('theme.system')}
+        </DropdownMenuRadioItem>
+        <DropdownMenuRadioItem className="cursor-pointer" value="dark">
+          {t('theme.dark')}
+        </DropdownMenuRadioItem>
+        <DropdownMenuRadioItem className="cursor-pointer" value="light">
+          {t('theme.light')}
+        </DropdownMenuRadioItem>
+      </DropdownMenuRadioGroup>
       <DropdownMenuSeparator />
       <AnimateIcon animateOnHover asChild>
         <DropdownMenuItem className="cursor-pointer" onClick={signOut}>

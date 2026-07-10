@@ -85,6 +85,10 @@
     "comingSoon": "This product is on the way.",
     "notEnabled": "This product is not enabled for your company."
   },
+  "menu": {
+    "account": "Account",
+    "changelog": "Changelog"
+  },
   "errors": {
     "title": "Something went wrong",
     "description": "An unexpected error occurred. Try again — if it persists, contact support.",
@@ -95,6 +99,7 @@
   },
   "common": {
     "loading": "Loading…",
+    "comingSoon": "Coming soon — not built yet.",
     "save": "Save",
     "cancel": "Cancel",
     "search": "Search",
