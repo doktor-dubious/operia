@@ -259,5 +259,19 @@
     "title": "Ugemte ændringer",
     "description": "Du har ugemte ændringer i detaljepanelet. Vil du kassere dem?",
     "discard": "Kassér ændringer"
+  },
+  "detail": {
+    "tabDetails": "Detaljer",
+    "tabData": "Data",
+    "tabActions": "Handlinger",
+    "copyId": "Kopiér ID"
+  },
+  "employeeDetail": {
+    "phone": "Telefon",
+    "employeeNo": "Medarbejder-nr.",
+    "language": "Sprog",
+    "active": "Aktiv",
+    "deactivateDescription": "Inaktive medarbejdere kan ikke vælges som modtagere; historikken bevares.",
+    "anonymizeDescription": "Blanker persondata permanent (GDPR). Rækken og pakkehistorikken bevares."
   }
 }

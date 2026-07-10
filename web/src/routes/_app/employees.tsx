@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable, type ColumnDef } from '@/components/data-table'
+import { DetailTabs } from '@/components/detail-tabs'
+import { CopyButton } from '@/components/copy-button'
+import { Field } from '@/components/detail-field'
 import { useAccess } from '@/hooks/use-access'
 import { supabase } from '@/lib/supabase'
 
@@ -42,7 +45,7 @@ function useRows() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, full_name, initials, email, is_active, department:departments (name)')
+        .select('id, full_name, initials, email, phone, employee_no, language, is_active, department:departments (name)')
         .order('full_name')
       if (error) throw error
       return data
@@ -147,6 +150,100 @@ function AnonymizeDialog({
   )
 }
 
+function EmployeeDetailPane({
+  row,
+  onClose,
+  onDeactivate,
+  onAnonymize,
+}: {
+  row: Row
+  onClose: () => void
+  onDeactivate: () => void
+  onAnonymize: () => void
+}) {
+  const { t } = useTranslation()
+  const [tab, setTab] = useState('details')
+
+  const tabs = [
+    { key: 'details', label: t('detail.tabDetails') },
+    { key: 'data', label: t('detail.tabData') },
+    { key: 'actions', label: t('detail.tabActions') },
+  ]
+
+  return (
+    <DetailTabs tabs={tabs} active={tab} onChange={setTab} onClose={onClose}>
+      {tab === 'details' && (
+        <div className="flex flex-col gap-5">
+          <Field label="ID">
+            <div className="relative">
+              <Input value={row.id} disabled className="pr-10 font-mono text-xs" />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                <CopyButton value={row.id} label={t('detail.copyId')} />
+              </div>
+            </div>
+          </Field>
+          <Field label={t('employees.name')}>
+            <Input value={row.full_name} disabled />
+          </Field>
+          <Field label={t('employees.initials')}>
+            <Input value={row.initials ?? ''} disabled />
+          </Field>
+          <Field label={t('employees.email')}>
+            <Input value={row.email ?? ''} disabled />
+          </Field>
+          <Field label={t('employeeDetail.phone')}>
+            <Input value={row.phone ?? ''} disabled />
+          </Field>
+          <Field label={t('employees.department')}>
+            <Input value={row.department?.name ?? ''} disabled />
+          </Field>
+        </div>
+      )}
+      {tab === 'data' && (
+        <div className="flex flex-col gap-5">
+          <Field label={t('employeeDetail.employeeNo')}>
+            <Input value={row.employee_no ?? ''} disabled className="font-mono" />
+          </Field>
+          <Field label={t('employeeDetail.language')}>
+            <Input value={row.language} disabled />
+          </Field>
+          <Field label={t('employeeDetail.active')}>
+            <Input value={row.is_active ? t('common.yes') : t('common.no')} disabled />
+          </Field>
+        </div>
+      )}
+      {tab === 'actions' && (
+        <div className="flex max-w-2xl flex-col gap-4">
+          <div className="flex items-center justify-between rounded-md border p-4">
+            <div>
+              <p className="text-[13px] font-[450]">{t('employeesActions.deactivate')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('employeeDetail.deactivateDescription')}
+              </p>
+            </div>
+            <Button size="sm" variant="outline" disabled={!row.is_active} onClick={onDeactivate}>
+              {t('employeesActions.deactivate')}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-md border border-destructive/40 p-4">
+            <div>
+              <p className="text-[13px] font-[450] text-destructive">
+                {t('employeesActions.anonymize')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t('employeeDetail.anonymizeDescription')}
+              </p>
+            </div>
+            <Button size="sm" variant="destructive" onClick={onAnonymize}>
+              {t('employeesActions.anonymize')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </DetailTabs>
+  )
+}
+
 function EmployeesPage() {
   const { t } = useTranslation()
   const { data, isPending } = useRows()
@@ -155,6 +252,7 @@ function EmployeesPage() {
   const [anonymizeIds, setAnonymizeIds] = useState<string[]>([])
   const [anonymizeOpen, setAnonymizeOpen] = useState(false)
   const [clearSelection, setClearSelection] = useState<(() => void) | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['employees'] })
 
@@ -187,8 +285,10 @@ function EmployeesPage() {
     { key: 'is_active', header: t('employees.active'), sortable: true, sortValue: (r) => (r.is_active ? 1 : 0), render: (r) => (r.is_active ? t('common.yes') : t('common.no')) },
   ]
 
+  const activeRow = data?.find((row) => row.id === activeId) ?? null
+
   return (
-    <>
+    <div className="flex min-h-full flex-col gap-6">
       <DataTable
         rows={data ?? []}
         columns={columns}
@@ -199,6 +299,8 @@ function EmployeesPage() {
             .join(' ')
         }
         storageKey="employees"
+        onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
+        activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
         selectionActions={({ ids, clear }) => (
           <>
@@ -229,6 +331,19 @@ function EmployeesPage() {
           </>
         )}
       />
+      {activeRow && (
+        <EmployeeDetailPane
+          key={activeRow.id}
+          row={activeRow}
+          onClose={() => setActiveId(null)}
+          onDeactivate={() => deactivate([activeRow.id], () => {})}
+          onAnonymize={() => {
+            setAnonymizeIds([activeRow.id])
+            setClearSelection(null)
+            setAnonymizeOpen(true)
+          }}
+        />
+      )}
       <AnonymizeDialog
         ids={anonymizeIds}
         open={anonymizeOpen}
@@ -238,6 +353,6 @@ function EmployeesPage() {
           refresh()
         }}
       />
-    </>
+    </div>
   )
 }

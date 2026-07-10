@@ -14,10 +14,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { CopyButton } from '@/components/copy-button'
+import { Field } from '@/components/detail-field'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { supabase } from '@/lib/supabase'
@@ -44,15 +44,6 @@ function useRows() {
       return data
     },
   })
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex max-w-2xl flex-col gap-2">
-      <Label className="text-label">{label}</Label>
-      {children}
-    </div>
-  )
 }
 
 function LocationDetailPane({
@@ -135,9 +126,9 @@ function LocationDetailPane({
   }
 
   const tabs = [
-    { key: 'details', label: t('locationDetail.tabDetails') },
-    { key: 'data', label: t('locationDetail.tabData') },
-    { key: 'actions', label: t('locationDetail.tabActions') },
+    { key: 'details', label: t('detail.tabDetails') },
+    { key: 'data', label: t('detail.tabData') },
+    { key: 'actions', label: t('detail.tabActions') },
   ]
 
   return (
@@ -149,7 +140,7 @@ function LocationDetailPane({
               <div className="relative">
                 <Input value={row.id} disabled className="pr-10 font-mono text-xs" />
                 <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                  <CopyButton value={row.id} label={t('locationDetail.copyId')} />
+                  <CopyButton value={row.id} label={t('detail.copyId')} />
                 </div>
               </div>
             </Field>

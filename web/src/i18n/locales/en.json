@@ -259,5 +259,19 @@
     "title": "Unsaved changes",
     "description": "You have unsaved changes in the detail pane. Discard them?",
     "discard": "Discard changes"
+  },
+  "detail": {
+    "tabDetails": "Details",
+    "tabData": "Data",
+    "tabActions": "Actions",
+    "copyId": "Copy ID"
+  },
+  "employeeDetail": {
+    "phone": "Phone",
+    "employeeNo": "Employee no.",
+    "language": "Language",
+    "active": "Active",
+    "deactivateDescription": "Inactive employees cannot be picked as receivers; history is kept.",
+    "anonymizeDescription": "Blanks personal data permanently (GDPR). The row and parcel history are kept."
   }
 }
