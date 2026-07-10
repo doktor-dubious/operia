@@ -282,5 +282,15 @@
     "deleteWarning": "Handlingen kan ikke fortrydes.",
     "deleteAcknowledge": "Jeg forstår, at medarbejderen slettes permanent.",
     "deletedToast": "Medarbejderen \"{{name}}\" er slettet"
+  },
+  "departmentDetail": {
+    "created": "Oprettet",
+    "noActions": "Ingen handlinger tilgængelige — afdelinger vedligeholdes af medarbejderimporten.",
+    "delete": "Slet afdeling",
+    "deleteDescription": "Fjerner afdelingen permanent. Kun til oprydning i testdata. Medarbejdere og pakker mister blot afdelingsfeltet.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at afdelingen slettes permanent.",
+    "deletedToast": "Afdelingen \"{{name}}\" er slettet"
   }
 }

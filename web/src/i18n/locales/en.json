@@ -282,5 +282,15 @@
     "deleteWarning": "This action cannot be undone.",
     "deleteAcknowledge": "I understand that the employee is deleted permanently.",
     "deletedToast": "Employee \"{{name}}\" deleted"
+  },
+  "departmentDetail": {
+    "created": "Created",
+    "noActions": "No actions available — departments are maintained by the employee import.",
+    "delete": "Delete department",
+    "deleteDescription": "Removes the department permanently. Test-data cleanup only. Employees and parcels merely lose the department field.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the department is deleted permanently.",
+    "deletedToast": "Department \"{{name}}\" deleted"
   }
 }
