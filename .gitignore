@@ -1,0 +1,34 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+docs/operia.txt
+
+# Gammel prototype — kun lokal reference; indeholder en live CRON_SECRET i SQL
+# (se CLAUDE.md "Known gaps"). Må ikke ind i git-historikken.
+prototype/
+
+# Node / web
+node_modules/
+dist/
+*.local
+.vite/
+
+# Supabase local dev
+supabase/.temp/
+supabase/.branches/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.kotlin/
+*.keystore
+*.jks
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

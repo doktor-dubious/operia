@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default = dansk (spec: dansk først). Engelsk ligger i values-en/.
+     Per-tenant tekst-overrides (app_labels) skal slås op som et lag OVENPÅ
+     disse ressourcer i runtime — aldrig ved at ændre filerne her. -->
+<resources>
+    <string name="app_name">Operia</string>
+    <string name="app_tagline">Track &amp; trace for interne pakker</string>
+    <string name="sign_in">Log ind</string>
+    <string name="sign_out">Log ud</string>
+</resources>

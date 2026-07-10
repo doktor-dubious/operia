@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "Operia",
+    "tagline": "Track & trace for internal parcels"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "parcels": "Parcels",
+    "employees": "Employees",
+    "settings": "Settings"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search"
+  }
+}
