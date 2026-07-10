@@ -199,7 +199,7 @@ function LocationDetailPane({ row, onClose }: { row: Row; onClose: () => void })
       </DetailTabs>
 
       {dirty && (
-        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-auto flex justify-end gap-3 border-t border-border bg-background px-6 py-3">
+        <div className="sticky bottom-4 z-10 mt-auto flex justify-end gap-3 rounded-lg border border-border bg-panel px-4 py-3 shadow-lg">
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
