@@ -96,6 +96,7 @@ export function DataTable<Row extends { id: string }>({
   searchPlaceholder,
   storageKey,
   onDelete,
+  selectionActions,
 }: {
   rows: Row[]
   columns: ColumnDef<Row>[]
@@ -104,6 +105,7 @@ export function DataTable<Row extends { id: string }>({
   searchPlaceholder?: string
   storageKey: string
   onDelete?: (ids: string[]) => Promise<void>
+  selectionActions?: (ctx: { ids: string[]; clear: () => void }) => React.ReactNode
 }) {
   const { t } = useTranslation()
   const [initial] = useState(() => loadTableState(storageKey))
@@ -414,6 +416,7 @@ export function DataTable<Row extends { id: string }>({
               })}
             </span>
             <div className="flex items-center gap-1">
+              {selectionActions?.({ ids: [...selected], clear: () => setSelected(new Set()) })}
               <Button
                 variant="ghost"
                 size="icon"

@@ -223,5 +223,17 @@
     "notePlaceholder": "e.g. collected by colleague",
     "sessionList": "Handed out this session",
     "sessionEmpty": "No parcels handed out in this session yet."
+  },
+  "employeesActions": {
+    "deactivate": "Deactivate selected",
+    "anonymize": "Anonymize selected (GDPR)",
+    "deactivatedToast": "{{count}} employees deactivated",
+    "anonymizedToast": "{{count}} employees anonymized",
+    "anonymizedName": "Anonymized employee",
+    "anonymizeTitle": "Anonymize {{count}} employees",
+    "anonymizeDescription": "Personal data (name, initials, email, phone, employee no.) is blanked permanently. The row is kept so parcel history stays intact. This action cannot be undone.",
+    "anonymizeAcknowledge": "I understand that personal data is deleted permanently and cannot be recovered.",
+    "typeToConfirm": "Type \"anonymize\" to confirm",
+    "anonymizeWord": "anonymize"
   }
 }

@@ -223,5 +223,17 @@
     "notePlaceholder": "fx afhentet af kollega",
     "sessionList": "Udleveret i denne session",
     "sessionEmpty": "Ingen pakker udleveret endnu i denne session."
+  },
+  "employeesActions": {
+    "deactivate": "Deaktivér valgte",
+    "anonymize": "Anonymisér valgte (GDPR)",
+    "deactivatedToast": "{{count}} medarbejdere deaktiveret",
+    "anonymizedToast": "{{count}} medarbejdere anonymiseret",
+    "anonymizedName": "Anonymiseret medarbejder",
+    "anonymizeTitle": "Anonymisér {{count}} medarbejdere",
+    "anonymizeDescription": "Persondata (navn, initialer, e-mail, telefon, medarbejder-nr.) blankes permanent. Rækken bevares, så pakkehistorikken forbliver intakt. Handlingen kan ikke fortrydes.",
+    "anonymizeAcknowledge": "Jeg forstår, at persondata slettes permanent og ikke kan gendannes.",
+    "typeToConfirm": "Skriv \"anonymiser\" for at bekræfte",
+    "anonymizeWord": "anonymiser"
   }
 }

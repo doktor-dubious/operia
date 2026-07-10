@@ -80,6 +80,21 @@ notification templates, reminders.
 - **Parcel status state machine**:
   unassigned → registered → in_storage/in_transit/in_locker → delivered/rejected/returned.
 
+## Master data policy (agreed 2026-07-10)
+
+- **Employees/departments: the Flow 0 import is the system of record** (customer HR system via
+  CSV — SFTP/email fetch). Import upserts on `employee_no`; employees missing from the file are
+  deactivated, never deleted; manually created employees are flagged so imports don't touch them.
+  In-app: **deactivate + GDPR anonymize replace delete** (rows must survive — parcel history/
+  chain-of-custody references them). Hard delete of employees is platform-admin-only (test-data
+  cleanup).
+- **Locations, handling classes, carriers: app-owned** — managers CRUD them freely; no external
+  source exists.
+- **Companies/entitlements: DCA-owned** — platform-admin screens only.
+- **Flow 0 roadmap**: pilot-grade in-app "upload CSV" screen FIRST (validation, æ/ø/å, upsert
+  semantics, Manager alerts), full SFTP/email ingestion pipeline later (needs a component outside
+  Supabase).
+
 ## Domain vocabulary (from the spec)
 
 | Term | Meaning |
