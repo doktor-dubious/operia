@@ -203,5 +203,25 @@
     "deleted": "{{count}} {{entity}} slettet",
     "selectAll": "Vælg alle",
     "selectStarred": "Stjernemarkerede"
+  },
+  "handout": {
+    "lookup": "Stregkode / reference",
+    "lookupPlaceholder": "Scan eller skriv stregkode",
+    "notFound": "Ingen åben pakke fundet med den stregkode.",
+    "deliveredTo": "Udleveres til",
+    "deliveredToPlaceholder": "Navn på den der afhenter",
+    "proxyHint": "Anden person end modtageren — registreres som proxy-afhentning.",
+    "proxyBlocked": "Håndteringsklassen tillader ikke afhentning ved andre end modtageren.",
+    "noReceiverWarning": "Pakken har ingen modtager — tildel en modtager under Redigér pakke først.",
+    "signature": "Underskrift",
+    "clearSignature": "Ryd underskrift",
+    "confirm": "Bekræft udlevering",
+    "reject": "Afvis pakke",
+    "rejected": "Afvist",
+    "deliveredToast": "Pakke {{barcode}} udleveret",
+    "rejectedToast": "Pakke {{barcode}} afvist",
+    "notePlaceholder": "fx afhentet af kollega",
+    "sessionList": "Udleveret i denne session",
+    "sessionEmpty": "Ingen pakker udleveret endnu i denne session."
   }
 }

@@ -435,6 +435,9 @@ export type Database = {
           condition_preset: string | null
           created_at: string
           delivered_at: string | null
+          delivered_note: string | null
+          delivered_signature_path: string | null
+          delivered_to: string | null
           department_id: string | null
           handling_class_id: string | null
           id: string
@@ -457,6 +460,9 @@ export type Database = {
           condition_preset?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivered_note?: string | null
+          delivered_signature_path?: string | null
+          delivered_to?: string | null
           department_id?: string | null
           handling_class_id?: string | null
           id?: string
@@ -479,6 +485,9 @@ export type Database = {
           condition_preset?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivered_note?: string | null
+          delivered_signature_path?: string | null
+          delivered_to?: string | null
           department_id?: string | null
           handling_class_id?: string | null
           id?: string

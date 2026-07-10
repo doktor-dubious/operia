@@ -203,5 +203,25 @@
     "deleted": "{{count}} {{entity}} deleted",
     "selectAll": "Select all",
     "selectStarred": "Starred"
+  },
+  "handout": {
+    "lookup": "Barcode / reference",
+    "lookupPlaceholder": "Scan or type barcode",
+    "notFound": "No open parcel found with that barcode.",
+    "deliveredTo": "Hand out to",
+    "deliveredToPlaceholder": "Name of the person collecting",
+    "proxyHint": "Different person than the receiver — recorded as proxy collection.",
+    "proxyBlocked": "The handling class does not allow collection by anyone but the receiver.",
+    "noReceiverWarning": "The parcel has no receiver — assign one under Edit parcel first.",
+    "signature": "Signature",
+    "clearSignature": "Clear signature",
+    "confirm": "Confirm handout",
+    "reject": "Reject parcel",
+    "rejected": "Rejected",
+    "deliveredToast": "Parcel {{barcode}} handed out",
+    "rejectedToast": "Parcel {{barcode}} rejected",
+    "notePlaceholder": "e.g. collected by colleague",
+    "sessionList": "Handed out this session",
+    "sessionEmpty": "No parcels handed out in this session yet."
   }
 }
