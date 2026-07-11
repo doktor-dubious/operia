@@ -242,13 +242,17 @@ export type Database = {
           department_id: string | null
           email: string | null
           employee_no: string | null
+          first_name: string | null
           full_name: string
           id: string
           initials: string | null
           is_active: boolean
           is_manual: boolean
           language: string
+          last_name: string | null
+          nfc_card_id: string | null
           phone: string | null
+          role: string | null
           updated_at: string
           user_id: string | null
         }
@@ -258,13 +262,17 @@ export type Database = {
           department_id?: string | null
           email?: string | null
           employee_no?: string | null
+          first_name?: string | null
           full_name: string
           id?: string
           initials?: string | null
           is_active?: boolean
           is_manual?: boolean
           language?: string
+          last_name?: string | null
+          nfc_card_id?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -274,13 +282,17 @@ export type Database = {
           department_id?: string | null
           email?: string | null
           employee_no?: string | null
+          first_name?: string | null
           full_name?: string
           id?: string
           initials?: string | null
           is_active?: boolean
           is_manual?: boolean
           language?: string
+          last_name?: string | null
+          nfc_card_id?: string | null
           phone?: string | null
+          role?: string | null
           updated_at?: string
           user_id?: string | null
         }

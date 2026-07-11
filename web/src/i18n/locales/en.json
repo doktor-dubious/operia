@@ -283,7 +283,11 @@
     "deleteTitle": "Delete \"{{name}}\"",
     "deleteWarning": "This action cannot be undone.",
     "deleteAcknowledge": "I understand that the employee is deleted permanently.",
-    "deletedToast": "Employee \"{{name}}\" deleted"
+    "deletedToast": "Employee \"{{name}}\" deleted",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "nfcCardId": "NFC card ID (UID)",
+    "role": "Role"
   },
   "departmentDetail": {
     "created": "Created",

@@ -48,7 +48,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, full_name, initials, email, phone, employee_no, language, is_active, department:departments (name)')
+        .select('id, full_name, first_name, last_name, initials, email, phone, employee_no, nfc_card_id, role, language, is_active, department:departments (name)')
         .eq('company_id', companyId!)
         .order('full_name')
       if (error) throw error
@@ -197,17 +197,28 @@ function EmployeeDetailPane({
           <Field label={t('employees.name')}>
             <Input value={row.full_name} disabled />
           </Field>
+          <div className="grid max-w-2xl grid-cols-2 gap-4">
+            <Field label={t('employeeDetail.firstName')}>
+              <Input value={row.first_name ?? ''} disabled />
+            </Field>
+            <Field label={t('employeeDetail.lastName')}>
+              <Input value={row.last_name ?? ''} disabled />
+            </Field>
+          </div>
           <Field label={t('employees.initials')}>
             <Input value={row.initials ?? ''} disabled />
-          </Field>
-          <Field label={t('employees.email')}>
-            <Input value={row.email ?? ''} disabled />
           </Field>
           <Field label={t('employeeDetail.phone')}>
             <Input value={row.phone ?? ''} disabled />
           </Field>
+          <Field label={t('employees.email')}>
+            <Input value={row.email ?? ''} disabled />
+          </Field>
           <Field label={t('employees.department')}>
             <Input value={row.department?.name ?? ''} disabled />
+          </Field>
+          <Field label={t('employeeDetail.role')}>
+            <Input value={row.role ?? ''} disabled />
           </Field>
         </div>
       )}
@@ -215,6 +226,9 @@ function EmployeeDetailPane({
         <div className="flex flex-col gap-5">
           <Field label={t('employeeDetail.employeeNo')}>
             <Input value={row.employee_no ?? ''} disabled className="font-mono" />
+          </Field>
+          <Field label={t('employeeDetail.nfcCardId')}>
+            <Input value={row.nfc_card_id ?? ''} disabled className="font-mono" />
           </Field>
           <Field label={t('employeeDetail.language')}>
             <Input value={row.language} disabled />

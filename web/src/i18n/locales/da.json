@@ -283,7 +283,11 @@
     "deleteTitle": "Slet \"{{name}}\"",
     "deleteWarning": "Handlingen kan ikke fortrydes.",
     "deleteAcknowledge": "Jeg forstår, at medarbejderen slettes permanent.",
-    "deletedToast": "Medarbejderen \"{{name}}\" er slettet"
+    "deletedToast": "Medarbejderen \"{{name}}\" er slettet",
+    "firstName": "Fornavn",
+    "lastName": "Efternavn",
+    "nfcCardId": "NFC-kort-ID (UID)",
+    "role": "Rolle"
   },
   "departmentDetail": {
     "created": "Oprettet",
