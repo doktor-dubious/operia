@@ -15,6 +15,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppStatsRouteImport } from './routes/_app/stats'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
+import { Route as AppLockersRouteImport } from './routes/_app/lockers'
 import { Route as AppLocationsRouteImport } from './routes/_app/locations'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppHandlingClassesRouteImport } from './routes/_app/handling-classes'
@@ -62,6 +63,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLockersRoute = AppLockersRouteImport.update({
+  id: '/lockers',
+  path: '/lockers',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLocationsRoute = AppLocationsRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/handling-classes': typeof AppHandlingClassesRoute
   '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
+  '/lockers': typeof AppLockersRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/handling-classes': typeof AppHandlingClassesRoute
   '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
+  '/lockers': typeof AppLockersRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
@@ -222,6 +230,7 @@ export interface FileRoutesById {
   '/_app/handling-classes': typeof AppHandlingClassesRoute
   '/_app/import': typeof AppImportRoute
   '/_app/locations': typeof AppLocationsRoute
+  '/_app/lockers': typeof AppLockersRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stats': typeof AppStatsRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/handling-classes'
     | '/import'
     | '/locations'
+    | '/lockers'
     | '/reports'
     | '/settings'
     | '/stats'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/handling-classes'
     | '/import'
     | '/locations'
+    | '/lockers'
     | '/reports'
     | '/settings'
     | '/stats'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/_app/handling-classes'
     | '/_app/import'
     | '/_app/locations'
+    | '/_app/lockers'
     | '/_app/reports'
     | '/_app/settings'
     | '/_app/stats'
@@ -369,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/lockers': {
+      id: '/_app/lockers'
+      path: '/lockers'
+      fullPath: '/lockers'
+      preLoaderRoute: typeof AppLockersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/locations': {
@@ -514,6 +533,7 @@ interface AppRouteChildren {
   AppHandlingClassesRoute: typeof AppHandlingClassesRoute
   AppImportRoute: typeof AppImportRoute
   AppLocationsRoute: typeof AppLocationsRoute
+  AppLockersRoute: typeof AppLockersRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStatsRoute: typeof AppStatsRoute
@@ -540,6 +560,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHandlingClassesRoute: AppHandlingClassesRoute,
   AppImportRoute: AppImportRoute,
   AppLocationsRoute: AppLocationsRoute,
+  AppLockersRoute: AppLockersRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStatsRoute: AppStatsRoute,

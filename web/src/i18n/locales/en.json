@@ -40,7 +40,8 @@
     "branding": "Branding",
     "billing": "Billing",
     "integrations": "Integrations",
-    "import": "Import"
+    "import": "Import",
+    "lockersData": "Lockers"
   },
   "auth": {
     "email": "Email",
@@ -375,5 +376,30 @@
     "noResults": "No results",
     "recent": "Recently used",
     "all": "All companies"
+  },
+  "lockersPage": {
+    "name": "Name",
+    "keynius": "Keynius locker ID",
+    "location": "Location",
+    "capSmall": "Small boxes",
+    "capMedium": "Medium boxes",
+    "capLarge": "Large boxes",
+    "active": "Active",
+    "empty": "No lockers yet."
+  },
+  "lockerDetail": {
+    "newTitle": "New locker",
+    "createdToast": "Locker \"{{name}}\" created",
+    "keyniusDescription": "The vendor's (Keynius) ID for the locker wall — used by the integration.",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "deactivateDescription": "Inactive lockers cannot be used for handout; history is kept.",
+    "delete": "Delete locker",
+    "deleteDescription": "Removes the locker permanently.",
+    "deleteTitle": "Delete \"{{name}}\"",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteAcknowledge": "I understand that the locker is deleted permanently.",
+    "deletedToast": "Locker \"{{name}}\" deleted",
+    "noLocation": "— no location —"
   }
 }

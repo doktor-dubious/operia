@@ -141,3 +141,12 @@ select cos.id, h.name, h.proxy, h.leave, h.descr from cos cross join (values
 with cos as (select id from public.companies where registration_no like '201100%')
 insert into public.carriers (company_id, name)
 select cos.id, c.name from cos cross join (values ('GLS'),('PostNord'),('Bring')) c(name);
+
+-- Locker-produkt + demo-skabe til DCA Demo A/S
+insert into public.company_products (company_id, product_key) values
+  ('11111111-1111-1111-1111-111111111111', 'lockers');
+insert into public.lockers (company_id, name, keynius_bank_id, storage_location_id, cap_small, cap_medium, cap_large) values
+  ('11111111-1111-1111-1111-111111111111', 'Reception – væg A', 'KEY-BANK-001',
+   '55555555-5555-5555-5555-555555555551', 12, 8, 4),
+  ('11111111-1111-1111-1111-111111111111', 'Kælder – væg B', null,
+   '55555555-5555-5555-5555-555555555553', 6, 6, 2);

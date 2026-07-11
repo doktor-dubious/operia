@@ -451,6 +451,63 @@ export type Database = {
           },
         ]
       }
+      lockers: {
+        Row: {
+          cap_large: number
+          cap_medium: number
+          cap_small: number
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keynius_bank_id: string | null
+          name: string
+          storage_location_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cap_large?: number
+          cap_medium?: number
+          cap_small?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keynius_bank_id?: string | null
+          name: string
+          storage_location_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cap_large?: number
+          cap_medium?: number
+          cap_small?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keynius_bank_id?: string | null
+          name?: string
+          storage_location_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lockers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lockers_storage_location_id_fkey"
+            columns: ["storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcel_events: {
         Row: {
           actor_user_id: string | null

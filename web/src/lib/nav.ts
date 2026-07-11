@@ -74,6 +74,7 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'locations', href: '/locations', icon: MapPin },
       { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
       { labelKey: 'carriers', href: '/carriers', icon: Truck },
+      { labelKey: 'lockersData', href: '/lockers', icon: Lock, productKey: 'lockers' },
       { labelKey: 'import', href: '/import', icon: Upload },
     ],
   },

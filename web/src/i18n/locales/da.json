@@ -40,7 +40,8 @@
     "branding": "Branding",
     "billing": "Fakturering",
     "integrations": "Integrationer",
-    "import": "Import"
+    "import": "Import",
+    "lockersData": "Skabe"
   },
   "auth": {
     "email": "E-mail",
@@ -375,5 +376,30 @@
     "noResults": "Ingen match",
     "recent": "Senest brugte",
     "all": "Alle virksomheder"
+  },
+  "lockersPage": {
+    "name": "Navn",
+    "keynius": "Keynius locker-ID",
+    "location": "Placering",
+    "capSmall": "Små rum",
+    "capMedium": "Mellem rum",
+    "capLarge": "Store rum",
+    "active": "Aktiv",
+    "empty": "Ingen skabe endnu."
+  },
+  "lockerDetail": {
+    "newTitle": "Nyt skab",
+    "createdToast": "Skabet \"{{name}}\" er oprettet",
+    "keyniusDescription": "Leverandørens (Keynius) ID for locker-væggen — bruges af integrationen.",
+    "activate": "Aktivér",
+    "deactivate": "Deaktivér",
+    "deactivateDescription": "Inaktive skabe kan ikke bruges til udlevering; historikken bevares.",
+    "delete": "Slet skab",
+    "deleteDescription": "Fjerner skabet permanent.",
+    "deleteTitle": "Slet \"{{name}}\"",
+    "deleteWarning": "Handlingen kan ikke fortrydes.",
+    "deleteAcknowledge": "Jeg forstår, at skabet slettes permanent.",
+    "deletedToast": "Skabet \"{{name}}\" er slettet",
+    "noLocation": "— ingen placering —"
   }
 }
