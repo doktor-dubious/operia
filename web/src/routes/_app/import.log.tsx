@@ -24,6 +24,9 @@ function ImportLogPage() {
   const { data, isPending } = useQuery({
     queryKey: ['import-runs', companyId],
     enabled: !!companyId,
+    // Loggen skal altid vise nyeste kørsler: hent friskt hver gang siden
+    // åbnes, så en netop kørt import straks dukker op som en ny række.
+    refetchOnMount: 'always',
     queryFn: async () => {
       const { data, error } = await supabase
         .from('import_runs')

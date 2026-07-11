@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
+import { AnimateIcon } from '@/components/animate-ui/icons/icon'
+import { RefreshCw } from '@/components/animate-ui/icons/refresh-cw'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -234,8 +237,25 @@ function ModernRail() {
 function HeaderActions() {
   const { t } = useTranslation()
   const initial = useUserInitial()
+  const queryClient = useQueryClient()
+  // Antal aktive forespørgsler der henter lige nu — driver spin-animationen.
+  const fetching = useIsFetching() > 0
   return (
     <div className="ml-auto flex items-center gap-1">
+      <AnimateIcon animate={fetching} loop={fetching} animateOnHover asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+          aria-label={t('common.refresh')}
+          title={t('common.refresh')}
+          // Hent nye serverdata: invalidér alle forespørgsler, så aktive
+          // skærme genhenter og cachen bliver frisk.
+          onClick={() => queryClient.invalidateQueries()}
+        >
+          <RefreshCw className="size-4" />
+        </Button>
+      </AnimateIcon>
       <Button
         variant="ghost"
         size="icon"
