@@ -68,17 +68,12 @@ export function CompanySwitcher({ compact = false }: { compact?: boolean }) {
     compact ? 'justify-center px-0 py-2' : 'px-3 py-2',
   )
 
-  if (isPending || !activeCompany) {
-    return (
-      <div className={barClass}>
-        <Blocks size={16} className="shrink-0" />
-        {!compact && <span className="truncate text-xs opacity-80">{t('common.loading')}</span>}
-      </div>
-    )
-  }
+  // Kun superbrugere (platform-admins) ser virksomhedsvælgeren; tenant-brugere
+  // er bundet til én virksomhed og får ingen vælger overhovedet.
+  if (isPending || isTenantUser || !activeCompany) return null
 
-  // Fast virksomhed (tenant-bruger) eller kun én: statisk bjælke
-  if (isTenantUser || companies.length <= 1) {
+  // Platform-admin med kun én virksomhed: statisk bjælke
+  if (companies.length <= 1) {
     return (
       <div className={barClass} title={activeCompany.name}>
         <Blocks size={16} className="shrink-0" />

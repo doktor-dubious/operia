@@ -4,6 +4,7 @@ import {
   Banknote,
   Building2,
   CalendarRange,
+  Cog,
   FileText,
   Handshake,
   LayoutDashboard,
@@ -128,6 +129,22 @@ export const settingsNav: NavItem = {
   icon: Settings,
 }
 
+// Operia-konfiguration (kun platform-admins) — nederst i sidemenuen. Åbner en
+// Supabase-settings-lignende side med egen venstremenu (operiaConfigNav).
+export const operiaNav: NavItem = {
+  labelKey: 'operia',
+  href: '/operia',
+  icon: Cog,
+}
+
+export const operiaConfigNav: { labelKey: string; href: string }[] = [
+  { labelKey: 'operiaCustomers', href: '/operia/customers' },
+  { labelKey: 'operiaCarriers', href: '/operia/carriers' },
+  { labelKey: 'operiaBilling', href: '/operia/billing' },
+  { labelKey: 'operiaApiKeys', href: '/operia/apikeys' },
+  { labelKey: 'operiaTemplates', href: '/operia/templates' },
+]
+
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
 // ikke hentet) vises kun pakkegruppen — så admin-punkter ikke blinker frem.
 export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {
@@ -156,4 +173,6 @@ export const allNavItems = [
     ),
   ),
   settingsNav,
+  operiaNav,
+  ...operiaConfigNav.map((c) => ({ ...c, icon: operiaNav.icon })),
 ]

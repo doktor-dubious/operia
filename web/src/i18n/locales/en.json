@@ -44,7 +44,26 @@
     "lockersData": "Lockers",
     "importLocal": "Local files",
     "importRemote": "Remote files",
-    "importLog": "Log"
+    "importLog": "Log",
+    "operia": "Operia",
+    "operiaCustomers": "Customers",
+    "operiaCarriers": "Carriers",
+    "operiaBilling": "Billing",
+    "operiaApiKeys": "API keys",
+    "operiaTemplates": "Templates"
+  },
+  "operiaConfig": {
+    "title": "Operia configuration",
+    "subtitle": "Platform settings for DCA Logic",
+    "sectionConfig": "Configuration",
+    "sectionBilling": "Billing"
+  },
+  "templatesPage": {
+    "title": "Templates",
+    "subtitle": "Edit the platform's templates (e.g. the invitation email).",
+    "templateLabel": "Template",
+    "titleLabel": "Title",
+    "bodyLabel": "Body"
   },
   "auth": {
     "email": "Email",

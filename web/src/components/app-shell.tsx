@@ -29,7 +29,7 @@ import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
-import { allNavItems, navGroups, settingsNav, visibleNavGroups } from '@/lib/nav'
+import { allNavItems, navGroups, operiaNav, settingsNav, visibleNavGroups } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
@@ -238,6 +238,28 @@ function ClassicSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {/* Operia-konfiguration nederst — kun for platform-admins (superbrugere) */}
+        {access?.isPlatformAdmin && (
+          <SidebarGroup className="mt-auto">
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(operiaNav.href)}
+                    tooltip={t('nav.operia')}
+                    className={menuItemClass}
+                  >
+                    <Link to={operiaNav.href}>
+                      <operiaNav.icon />
+                      <span>{t('nav.operia')}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="p-0">
         <DropdownMenu>

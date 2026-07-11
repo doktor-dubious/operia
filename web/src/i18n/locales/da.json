@@ -44,7 +44,26 @@
     "lockersData": "Skabe",
     "importLocal": "Lokale filer",
     "importRemote": "Fjernfiler",
-    "importLog": "Log"
+    "importLog": "Log",
+    "operia": "Operia",
+    "operiaCustomers": "Kunder",
+    "operiaCarriers": "Fragtfirmaer",
+    "operiaBilling": "Fakturering",
+    "operiaApiKeys": "API-nøgler",
+    "operiaTemplates": "Skabeloner"
+  },
+  "operiaConfig": {
+    "title": "Operia-konfiguration",
+    "subtitle": "Platformindstillinger for DCA Logic",
+    "sectionConfig": "Konfiguration",
+    "sectionBilling": "Fakturering"
+  },
+  "templatesPage": {
+    "title": "Skabeloner",
+    "subtitle": "Rediger platformens skabeloner (fx invitations-e-mail).",
+    "templateLabel": "Skabelon",
+    "titleLabel": "Titel",
+    "bodyLabel": "Brødtekst"
   },
   "auth": {
     "email": "E-mail",
