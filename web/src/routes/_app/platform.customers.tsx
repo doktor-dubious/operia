@@ -114,7 +114,7 @@ function EntitlementPicker({
   const enabledProducts = catalog.products.filter((p) => products.has(p.key))
 
   return (
-    <div className="grid items-start gap-6 sm:grid-cols-2">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label className="text-label">{t('customerDetail.productsLabel')}</Label>
@@ -128,9 +128,12 @@ function EntitlementPicker({
             {t('customerDetail.selectAll')}
           </Button>
         </div>
-        <div className="flex flex-col divide-y rounded-md border">
+        <div className="grid gap-2 sm:grid-cols-2">
           {catalog.products.map((p) => (
-            <label key={p.key} className="flex cursor-pointer items-center justify-between gap-3 p-3">
+            <label
+              key={p.key}
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-md border p-3"
+            >
               <div>
                 <p className="text-[13px] font-[450]">{p.name}</p>
                 {p.description && (
@@ -153,7 +156,7 @@ function EntitlementPicker({
             {t('customerDetail.pickProduct')}
           </p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="grid items-start gap-4 sm:grid-cols-2">
             {enabledProducts.map((p) => {
               const feats = catalog.features.filter((f) => f.product_key === p.key)
               if (!feats.length) return null
