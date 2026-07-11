@@ -114,7 +114,7 @@ function EntitlementPicker({
   const enabledProducts = catalog.products.filter((p) => products.has(p.key))
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid items-start gap-6 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label className="text-label">{t('customerDetail.productsLabel')}</Label>
@@ -515,7 +515,7 @@ function NewCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('customerDetail.newTitle')}</DialogTitle>
         </DialogHeader>
@@ -685,7 +685,7 @@ function CustomersPage() {
         storageKey="customers"
         toolbar={
           <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
-            <Plus className="size-4" /> {t('customerDetail.create')}
+            <Plus className="size-4" /> {t('common.new')}
           </Button>
         }
         onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}
