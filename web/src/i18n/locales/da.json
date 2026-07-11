@@ -73,6 +73,20 @@
     "signOut": "Log ud",
     "signInError": "Login mislykkedes. Kontrollér e-mail og adgangskode."
   },
+  "setPassword": {
+    "title": "Velkommen til Operia",
+    "subtitle": "Vælg en adgangskode for at aktivere din konto.",
+    "newPassword": "Ny adgangskode",
+    "confirm": "Gentag adgangskode",
+    "submit": "Aktivér konto",
+    "tooShort": "Adgangskoden skal være mindst 8 tegn.",
+    "mismatch": "Adgangskoderne er ikke ens.",
+    "done": "Adgangskoden er sat. Velkommen!",
+    "checking": "Kontrollerer invitationen…",
+    "invalidTitle": "Linket er ugyldigt eller udløbet",
+    "invalidBody": "Bed en administrator om at sende en ny invitation.",
+    "toLogin": "Til login"
+  },
   "theme": {
     "system": "System",
     "light": "Lys",

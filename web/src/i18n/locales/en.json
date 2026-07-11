@@ -73,6 +73,20 @@
     "signOut": "Sign out",
     "signInError": "Sign-in failed. Check your email and password."
   },
+  "setPassword": {
+    "title": "Welcome to Operia",
+    "subtitle": "Choose a password to activate your account.",
+    "newPassword": "New password",
+    "confirm": "Repeat password",
+    "submit": "Activate account",
+    "tooShort": "The password must be at least 8 characters.",
+    "mismatch": "The passwords do not match.",
+    "done": "Password set. Welcome!",
+    "checking": "Checking the invitation…",
+    "invalidTitle": "The link is invalid or expired",
+    "invalidBody": "Ask an administrator to send a new invitation.",
+    "toLogin": "To login"
+  },
   "theme": {
     "system": "System",
     "light": "Light",

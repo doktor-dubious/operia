@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VelkommenRouteImport } from './routes/velkommen'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
@@ -46,6 +47,11 @@ import { Route as AppImportRemoteRouteImport } from './routes/_app/import.remote
 import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
 import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 
+const VelkommenRoute = VelkommenRouteImport.update({
+  id: '/velkommen',
+  path: '/velkommen',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -229,6 +235,7 @@ const AppImportLocalRoute = AppImportLocalRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/velkommen': typeof VelkommenRoute
   '/carriers': typeof AppCarriersRoute
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/velkommen': typeof VelkommenRoute
   '/carriers': typeof AppCarriersRoute
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/velkommen': typeof VelkommenRoute
   '/_app/carriers': typeof AppCarriersRoute
   '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/velkommen'
     | '/carriers'
     | '/departments'
     | '/employees'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/velkommen'
     | '/carriers'
     | '/departments'
     | '/employees'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/velkommen'
     | '/_app/carriers'
     | '/_app/departments'
     | '/_app/employees'
@@ -455,10 +467,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  VelkommenRoute: typeof VelkommenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/velkommen': {
+      id: '/velkommen'
+      path: '/velkommen'
+      fullPath: '/velkommen'
+      preLoaderRoute: typeof VelkommenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -803,6 +823,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  VelkommenRoute: VelkommenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

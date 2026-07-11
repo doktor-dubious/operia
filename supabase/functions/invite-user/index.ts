@@ -96,7 +96,12 @@ Deno.serve(async (req) => {
   let inviteLink: string | null = null
   try {
     if (body.sendInvitation) {
-      const { data, error } = await admin.auth.admin.generateLink({ type: 'invite', email })
+      const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173'
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: 'invite',
+        email,
+        options: { redirectTo: `${appUrl}/velkommen` },
+      })
       if (error) throw error
       newUserId = data.user.id
       inviteLink = data.properties?.action_link ?? null
