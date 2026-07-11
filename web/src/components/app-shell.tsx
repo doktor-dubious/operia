@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ChevronUp, MessageCircle, Search } from 'lucide-react'
+import { ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -25,7 +26,8 @@ import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
-import { allNavItems, settingsNav, visibleNavGroups } from '@/lib/nav'
+import { allNavItems, navGroups, settingsNav, visibleNavGroups } from '@/lib/nav'
+import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
 
@@ -76,6 +78,16 @@ function ClassicSidebar() {
   const { data: access } = useAccess()
   const groups = visibleNavGroups(access)
 
+  // Undermenuer er foldet sammen som udgangspunkt; klik folder ud, og kun
+  // én kan være åben ad gangen (accordion). Aktiv child-rute åbner sin forælder.
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
+  useEffect(() => {
+    const parent = navGroups
+      .flatMap((g) => g.items)
+      .find((item) => item.children?.some((child) => child.href === pathname))
+    if (parent) setOpenSubmenu(parent.labelKey)
+  }, [pathname])
+
   return (
     <Sidebar collapsible="icon" className="select-none">
       <SidebarHeader>
@@ -95,40 +107,60 @@ function ClassicSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={
-                        item.children
-                          ? item.children.some((c) => c.href === pathname)
-                          : pathname === item.href
-                      }
-                      tooltip={t(`nav.${item.labelKey}`)}
-                      className={menuItemClass}
-                    >
-                      <Link to={item.href}>
+                {group.items.map((item) =>
+                  item.children ? (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={item.children.some((c) => c.href === pathname)}
+                        tooltip={t(`nav.${item.labelKey}`)}
+                        className={cn(menuItemClass, 'cursor-pointer')}
+                        onClick={() =>
+                          setOpenSubmenu((prev) =>
+                            prev === item.labelKey ? null : item.labelKey,
+                          )
+                        }
+                      >
                         <item.icon />
                         <span>{t(`nav.${item.labelKey}`)}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                    {item.children && (
-                      <SidebarMenuSub>
-                        {item.children.map((child) => (
-                          <SidebarMenuSubItem key={child.href}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={pathname === child.href}
-                              className="h-6 text-xs text-muted-foreground hover:text-foreground data-[active=true]:text-foreground"
-                            >
-                              <Link to={child.href}>{t(`nav.${child.labelKey}`)}</Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    )}
-                  </SidebarMenuItem>
-                ))}
+                        <ChevronRight
+                          className={cn(
+                            'ml-auto size-3.5 transition-transform duration-200',
+                            openSubmenu === item.labelKey && 'rotate-90',
+                          )}
+                        />
+                      </SidebarMenuButton>
+                      {openSubmenu === item.labelKey && (
+                        <SidebarMenuSub>
+                          {item.children.map((child) => (
+                            <SidebarMenuSubItem key={child.href}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={pathname === child.href}
+                                className="h-6 text-xs text-muted-foreground hover:text-foreground data-[active=true]:text-foreground"
+                              >
+                                <Link to={child.href}>{t(`nav.${child.labelKey}`)}</Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  ) : (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === item.href}
+                        tooltip={t(`nav.${item.labelKey}`)}
+                        className={menuItemClass}
+                      >
+                        <Link to={item.href}>
+                          <item.icon />
+                          <span>{t(`nav.${item.labelKey}`)}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ),
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
