@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/password-input'
 import { BrandLogo } from '@/components/brand-logo'
 import { supabase } from '@/lib/supabase'
 
@@ -65,7 +65,7 @@ function SetPasswordPage() {
     <main className="flex min-h-svh items-center justify-center bg-background p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
+          <CardTitle className="flex items-center gap-2 text-[28px]">
             <BrandLogo className="h-6 w-6" />
             {t('setPassword.title')}
           </CardTitle>
@@ -86,9 +86,8 @@ function SetPasswordPage() {
             <form className="flex flex-col gap-4" onSubmit={submit}>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="new-password">{t('setPassword.newPassword')}</Label>
-                <Input
+                <PasswordInput
                   id="new-password"
-                  type="password"
                   autoComplete="new-password"
                   required
                   value={password}
@@ -97,9 +96,8 @@ function SetPasswordPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="confirm-password">{t('setPassword.confirm')}</Label>
-                <Input
+                <PasswordInput
                   id="confirm-password"
-                  type="password"
                   autoComplete="new-password"
                   required
                   value={confirm}
