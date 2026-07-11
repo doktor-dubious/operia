@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -240,22 +240,42 @@ function HeaderActions() {
   const queryClient = useQueryClient()
   // Antal aktive forespørgsler der henter lige nu — driver spin-animationen.
   const fetching = useIsFetching() > 0
+  // Lille kvitteringsbadge under ikonet et øjeblik efter klik, så brugeren
+  // ser at der sker noget.
+  const [pinged, setPinged] = useState(false)
+  const pingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (pingTimer.current) clearTimeout(pingTimer.current)
+  }, [])
+  const refresh = () => {
+    // Hent nye serverdata: invalidér alle forespørgsler, så aktive skærme
+    // genhenter og cachen bliver frisk.
+    queryClient.invalidateQueries()
+    setPinged(true)
+    if (pingTimer.current) clearTimeout(pingTimer.current)
+    pingTimer.current = setTimeout(() => setPinged(false), 1600)
+  }
   return (
     <div className="ml-auto flex items-center gap-1">
-      <AnimateIcon animate={fetching} loop={fetching} animateOnHover asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
-          aria-label={t('common.refresh')}
-          title={t('common.refresh')}
-          // Hent nye serverdata: invalidér alle forespørgsler, så aktive
-          // skærme genhenter og cachen bliver frisk.
-          onClick={() => queryClient.invalidateQueries()}
-        >
-          <RefreshCw className="size-4" />
-        </Button>
-      </AnimateIcon>
+      <div className="relative flex items-center">
+        <AnimateIcon animate={fetching} loop={fetching} animateOnHover asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+            aria-label={t('common.refresh')}
+            title={t('common.refresh')}
+            onClick={refresh}
+          >
+            <RefreshCw className="size-4" />
+          </Button>
+        </AnimateIcon>
+        {pinged && (
+          <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-popover px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm animate-in fade-in slide-in-from-top-1">
+            {t('common.refreshing')}
+          </span>
+        )}
+      </div>
       <Button
         variant="ghost"
         size="icon"
