@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { BritishFlag, DanishFlag } from '@/components/flags'
 import { supabase } from '@/lib/supabase'
 
 // Operia → Skabeloner: platform-admin redigerer platformens skabeloner pr.
@@ -27,8 +28,8 @@ export const Route = createFileRoute('/_app/operia/templates')({
 
 // Sprog skabelonerne kan laves i (matcher appens i18n: dansk først, engelsk).
 const LANGS = [
-  { code: 'da', label: 'Dansk' },
-  { code: 'en', label: 'English' },
+  { code: 'da', label: 'Dansk', Flag: DanishFlag },
+  { code: 'en', label: 'English', Flag: BritishFlag },
 ]
 
 function useTemplates() {
@@ -131,7 +132,10 @@ function TemplatesPage() {
               <SelectContent>
                 {LANGS.map((l) => (
                   <SelectItem key={l.code} value={l.code}>
-                    {l.label}
+                    <span className="flex items-center gap-2">
+                      <l.Flag className="h-3.5 w-5" />
+                      {l.label}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

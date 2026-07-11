@@ -50,7 +50,8 @@
     "operiaCarriers": "Fragtfirmaer",
     "operiaBilling": "Fakturering",
     "operiaApiKeys": "API-nøgler",
-    "operiaTemplates": "Skabeloner"
+    "operiaTemplates": "Skabeloner",
+    "operiaLogs": "Logs"
   },
   "operiaConfig": {
     "title": "Operia-konfiguration",
@@ -102,6 +103,14 @@
     "languageLabel": "Sprog",
     "preferences": "Præferencer",
     "preferencesSubtitle": "Administrér din kontoprofil",
+    "passwordSection": "Adgangskode",
+    "passwordSubtitle": "Skift din adgangskode",
+    "currentPassword": "Nuværende adgangskode",
+    "newPassword": "Ny adgangskode",
+    "newPasswordDescription": "Mindst 8 tegn.",
+    "savePassword": "Gem ny adgangskode",
+    "passwordChanged": "Adgangskoden er ændret.",
+    "wrongCurrentPassword": "Forkert nuværende adgangskode.",
     "profileSection": "Profiloplysninger",
     "firstName": "Fornavn",
     "lastName": "Efternavn",
@@ -363,7 +372,7 @@
     "removedToast": "Brugeren \"{{name}}\" er fjernet",
     "selfHint": "Du kan ikke fjerne din egen adgang.",
     "invite": "Inviter bruger",
-    "sending": "Sender e-mail…",
+    "sending": "Sender invitation…",
     "inviteTitle": "Inviter bruger",
     "inviteIntro": "Opretter en login-konto og giver den adgang til den valgte virksomhed med de valgte roller. Kører i én arbejdsgang — ruller tilbage hvis noget fejler.",
     "sendInvitation": "Send invitation i stedet for fast adgangskode",

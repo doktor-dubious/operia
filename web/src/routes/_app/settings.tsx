@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/password-input'
 import { useTheme } from '@/components/theme-provider'
 import { useUiSettings, type NavMode } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
@@ -231,6 +232,38 @@ function SettingsPage() {
   const [username, setUsername] = useState<string>(meta.username ?? '')
   const [saving, setSaving] = useState(false)
 
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+
+  const changePassword = async () => {
+    if (newPassword.length < 8) {
+      toast.error(t('setPassword.tooShort'))
+      return
+    }
+    setSavingPassword(true)
+    // Verificér den nuværende adgangskode ved at re-autentificere først.
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: session?.user.email ?? '',
+      password: currentPassword,
+    })
+    if (reauthError) {
+      setSavingPassword(false)
+      toast.error(t('settings.wrongCurrentPassword'))
+      return
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setSavingPassword(false)
+    if (error) {
+      console.error('Kunne ikke skifte adgangskode:', error)
+      toast.error(t('common.error'))
+      return
+    }
+    setCurrentPassword('')
+    setNewPassword('')
+    toast.success(t('settings.passwordChanged'))
+  }
+
   const saveProfile = async () => {
     setSaving(true)
     const { error } = await supabase.auth.updateUser({
@@ -355,6 +388,41 @@ function SettingsPage() {
               </SelectionCard>
             </div>
           </PanelRow>
+        </Panel>
+      </section>
+
+      <section className="mt-10">
+        <SectionHeader
+          title={t('settings.passwordSection')}
+          subtitle={t('settings.passwordSubtitle')}
+        />
+        <Panel>
+          <PanelRow label={t('settings.currentPassword')}>
+            <PasswordInput
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </PanelRow>
+          <PanelRow
+            label={t('settings.newPassword')}
+            description={t('settings.newPasswordDescription')}
+          >
+            <PasswordInput
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </PanelRow>
+          <div className="flex justify-end px-6 py-3">
+            <Button
+              size="sm"
+              onClick={changePassword}
+              disabled={savingPassword || !currentPassword || !newPassword}
+            >
+              {savingPassword ? t('common.loading') : t('settings.savePassword')}
+            </Button>
+          </div>
         </Panel>
       </section>
     </div>

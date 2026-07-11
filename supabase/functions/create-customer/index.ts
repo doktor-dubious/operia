@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       const { data, error } = await admin.auth.admin.generateLink({
         type: 'invite',
         email: adminEmail,
-        options: { redirectTo: `${appUrl}/velkommen` },
+        options: { redirectTo: `${appUrl}/welcome` },
       })
       if (error) throw error
       newUserId = data.user.id

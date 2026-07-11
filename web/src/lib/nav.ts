@@ -143,6 +143,7 @@ export const operiaConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'operiaBilling', href: '/operia/billing' },
   { labelKey: 'operiaApiKeys', href: '/operia/apikeys' },
   { labelKey: 'operiaTemplates', href: '/operia/templates' },
+  { labelKey: 'operiaLogs', href: '/operia/logs' },
 ]
 
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu

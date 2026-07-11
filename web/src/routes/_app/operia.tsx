@@ -21,8 +21,10 @@ function OperiaLayout() {
     return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
   }
 
-  const configItems = operiaConfigNav.filter((i) => i.href !== '/operia/billing')
+  const bottomHrefs = ['/operia/billing', '/operia/logs']
+  const configItems = operiaConfigNav.filter((i) => !bottomHrefs.includes(i.href))
   const billingItems = operiaConfigNav.filter((i) => i.href === '/operia/billing')
+  const logsItems = operiaConfigNav.filter((i) => i.href === '/operia/logs')
 
   const NavLink = ({ href, labelKey }: { href: string; labelKey: string }) => (
     <Link
@@ -60,6 +62,11 @@ function OperiaLayout() {
             ))}
           </nav>
         </div>
+        <nav className="flex flex-col gap-0.5 pt-2">
+          {logsItems.map((i) => (
+            <NavLink key={i.href} href={i.href} labelKey={i.labelKey} />
+          ))}
+        </nav>
       </aside>
       <div className="min-w-0 flex-1">
         <Outlet />

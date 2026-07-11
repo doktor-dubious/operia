@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase'
 // generateLink type=invite) redirecter hertil med et engangs-token i URL'en;
 // supabase-js opretter sessionen (detectSessionInUrl), og brugeren vælger sin
 // adgangskode via updateUser. Offentlig rute (uden for _app-vagten).
-export const Route = createFileRoute('/velkommen')({
+export const Route = createFileRoute('/welcome')({
   component: SetPasswordPage,
 })
 

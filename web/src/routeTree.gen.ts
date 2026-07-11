@@ -9,7 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VelkommenRouteImport } from './routes/velkommen'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
@@ -39,6 +39,7 @@ import { Route as AppPlatformBillingRouteImport } from './routes/_app/platform.b
 import { Route as AppParcelsReceiveRouteImport } from './routes/_app/parcels.receive'
 import { Route as AppParcelsHandoutRouteImport } from './routes/_app/parcels.handout'
 import { Route as AppOperiaTemplatesRouteImport } from './routes/_app/operia.templates'
+import { Route as AppOperiaLogsRouteImport } from './routes/_app/operia.logs'
 import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.customers'
 import { Route as AppOperiaCarriersRouteImport } from './routes/_app/operia.carriers'
 import { Route as AppOperiaBillingRouteImport } from './routes/_app/operia.billing'
@@ -47,9 +48,9 @@ import { Route as AppImportRemoteRouteImport } from './routes/_app/import.remote
 import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
 import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 
-const VelkommenRoute = VelkommenRouteImport.update({
-  id: '/velkommen',
-  path: '/velkommen',
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -196,6 +197,11 @@ const AppOperiaTemplatesRoute = AppOperiaTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaLogsRoute = AppOperiaLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaCustomersRoute = AppOperiaCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -235,7 +241,7 @@ const AppImportLocalRoute = AppImportLocalRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
-  '/velkommen': typeof VelkommenRoute
+  '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
+  '/operia/logs': typeof AppOperiaLogsRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
@@ -272,7 +279,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/velkommen': typeof VelkommenRoute
+  '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
+  '/operia/logs': typeof AppOperiaLogsRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
@@ -311,7 +319,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/velkommen': typeof VelkommenRoute
+  '/welcome': typeof WelcomeRoute
   '/_app/carriers': typeof AppCarriersRoute
   '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/_app/operia/billing': typeof AppOperiaBillingRoute
   '/_app/operia/carriers': typeof AppOperiaCarriersRoute
   '/_app/operia/customers': typeof AppOperiaCustomersRoute
+  '/_app/operia/logs': typeof AppOperiaLogsRoute
   '/_app/operia/templates': typeof AppOperiaTemplatesRoute
   '/_app/parcels/handout': typeof AppParcelsHandoutRoute
   '/_app/parcels/receive': typeof AppParcelsReceiveRoute
@@ -352,7 +361,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/velkommen'
+    | '/welcome'
     | '/carriers'
     | '/departments'
     | '/employees'
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/operia/billing'
     | '/operia/carriers'
     | '/operia/customers'
+    | '/operia/logs'
     | '/operia/templates'
     | '/parcels/handout'
     | '/parcels/receive'
@@ -389,7 +399,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/velkommen'
+    | '/welcome'
     | '/carriers'
     | '/departments'
     | '/employees'
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/operia/billing'
     | '/operia/carriers'
     | '/operia/customers'
+    | '/operia/logs'
     | '/operia/templates'
     | '/parcels/handout'
     | '/parcels/receive'
@@ -427,7 +438,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
-    | '/velkommen'
+    | '/welcome'
     | '/_app/carriers'
     | '/_app/departments'
     | '/_app/employees'
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | '/_app/operia/billing'
     | '/_app/operia/carriers'
     | '/_app/operia/customers'
+    | '/_app/operia/logs'
     | '/_app/operia/templates'
     | '/_app/parcels/handout'
     | '/_app/parcels/receive'
@@ -467,16 +479,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
-  VelkommenRoute: typeof VelkommenRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/velkommen': {
-      id: '/velkommen'
-      path: '/velkommen'
-      fullPath: '/velkommen'
-      preLoaderRoute: typeof VelkommenRouteImport
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -682,6 +694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaTemplatesRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/logs': {
+      id: '/_app/operia/logs'
+      path: '/logs'
+      fullPath: '/operia/logs'
+      preLoaderRoute: typeof AppOperiaLogsRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/customers': {
       id: '/_app/operia/customers'
       path: '/customers'
@@ -739,6 +758,7 @@ interface AppOperiaRouteChildren {
   AppOperiaBillingRoute: typeof AppOperiaBillingRoute
   AppOperiaCarriersRoute: typeof AppOperiaCarriersRoute
   AppOperiaCustomersRoute: typeof AppOperiaCustomersRoute
+  AppOperiaLogsRoute: typeof AppOperiaLogsRoute
   AppOperiaTemplatesRoute: typeof AppOperiaTemplatesRoute
   AppOperiaIndexRoute: typeof AppOperiaIndexRoute
 }
@@ -748,6 +768,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaBillingRoute: AppOperiaBillingRoute,
   AppOperiaCarriersRoute: AppOperiaCarriersRoute,
   AppOperiaCustomersRoute: AppOperiaCustomersRoute,
+  AppOperiaLogsRoute: AppOperiaLogsRoute,
   AppOperiaTemplatesRoute: AppOperiaTemplatesRoute,
   AppOperiaIndexRoute: AppOperiaIndexRoute,
 }
@@ -823,7 +844,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
-  VelkommenRoute: VelkommenRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

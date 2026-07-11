@@ -50,7 +50,8 @@
     "operiaCarriers": "Carriers",
     "operiaBilling": "Billing",
     "operiaApiKeys": "API keys",
-    "operiaTemplates": "Templates"
+    "operiaTemplates": "Templates",
+    "operiaLogs": "Logs"
   },
   "operiaConfig": {
     "title": "Operia configuration",
@@ -102,6 +103,14 @@
     "languageLabel": "Language",
     "preferences": "Preferences",
     "preferencesSubtitle": "Manage your account profile",
+    "passwordSection": "Password",
+    "passwordSubtitle": "Change your password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordDescription": "At least 8 characters.",
+    "savePassword": "Save new password",
+    "passwordChanged": "Password changed.",
+    "wrongCurrentPassword": "Current password is incorrect.",
     "profileSection": "Profile information",
     "firstName": "First name",
     "lastName": "Last name",
@@ -363,7 +372,7 @@
     "removedToast": "User \"{{name}}\" removed",
     "selfHint": "You cannot remove your own access.",
     "invite": "Invite user",
-    "sending": "Sending email…",
+    "sending": "Sending invite…",
     "inviteTitle": "Invite user",
     "inviteIntro": "Creates a login account and gives it access to the selected company with the chosen roles. Runs in one go — rolls back if anything fails.",
     "sendInvitation": "Send invitation instead of a fixed password",
