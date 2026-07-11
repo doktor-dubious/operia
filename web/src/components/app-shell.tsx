@@ -271,7 +271,7 @@ function HeaderActions() {
           </Button>
         </AnimateIcon>
         {pinged && (
-          <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-popover px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm animate-in fade-in slide-in-from-top-1">
+          <span className="pointer-events-none absolute left-1/2 top-full z-50 -mt-0.5 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-popover px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm animate-in fade-in slide-in-from-top-1">
             {t('common.refreshing')}
           </span>
         )}
