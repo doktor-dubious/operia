@@ -29,7 +29,7 @@ import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
-import { allNavItems, navGroups, operiaNav, settingsNav, visibleNavGroups } from '@/lib/nav'
+import { allNavItems, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
@@ -219,25 +219,6 @@ function ClassicSidebar() {
           </SidebarGroup>
           )
         })}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === settingsNav.href}
-                  tooltip={t('nav.settings')}
-                  className={menuItemClass}
-                >
-                  <Link to={settingsNav.href}>
-                    <settingsNav.icon />
-                    <span>{t('nav.settings')}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
         {/* Operia-konfiguration nederst — kun for platform-admins (superbrugere) */}
         {access?.isPlatformAdmin && (
           <SidebarGroup className="mt-auto">
