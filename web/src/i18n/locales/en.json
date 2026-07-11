@@ -60,6 +60,24 @@
     "sectionBilling": "Billing",
     "sectionLogs": "Logs"
   },
+  "logsPage": {
+    "searchPlaceholder": "Filter by type, company, message…",
+    "timeRange": "Time range",
+    "range60m": "Last 60 min",
+    "range24h": "Last 24 hours",
+    "range7d": "Last 7 days",
+    "range30d": "Last 30 days",
+    "rangeAll": "All",
+    "eventType": "Event type",
+    "live": "Live",
+    "colDate": "Date",
+    "colEvent": "Event",
+    "colCompany": "Company",
+    "colMessage": "Message",
+    "empty": "No events in the selected range.",
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events"
+  },
   "templatesPage": {
     "title": "Templates",
     "subtitle": "Edit the platform's templates (e.g. the invitation email).",

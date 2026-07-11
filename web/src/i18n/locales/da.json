@@ -60,6 +60,24 @@
     "sectionBilling": "Fakturering",
     "sectionLogs": "Logs"
   },
+  "logsPage": {
+    "searchPlaceholder": "Filtrér efter type, virksomhed, besked…",
+    "timeRange": "Tidsrum",
+    "range60m": "Seneste 60 min",
+    "range24h": "Seneste 24 timer",
+    "range7d": "Seneste 7 dage",
+    "range30d": "Seneste 30 dage",
+    "rangeAll": "Alt",
+    "eventType": "Hændelsestype",
+    "live": "Live",
+    "colDate": "Dato",
+    "colEvent": "Hændelse",
+    "colCompany": "Virksomhed",
+    "colMessage": "Besked",
+    "empty": "Ingen hændelser i det valgte tidsrum.",
+    "count_one": "{{count}} hændelse",
+    "count_other": "{{count}} hændelser"
+  },
   "templatesPage": {
     "title": "Skabeloner",
     "subtitle": "Rediger platformens skabeloner (fx invitations-e-mail).",
