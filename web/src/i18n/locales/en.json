@@ -325,7 +325,18 @@
     "removeWarning": "This action cannot be undone.",
     "removeAcknowledge": "I understand that the user's access is removed.",
     "removedToast": "User \"{{name}}\" removed",
-    "selfHint": "You cannot remove your own access."
+    "selfHint": "You cannot remove your own access.",
+    "invite": "Invite user",
+    "inviteTitle": "Invite user",
+    "inviteIntro": "Creates a login account and gives it access to the selected company with the chosen roles. Runs in one go — rolls back if anything fails.",
+    "sendInvitation": "Send invitation instead of a fixed password",
+    "sendInvitationHint": "The user gets an email with a link and sets their own password.",
+    "password": "Password",
+    "passwordOptional": "empty = generate automatically",
+    "passwordPlaceholder": "At least 8 characters — or leave empty",
+    "rolesLabel": "Roles",
+    "createdToast": "User \"{{email}}\" created",
+    "invitedToast": "Invitation sent to {{email}}"
   },
   "customersPage": {
     "name": "Name",

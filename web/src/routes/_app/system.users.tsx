@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,7 +16,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
@@ -312,6 +315,179 @@ function UserDetailPane({
   )
 }
 
+function InviteUserDialog({
+  open,
+  onOpenChange,
+  companyId,
+  onInvited,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  companyId: string | null
+  onInvited: () => void
+}) {
+  const { t } = useTranslation()
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [invite, setInvite] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [roles, setRoles] = useState<Set<AppRole>>(new Set())
+  const [busy, setBusy] = useState(false)
+
+  const reset = () => {
+    setFullName('')
+    setEmail('')
+    setInvite(false)
+    setPassword('')
+    setShowPassword(false)
+    setRoles(new Set())
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) reset()
+    onOpenChange(next)
+  }
+
+  const toggleRole = (role: AppRole, on: boolean) => {
+    setRoles((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(role)
+      else next.delete(role)
+      return next
+    })
+  }
+
+  const submit = async () => {
+    if (!companyId || !email.trim()) return
+    setBusy(true)
+    const { error } = await supabase.functions.invoke('invite-user', {
+      body: {
+        companyId,
+        email: email.trim(),
+        fullName: fullName.trim(),
+        roles: [...roles],
+        sendInvitation: invite,
+        password: invite ? undefined : password || undefined,
+      },
+    })
+    setBusy(false)
+    if (error) {
+      console.error('Kunne ikke invitere bruger:', error)
+      toast.error(t('common.error'))
+      return
+    }
+    toast.success(
+      invite
+        ? t('userDetail.invitedToast', { email: email.trim() })
+        : t('userDetail.createdToast', { email: email.trim() }),
+    )
+    onInvited()
+    handleOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t('userDetail.inviteTitle')}</DialogTitle>
+        </DialogHeader>
+        <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          {t('userDetail.inviteIntro')}
+        </p>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="invite-name" className="text-label">
+            {t('userDetail.fullName')}
+          </Label>
+          <Input id="invite-name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="invite-email" className="text-label">
+            {t('userDetail.email')} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="invite-email"
+            type="email"
+            value={email}
+            autoFocus
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border p-3">
+          <div>
+            <p className="text-[13px] font-[450]">{t('userDetail.sendInvitation')}</p>
+            <p className="text-xs text-muted-foreground">{t('userDetail.sendInvitationHint')}</p>
+          </div>
+          <Switch checked={invite} onCheckedChange={setInvite} />
+        </label>
+
+        {!invite && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="invite-pw" className="text-label">
+                {t('userDetail.password')}{' '}
+                <span className="font-normal text-muted-foreground">
+                  ({t('userDetail.passwordOptional')})
+                </span>
+              </Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-6 text-xs"
+                onClick={() => setShowPassword((s) => !s)}
+              >
+                {showPassword ? t('common.hide') : t('common.show')}
+              </Button>
+            </div>
+            <Input
+              id="invite-pw"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              placeholder={t('userDetail.passwordPlaceholder')}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <Label className="text-label">{t('userDetail.rolesLabel')}</Label>
+          <div className="flex flex-col gap-2">
+            {ROLES.map((r) => (
+              <label
+                key={r.value}
+                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
+              >
+                <Checkbox
+                  className="mt-0.5"
+                  checked={roles.has(r.value)}
+                  onCheckedChange={(v) => toggleRole(r.value, v === true)}
+                />
+                <div>
+                  <p className="text-[13px] font-[450]">{t(r.labelKey)}</p>
+                  <p className="text-xs text-muted-foreground">{t(r.descKey)}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button disabled={busy || !email.trim() || !companyId} onClick={submit}>
+            {busy ? t('common.loading') : t('userDetail.invite')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function UsersPage() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
@@ -322,6 +498,7 @@ function UsersPage() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [paneDirty, setPaneDirty] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const guarded = (action: () => void) => {
     if (paneDirty) setPendingAction(() => action)
@@ -401,6 +578,11 @@ function UsersPage() {
             .join(' ')
         }
         storageKey="app-users"
+        toolbar={
+          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+            <Plus className="size-4" /> {t('userDetail.invite')}
+          </Button>
+        }
         onRowClick={(row) =>
           guarded(() => setActiveId(row.user_id === activeId ? null : row.user_id))
         }
@@ -418,6 +600,12 @@ function UsersPage() {
           refresh={refresh}
         />
       )}
+      <InviteUserDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        companyId={companyId}
+        onInvited={refresh}
+      />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

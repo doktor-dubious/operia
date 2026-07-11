@@ -325,7 +325,18 @@
     "removeWarning": "Handlingen kan ikke fortrydes.",
     "removeAcknowledge": "Jeg forstår, at brugerens adgang fjernes.",
     "removedToast": "Brugeren \"{{name}}\" er fjernet",
-    "selfHint": "Du kan ikke fjerne din egen adgang."
+    "selfHint": "Du kan ikke fjerne din egen adgang.",
+    "invite": "Inviter bruger",
+    "inviteTitle": "Inviter bruger",
+    "inviteIntro": "Opretter en login-konto og giver den adgang til den valgte virksomhed med de valgte roller. Kører i én arbejdsgang — ruller tilbage hvis noget fejler.",
+    "sendInvitation": "Send invitation i stedet for fast adgangskode",
+    "sendInvitationHint": "Brugeren får en e-mail med et link og vælger selv sin adgangskode.",
+    "password": "Adgangskode",
+    "passwordOptional": "tom = generér automatisk",
+    "passwordPlaceholder": "Mindst 8 tegn — eller lad stå tom",
+    "rolesLabel": "Roller",
+    "createdToast": "Brugeren \"{{email}}\" er oprettet",
+    "invitedToast": "Invitation sendt til {{email}}"
   },
   "customersPage": {
     "name": "Navn",
