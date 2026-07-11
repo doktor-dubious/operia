@@ -158,7 +158,9 @@
     "allowProxy": "Proxy-afhentning",
     "allowLeave": "Må efterlades",
     "description": "Beskrivelse",
-    "empty": "Ingen håndteringsklasser endnu."
+    "empty": "Ingen håndteringsklasser endnu.",
+    "allowProxyInfo": "Tillader at en anden end modtageren afhenter pakken. Afhentningen registreres som proxy-afhentning ved udlevering.",
+    "allowLeaveInfo": "Tillader at pakken efterlades på et aftalt sted uden personlig overdragelse."
   },
   "receive": {
     "company": "Virksomhed",

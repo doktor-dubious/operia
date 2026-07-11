@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { InfoTip } from '@/components/info-tip'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -54,10 +55,12 @@ function useRows(companyId: string | null) {
 
 function CheckboxRow({
   label,
+  info,
   checked,
   onChange,
 }: {
   label: string
+  info?: string
   checked: boolean
   onChange: (checked: boolean) => void
 }) {
@@ -65,6 +68,7 @@ function CheckboxRow({
     <label className="flex max-w-2xl cursor-pointer items-center gap-3 rounded-md border p-3 text-[13px]">
       <Checkbox checked={checked} onCheckedChange={(c) => onChange(c === true)} />
       {label}
+      {info && <InfoTip text={info} />}
     </label>
   )
 }
@@ -192,11 +196,13 @@ function HandlingClassDetailPane({
           <div className="flex flex-col gap-3">
             <CheckboxRow
               label={t('handlingClasses.allowProxy')}
+              info={t('handlingClasses.allowProxyInfo')}
               checked={allowProxy}
               onChange={setAllowProxy}
             />
             <CheckboxRow
               label={t('handlingClasses.allowLeave')}
+              info={t('handlingClasses.allowLeaveInfo')}
               checked={allowLeave}
               onChange={setAllowLeave}
             />

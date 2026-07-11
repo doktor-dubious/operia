@@ -158,7 +158,9 @@
     "allowProxy": "Proxy collection",
     "allowLeave": "May be left",
     "description": "Description",
-    "empty": "No handling classes yet."
+    "empty": "No handling classes yet.",
+    "allowProxyInfo": "Allows someone other than the receiver to collect the parcel. Recorded as proxy collection at handout.",
+    "allowLeaveInfo": "Allows the parcel to be left at an agreed location without personal handover."
   },
   "receive": {
     "company": "Company",
