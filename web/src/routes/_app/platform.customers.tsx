@@ -111,7 +111,7 @@ function EntitlementPicker({
     onFeaturesChange(next)
   }
 
-  const enabledProducts = catalog.products.filter((p) => products.has(p.key))
+  const enabledFeatures = catalog.features.filter((f) => products.has(f.product_key))
 
   return (
     <div className="flex flex-col gap-6">
@@ -151,42 +151,29 @@ function EntitlementPicker({
 
       <div className="flex flex-col gap-2">
         <Label className="text-label">{t('customerDetail.featuresLabel')}</Label>
-        {enabledProducts.length === 0 ? (
+        {enabledFeatures.length === 0 ? (
           <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
             {t('customerDetail.pickProduct')}
           </p>
         ) : (
-          <div className="grid items-start gap-4 sm:grid-cols-2">
-            {enabledProducts.map((p) => {
-              const feats = catalog.features.filter((f) => f.product_key === p.key)
-              if (!feats.length) return null
-              return (
-                <div key={p.key} className="flex flex-col gap-1">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                    {p.name}
-                  </p>
-                  <div className="flex flex-col divide-y rounded-md border">
-                    {feats.map((f) => (
-                      <label
-                        key={f.key}
-                        className="flex cursor-pointer items-center justify-between gap-3 p-3"
-                      >
-                        <div>
-                          <p className="text-[13px] font-[450]">{f.name}</p>
-                          {f.description && (
-                            <p className="text-xs text-muted-foreground">{f.description}</p>
-                          )}
-                        </div>
-                        <Switch
-                          checked={features.has(f.key)}
-                          onCheckedChange={(v) => toggleFeature(f.key, v)}
-                        />
-                      </label>
-                    ))}
-                  </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {enabledFeatures.map((f) => (
+              <label
+                key={f.key}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-md border p-3"
+              >
+                <div>
+                  <p className="text-[13px] font-[450]">{f.name}</p>
+                  {f.description && (
+                    <p className="text-xs text-muted-foreground">{f.description}</p>
+                  )}
                 </div>
-              )
-            })}
+                <Switch
+                  checked={features.has(f.key)}
+                  onCheckedChange={(v) => toggleFeature(f.key, v)}
+                />
+              </label>
+            ))}
           </div>
         )}
       </div>
