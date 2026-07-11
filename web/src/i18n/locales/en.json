@@ -297,6 +297,34 @@
     "nfcCardId": "NFC card ID (UID)",
     "role": "Role"
   },
+  "usersPage": {
+    "name": "Name",
+    "email": "Email",
+    "roles": "Roles",
+    "created": "Created",
+    "noRoles": "None",
+    "roleManager": "Manager",
+    "roleParcelHandler": "Parcel handler",
+    "roleFinalReceiver": "Receiver"
+  },
+  "userDetail": {
+    "fullName": "Full name",
+    "email": "Email",
+    "emailHint": "The login email is managed by the user's account and cannot be changed here.",
+    "you": "you",
+    "tabAccess": "Access",
+    "accessHint": "Roles control what the user can do in the system. A user can have several roles.",
+    "roleManagerDescription": "Full administration: configuration, users and exceptions.",
+    "roleParcelHandlerDescription": "Can register and hand out parcels on the handheld.",
+    "roleFinalReceiverDescription": "Can receive their own parcels; no system access.",
+    "remove": "Remove user",
+    "removeDescription": "Removes the user's system access to this company. The login account itself is not deleted.",
+    "removeTitle": "Remove \"{{name}}\"",
+    "removeWarning": "This action cannot be undone.",
+    "removeAcknowledge": "I understand that the user's access is removed.",
+    "removedToast": "User \"{{name}}\" removed",
+    "selfHint": "You cannot remove your own access."
+  },
   "departmentDetail": {
     "created": "Created",
     "noActions": "No actions available — departments are maintained by the employee import.",

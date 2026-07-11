@@ -297,6 +297,34 @@
     "nfcCardId": "NFC-kort-ID (UID)",
     "role": "Rolle"
   },
+  "usersPage": {
+    "name": "Navn",
+    "email": "E-mail",
+    "roles": "Roller",
+    "created": "Oprettet",
+    "noRoles": "Ingen",
+    "roleManager": "Manager",
+    "roleParcelHandler": "Pakkehåndterer",
+    "roleFinalReceiver": "Modtager"
+  },
+  "userDetail": {
+    "fullName": "Fulde navn",
+    "email": "E-mail",
+    "emailHint": "Login-e-mailen styres af brugerens konto og kan ikke ændres her.",
+    "you": "dig",
+    "tabAccess": "Adgang",
+    "accessHint": "Roller styrer, hvad brugeren kan i systemet. En bruger kan have flere roller.",
+    "roleManagerDescription": "Fuld administration: konfiguration, brugere og undtagelser.",
+    "roleParcelHandlerDescription": "Kan registrere og udlevere pakker på håndterminalen.",
+    "roleFinalReceiverDescription": "Kan modtage egne pakker; ingen systemadgang.",
+    "remove": "Fjern bruger",
+    "removeDescription": "Fjerner brugerens systemadgang til denne virksomhed. Selve login-kontoen slettes ikke.",
+    "removeTitle": "Fjern \"{{name}}\"",
+    "removeWarning": "Handlingen kan ikke fortrydes.",
+    "removeAcknowledge": "Jeg forstår, at brugerens adgang fjernes.",
+    "removedToast": "Brugeren \"{{name}}\" er fjernet",
+    "selfHint": "Du kan ikke fjerne din egen adgang."
+  },
   "departmentDetail": {
     "created": "Oprettet",
     "noActions": "Ingen handlinger tilgængelige — afdelinger vedligeholdes af medarbejderimporten.",
