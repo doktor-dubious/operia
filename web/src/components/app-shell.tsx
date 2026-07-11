@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { RefreshCw } from '@/components/animate-ui/icons/refresh-cw'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -91,6 +91,26 @@ function ClassicSidebar() {
     if (parent) setOpenSubmenu(parent.labelKey)
   }, [pathname])
 
+  // Grupper (Pakker, Stamdata, System, …) kan foldes op/ned ved klik på
+  // overskriften. Udfoldet som udgangspunkt; valget huskes i localStorage.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem('operia-sidebar-collapsed') ?? '[]'))
+    } catch {
+      return new Set<string>()
+    }
+  })
+  useEffect(() => {
+    localStorage.setItem('operia-sidebar-collapsed', JSON.stringify([...collapsedGroups]))
+  }, [collapsedGroups])
+  const toggleGroup = (key: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
   return (
     <Sidebar collapsible="icon" className="select-none">
       <SidebarHeader>
@@ -103,11 +123,29 @@ function ClassicSidebar() {
       </SidebarHeader>
       <CompanySwitcher />
       <SidebarContent>
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const collapsed = collapsedGroups.has(group.labelKey)
+          return (
           <SidebarGroup key={group.labelKey}>
-            <SidebarGroupLabel className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-              {t(`nav.${group.labelKey}`)}
+            <SidebarGroupLabel
+              asChild
+              className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70"
+            >
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.labelKey)}
+                className="w-full cursor-pointer transition-colors hover:text-muted-foreground"
+              >
+                <span>{t(`nav.${group.labelKey}`)}</span>
+                <ChevronDown
+                  className={cn(
+                    'ml-auto !size-3.5 transition-transform duration-200',
+                    collapsed && '-rotate-90',
+                  )}
+                />
+              </button>
             </SidebarGroupLabel>
+            {!collapsed && (
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {group.items.map((item) =>
@@ -170,8 +208,10 @@ function ClassicSidebar() {
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
+            )}
           </SidebarGroup>
-        ))}
+          )
+        })}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
