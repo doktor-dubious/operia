@@ -348,6 +348,7 @@
     "removedToast": "User \"{{name}}\" removed",
     "selfHint": "You cannot remove your own access.",
     "invite": "Invite user",
+    "sending": "Sending email…",
     "inviteTitle": "Invite user",
     "inviteIntro": "Creates a login account and gives it access to the selected company with the chosen roles. Runs in one go — rolls back if anything fails.",
     "sendInvitation": "Send invitation instead of a fixed password",

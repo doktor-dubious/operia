@@ -27,6 +27,7 @@ import { Field } from '@/components/detail-field'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
 import type { Database } from '@/lib/database.types'
+import { readEdgeError } from '@/lib/edge'
 import { supabase } from '@/lib/supabase'
 
 // System → Brugere: virksomhedens brugere med systemadgang (app_users) og
@@ -374,7 +375,7 @@ function InviteUserDialog({
     setBusy(false)
     if (error) {
       console.error('Kunne ikke invitere bruger:', error)
-      toast.error(t('common.error'))
+      toast.error(await readEdgeError(error, t('common.error')))
       return
     }
     if (invite && data?.emailSent === false) {
@@ -484,7 +485,11 @@ function InviteUserDialog({
             {t('common.cancel')}
           </Button>
           <Button disabled={busy || !email.trim() || !companyId || roles.size === 0} onClick={submit}>
-            {busy ? t('common.loading') : t('userDetail.invite')}
+            {busy
+              ? invite
+                ? t('userDetail.sending')
+                : t('common.loading')
+              : t('userDetail.invite')}
           </Button>
         </DialogFooter>
       </DialogContent>
