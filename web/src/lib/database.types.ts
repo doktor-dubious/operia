@@ -74,6 +74,42 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          company_id: string | null
+          created_at: string
+          detail: Json
+          entity_id: string | null
+          entity_type: string
+          id: number
+          summary: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          detail?: Json
+          entity_id?: string | null
+          entity_type: string
+          id?: never
+          summary?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          detail?: Json
+          entity_id?: string | null
+          entity_type?: string
+          id?: never
+          summary?: string | null
+        }
+        Relationships: []
+      }
       carriers: {
         Row: {
           company_id: string
@@ -242,6 +278,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          anonymized_at: string | null
           company_id: string
           created_at: string
           department_id: string | null
@@ -262,6 +299,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          anonymized_at?: string | null
           company_id: string
           created_at?: string
           department_id?: string | null
@@ -282,6 +320,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          anonymized_at?: string | null
           company_id?: string
           created_at?: string
           department_id?: string | null
@@ -843,6 +882,18 @@ export type Database = {
           to_s: Database["public"]["Enums"]["parcel_status"]
         }
         Returns: boolean
+      }
+      record_audit: {
+        Args: {
+          p_action: string
+          p_actor?: string
+          p_company_id: string
+          p_detail?: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_summary: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

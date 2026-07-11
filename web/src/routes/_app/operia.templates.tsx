@@ -107,11 +107,11 @@ function TemplatesPage() {
           <p className="mt-1 text-sm text-foreground-light">{t('templatesPage.subtitle')}</p>
         </header>
 
-        <div className="mb-6 flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-2">
+        <div className="mb-6 flex flex-wrap items-end gap-3 border-b border-border pb-6">
+          <div className="flex flex-1 flex-col gap-2">
             <Label className="text-label">{t('templatesPage.templateLabel')}</Label>
             <Select value={activeKey ?? undefined} onValueChange={setSelectedKey}>
-              <SelectTrigger className="w-64">
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

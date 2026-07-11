@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useIsFetching, useQueryClient } from '@tanstack/react-query'
+import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
@@ -29,6 +29,7 @@ import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
+import { supabase } from '@/lib/supabase'
 import { allNavItems, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
@@ -40,13 +41,28 @@ import { BrandLogo } from '@/components/brand-logo'
 //             (compliance-circle/gorm.ai-mønsteret). Navigationskromen er
 //             bevidst skarpkantet (rounded-none) som i compliance-circle.
 
-function useUserInitial() {
-  // Initial fra e-mailen i sessionen; profilnavn (app_users) kommer senere.
+function useUserProfile() {
+  // Profilnavn fra app_users; falder tilbage til e-mailen indtil navnet
+  // findes (fx hvis rækken mangler eller stadig hentes).
   const { session } = useSession()
-  return session?.user.email?.[0]?.toUpperCase() ?? 'O'
+  const { data: fullName } = useQuery({
+    queryKey: ['user-profile', session?.user.id],
+    enabled: !!session,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_users')
+        .select('full_name')
+        .eq('user_id', session!.user.id)
+        .maybeSingle()
+      return data?.full_name ?? null
+    },
+  })
+  const name = fullName ?? session?.user.email ?? 'Operia'
+  return { name, initial: name[0]?.toUpperCase() ?? 'O' }
 }
 
-function UserTrigger({ name }: { name: string }) {
+function UserTrigger({ name, initial }: { name: string; initial: string }) {
   return (
     <DropdownMenuTrigger asChild>
       <Button
@@ -55,10 +71,10 @@ function UserTrigger({ name }: { name: string }) {
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback className="bg-muted-foreground/20">{name}</AvatarFallback>
+            <AvatarFallback className="bg-muted-foreground/20">{initial}</AvatarFallback>
           </Avatar>
           <span className="min-w-0 flex-1 truncate text-left text-xs font-medium group-data-[collapsible=icon]:hidden">
-            Operia
+            {name}
           </span>
           <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
         </div>
@@ -77,7 +93,7 @@ const menuItemClass =
 function ClassicSidebar() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const initial = useUserInitial()
+  const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
   const groups = visibleNavGroups(access)
 
@@ -244,7 +260,7 @@ function ClassicSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-0">
         <DropdownMenu>
-          <UserTrigger name={initial} />
+          <UserTrigger name={name} initial={initial} />
           <UserNavDropdownContent includeNav={false} />
         </DropdownMenu>
       </SidebarFooter>
@@ -254,7 +270,7 @@ function ClassicSidebar() {
 
 function ModernRail() {
   const { t } = useTranslation()
-  const initial = useUserInitial()
+  const { initial } = useUserProfile()
   return (
     <aside className="flex w-12 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar pb-2">
       <Link to="/" aria-label={t('app.name')} className="flex justify-center p-2 pt-3">
@@ -286,7 +302,7 @@ function ModernRail() {
 // (foreløbig Feedback og Søg — flere kan komme til) + brugermenuen.
 function HeaderActions() {
   const { t } = useTranslation()
-  const initial = useUserInitial()
+  const { initial } = useUserProfile()
   const queryClient = useQueryClient()
   // Antal aktive forespørgsler der henter lige nu — driver spin-animationen.
   const fetching = useIsFetching() > 0

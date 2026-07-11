@@ -96,6 +96,7 @@ function AnonymizeDialog({
           phone: null,
           employee_no: null,
           is_active: false,
+          anonymized_at: new Date().toISOString(),
         })
         .in('id', ids)
         .select('id')

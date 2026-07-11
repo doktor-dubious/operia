@@ -17,10 +17,10 @@ import {
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
-// Operia → Logs (platform-admins): Supabase-Studio-lignende logfremviser over
-// systemets revisionslog (parcel_events, append-only, på tværs af tenants).
-// Faceter til venstre (tidsrum + hændelsestype), aktivitetshistogram øverst,
-// tæt logtabel og en Live-tilstand der auto-genhenter.
+// Operia → Logs (platform-admins): Supabase-Studio-lignende fremviser af den
+// centrale NIS2-revisionslog (audit_log), skrevet server-side af triggere på
+// tværs af tenants. Faceter (tidsrum + handling), aktivitetshistogram, tæt
+// tabel og en Live-tilstand der auto-genhenter.
 export const Route = createFileRoute('/_app/operia/logs')({
   component: LogsPage,
 })
@@ -36,16 +36,14 @@ const RANGES = [
 const dateFmt = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'medium' })
 const BUCKETS = 48
 
-function useLogs(live: boolean) {
+function useAuditLog(live: boolean) {
   return useQuery({
-    queryKey: ['operia-logs'],
+    queryKey: ['operia-audit-log'],
     refetchInterval: live ? 5000 : false,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('parcel_events')
-        .select(
-          'id, created_at, event_type, from_status, to_status, company:companies (name), parcel:parcels (barcode)',
-        )
+        .from('audit_log')
+        .select('id, created_at, action, entity_type, entity_id, summary, company_id, detail')
         .order('created_at', { ascending: false })
         .limit(1000)
       if (error) throw error
@@ -54,41 +52,47 @@ function useLogs(live: boolean) {
   })
 }
 
-type LogRow = NonNullable<ReturnType<typeof useLogs>['data']>[number]
+function useCompanyNames() {
+  return useQuery({
+    queryKey: ['companies-for-logs'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name')
+      if (error) throw error
+      return new Map(data.map((c) => [c.id, c.name]))
+    },
+  })
+}
 
-function dotColor(status: string | null) {
-  switch (status) {
-    case 'delivered':
-      return 'bg-emerald-500'
-    case 'rejected':
-    case 'returned':
-      return 'bg-red-500'
-    case 'in_storage':
-    case 'in_transit':
-    case 'in_locker':
-      return 'bg-amber-500'
-    case 'registered':
-      return 'bg-sky-500'
-    default:
-      return 'bg-muted-foreground/40'
-  }
+type LogRow = NonNullable<ReturnType<typeof useAuditLog>['data']>[number]
+
+function dotColor(action: string) {
+  if (/(deleted|removed|rejected|failed)/.test(action)) return 'bg-red-500'
+  if (/(deactivated|anonymized|returned)/.test(action)) return 'bg-amber-500'
+  if (/(created|invited|delivered|applied)/.test(action)) return 'bg-emerald-500'
+  if (action.startsWith('parcel.')) return 'bg-sky-500'
+  return 'bg-muted-foreground/40'
 }
 
 function message(r: LogRow) {
+  const d = (r.detail ?? {}) as Record<string, unknown>
   const parts: string[] = []
-  if (r.parcel?.barcode) parts.push(r.parcel.barcode)
-  if (r.to_status) parts.push(`${r.from_status ?? '—'} → ${r.to_status}`)
+  if (r.summary) parts.push(r.summary)
+  if (d.from_status || d.to_status) parts.push(`${d.from_status ?? '—'} → ${d.to_status ?? '—'}`)
+  if (r.action.startsWith('import.'))
+    parts.push(`+${d.created ?? 0} / ~${d.updated ?? 0} / -${d.deactivated ?? 0} / ✗${d.rejected ?? 0}`)
   return parts.join('   ·   ')
 }
 
-const GRID = 'grid grid-cols-[16px_150px_130px_160px_1fr] items-center gap-3'
+const GRID = 'grid grid-cols-[16px_150px_180px_150px_1fr] items-center gap-3'
 
 function LogsPage() {
   const { t } = useTranslation()
   const [live, setLive] = useState(false)
-  const { data, isPending, refetch, isFetching } = useLogs(live)
-  const [range, setRange] = useState('24h')
-  const [types, setTypes] = useState<Set<string>>(new Set())
+  const { data, isPending, refetch, isFetching } = useAuditLog(live)
+  const { data: companyNames } = useCompanyNames()
+  const [range, setRange] = useState('7d')
+  const [actions, setActions] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   const rows = data ?? []
@@ -98,23 +102,23 @@ function LogsPage() {
 
   const timeFiltered = rows.filter((r) => new Date(r.created_at).getTime() >= cutoff)
 
-  // Facet-tællinger pr. hændelsestype (tidsfiltreret, ikke type-filtreret).
-  const typeCounts = useMemo(() => {
+  const actionCounts = useMemo(() => {
     const m = new Map<string, number>()
-    for (const r of timeFiltered) m.set(r.event_type, (m.get(r.event_type) ?? 0) + 1)
+    for (const r of timeFiltered) m.set(r.action, (m.get(r.action) ?? 0) + 1)
     return [...m.entries()].sort((a, b) => b[1] - a[1])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, range])
 
+  const companyName = (id: string | null) => (id ? (companyNames?.get(id) ?? '—') : '—')
+
   const q = query.trim().toLowerCase()
   const filtered = timeFiltered.filter((r) => {
-    if (types.size && !types.has(r.event_type)) return false
-    if (q && !`${r.event_type} ${r.company?.name ?? ''} ${message(r)}`.toLowerCase().includes(q))
+    if (actions.size && !actions.has(r.action)) return false
+    if (q && !`${r.action} ${companyName(r.company_id)} ${message(r)}`.toLowerCase().includes(q))
       return false
     return true
   })
 
-  // Aktivitetshistogram: fordel hændelserne på BUCKETS tidsintervaller.
   const times = filtered.map((r) => new Date(r.created_at).getTime())
   const hiMax = rangeMs ? now : times.length ? Math.max(...times) : now
   const hiMin = rangeMs ? cutoff : times.length ? Math.min(...times) : now - 1
@@ -126,11 +130,11 @@ function LogsPage() {
   }
   const bucketMax = Math.max(1, ...buckets)
 
-  const toggleType = (type: string, on: boolean) =>
-    setTypes((prev) => {
+  const toggleAction = (action: string, on: boolean) =>
+    setActions((prev) => {
       const next = new Set(prev)
-      if (on) next.add(type)
-      else next.delete(type)
+      if (on) next.add(action)
+      else next.delete(action)
       return next
     })
 
@@ -213,17 +217,17 @@ function LogsPage() {
               {t('logsPage.eventType')}
             </p>
             <div className="flex flex-col gap-1.5">
-              {typeCounts.map(([type, count]) => (
-                <label key={type} className="flex cursor-pointer items-center gap-2 text-xs">
+              {actionCounts.map(([action, count]) => (
+                <label key={action} className="flex cursor-pointer items-center gap-2 text-xs">
                   <Checkbox
-                    checked={types.has(type)}
-                    onCheckedChange={(v) => toggleType(type, v === true)}
+                    checked={actions.has(action)}
+                    onCheckedChange={(v) => toggleAction(action, v === true)}
                   />
-                  <span className="flex-1 truncate">{type}</span>
+                  <span className="flex-1 truncate font-mono text-[11px]">{action}</span>
                   <span className="text-muted-foreground">{count}</span>
                 </label>
               ))}
-              {!typeCounts.length && <p className="text-xs text-muted-foreground">—</p>}
+              {!actionCounts.length && <p className="text-xs text-muted-foreground">—</p>}
             </div>
           </div>
         </aside>
@@ -241,7 +245,7 @@ function LogsPage() {
               >
                 <span />
                 <span>{t('logsPage.colDate')}</span>
-                <span>{t('logsPage.colEvent')}</span>
+                <span>{t('logsPage.colAction')}</span>
                 <span>{t('logsPage.colCompany')}</span>
                 <span>{t('logsPage.colMessage')}</span>
               </div>
@@ -254,13 +258,13 @@ function LogsPage() {
                       'border-b border-border/50 px-3 py-1.5 text-xs hover:bg-muted/40',
                     )}
                   >
-                    <span className={cn('size-1.5 rounded-full', dotColor(r.to_status ?? r.from_status))} />
+                    <span className={cn('size-1.5 rounded-full', dotColor(r.action))} />
                     <span className="font-mono text-[11px] text-muted-foreground">
                       {dateFmt.format(new Date(r.created_at))}
                     </span>
-                    <span className="truncate">{r.event_type}</span>
-                    <span className="truncate text-muted-foreground">{r.company?.name ?? '—'}</span>
-                    <span className="truncate font-mono text-[11px]">{message(r) || '—'}</span>
+                    <span className="truncate font-mono text-[11px]">{r.action}</span>
+                    <span className="truncate text-muted-foreground">{companyName(r.company_id)}</span>
+                    <span className="truncate">{message(r) || '—'}</span>
                   </div>
                 ))}
                 {!filtered.length && (
