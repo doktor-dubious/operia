@@ -196,7 +196,7 @@ function PhotoCapture({
 function ReceivePage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { companyId, companies, setCompanyId, isPending: companyPending } = useCompanyContext()
+  const { companyId, isPending: companyPending } = useCompanyContext()
   const { data: master } = useMasterData(companyId)
 
   const [barcode, setBarcode] = useState('')
@@ -321,23 +321,6 @@ function ReceivePage() {
         </CardHeader>
         <CardContent>
           <form className="flex flex-col gap-4" onSubmit={submit}>
-            {companies.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <Label>{t('receive.company')}</Label>
-                <Select value={companyId} onValueChange={setCompanyId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             <div className="flex flex-col gap-2">
               <Label htmlFor="barcode">{t('receive.barcode')}</Label>
               <Input

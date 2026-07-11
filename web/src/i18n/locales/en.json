@@ -365,5 +365,11 @@
     "fileRejected": "The file was rejected — nothing was changed.",
     "noCompany": "Choose a company first.",
     "importButton": "Import"
+  },
+  "companySwitcher": {
+    "search": "Search companies…",
+    "noResults": "No results",
+    "recent": "Recently used",
+    "all": "All companies"
   }
 }

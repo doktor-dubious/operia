@@ -365,5 +365,11 @@
     "fileRejected": "Filen blev afvist — intet er ændret.",
     "noCompany": "Vælg virksomhed først.",
     "importButton": "Importér"
+  },
+  "companySwitcher": {
+    "search": "Søg virksomhed…",
+    "noResults": "Ingen match",
+    "recent": "Senest brugte",
+    "all": "Alle virksomheder"
   }
 }

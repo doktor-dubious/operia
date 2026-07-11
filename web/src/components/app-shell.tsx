@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from '@/components/ui/sidebar'
+import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
@@ -82,6 +83,7 @@ function ClassicSidebar() {
           </span>
         </div>
       </SidebarHeader>
+      <CompanySwitcher />
       <SidebarContent>
         {groups.map((group) => (
           <SidebarGroup key={group.labelKey}>
@@ -143,25 +145,28 @@ function ModernRail() {
   const { t } = useTranslation()
   const initial = useUserInitial()
   return (
-    <aside className="flex w-12 shrink-0 select-none flex-col items-center justify-between border-r border-sidebar-border bg-sidebar py-2">
-      <Link to="/" aria-label={t('app.name')} className="p-2">
+    <aside className="flex w-12 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar pb-2">
+      <Link to="/" aria-label={t('app.name')} className="flex justify-center p-2 pt-3">
         <BrandLogo className="h-5 w-5" />
       </Link>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 cursor-pointer rounded-none"
-            aria-label="Menu"
-          >
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-muted-foreground/20">{initial}</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <UserNavDropdownContent includeNav />
-      </DropdownMenu>
+      <CompanySwitcher compact />
+      <div className="mt-auto flex justify-center pt-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 cursor-pointer rounded-none"
+              aria-label="Menu"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-muted-foreground/20">{initial}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <UserNavDropdownContent includeNav />
+        </DropdownMenu>
+      </div>
     </aside>
   )
 }

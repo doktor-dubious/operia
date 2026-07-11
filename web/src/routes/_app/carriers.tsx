@@ -16,7 +16,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CompanyPicker } from '@/components/company-picker'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
@@ -285,7 +284,7 @@ function NewCarrierDialog({
 
 function CarriersPage() {
   const { t } = useTranslation()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -337,14 +336,6 @@ function CarriersPage() {
             <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
               <Plus className="size-4" /> {t('common.new')}
             </Button>
-            <CompanyPicker
-              companies={companies}
-              value={companyId}
-              onChange={(id) => {
-                setActiveId(null)
-                setCompanyId(id)
-              }}
-            />
           </div>
         }
         onRowClick={(row) => guarded(() => setActiveId(row.id === activeId ? null : row.id))}

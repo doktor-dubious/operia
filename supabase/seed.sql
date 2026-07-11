@@ -107,3 +107,17 @@ values (gen_random_uuid(),'99999999-9999-9999-9999-999999999999','99999999-9999-
 insert into public.app_users (user_id, company_id, full_name, email)
 values ('99999999-9999-9999-9999-999999999999','11111111-1111-1111-1111-111111111111','Test Handler','handler@operia.local');
 insert into public.user_roles (user_id, role) values ('99999999-9999-9999-9999-999999999999','parcel_handler');
+
+-- 10 testkunder (til virksomhedsskifteren)
+with new_companies as (
+  insert into public.companies (name, registration_no)
+  values
+    ('Nordvind Logistik ApS','20110001'),('Baltic Fragt A/S','20110002'),
+    ('Grøndal & Søn ApS','20110003'),('Havnekontoret A/S','20110004'),
+    ('Jysk Pakkecenter ApS','20110005'),('Møllegården Ejendomme A/S','20110006'),
+    ('Fjordbyg Entreprise ApS','20110007'),('Skovgaard Medico A/S','20110008'),
+    ('Citypost Danmark ApS','20110009'),('Østerbro Kontorhotel A/S','20110010')
+  returning id
+)
+insert into public.company_products (company_id, product_key)
+select id, 'parcels' from new_companies;

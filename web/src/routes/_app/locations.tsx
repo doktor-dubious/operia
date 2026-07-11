@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { CompanyPicker } from '@/components/company-picker'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { Field } from '@/components/detail-field'
@@ -339,7 +338,7 @@ function NewLocationDialog({
 
 function LocationsPage() {
   const { t } = useTranslation()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -403,16 +402,6 @@ function LocationsPage() {
             <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
               <Plus className="size-4" /> {t('common.new')}
             </Button>
-            <CompanyPicker
-              companies={companies}
-              value={companyId}
-              onChange={(id) => {
-                guarded(() => {
-                  setActiveId(null)
-                  setCompanyId(id)
-                })
-              }}
-            />
           </div>
         }
         onDelete={deleteRows}

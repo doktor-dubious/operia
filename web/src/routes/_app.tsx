@@ -1,6 +1,7 @@
 import { Navigate, Outlet, createFileRoute } from '@tanstack/react-router'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AppShell } from '@/components/app-shell'
+import { CompanyProvider } from '@/components/company-provider'
 import { PreferencesSync } from '@/components/preferences-sync'
 import { useSession } from '@/hooks/use-session'
 
@@ -25,11 +26,11 @@ function AppLayout() {
   }
 
   return (
-    <>
+    <CompanyProvider>
       <PreferencesSync session={session} />
       <AppShell>
         <Outlet />
       </AppShell>
-    </>
+    </CompanyProvider>
   )
 }

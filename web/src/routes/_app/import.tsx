@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CompanyPicker } from '@/components/company-picker'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
@@ -98,7 +97,7 @@ function ImportPage() {
   const { t } = useTranslation()
   const { session } = useSession()
   const { data: access } = useAccess()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { companyId } = useCompanyContext()
   const queryClient = useQueryClient()
 
   const [step, setStep] = useState<'upload' | 'preview' | 'receipt'>('upload')
@@ -429,21 +428,13 @@ function ImportPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 py-6">
-      <header className="flex items-start justify-between gap-4">
+      <header>
         <div>
           <h1 className="text-2xl font-medium text-foreground">{t('importPage.title')}</h1>
           <p className="mt-1 max-w-xl text-sm text-foreground-light">
             {t('importPage.subtitle')}
           </p>
         </div>
-        <CompanyPicker
-          companies={companies}
-          value={companyId}
-          onChange={(id) => {
-            resetWizard()
-            setCompanyId(id)
-          }}
-        />
       </header>
 
       {/* Trinindikator */}
