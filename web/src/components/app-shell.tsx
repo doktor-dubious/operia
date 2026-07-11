@@ -111,9 +111,13 @@ function ClassicSidebar() {
                   item.children ? (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
-                        isActive={item.children.some((c) => c.href === pathname)}
                         tooltip={t(`nav.${item.labelKey}`)}
-                        className={cn(menuItemClass, 'cursor-pointer')}
+                        className={cn(
+                          menuItemClass,
+                          'cursor-pointer',
+                          // aktiv child: kun tekstfremhævning, ingen baggrund
+                          item.children.some((c) => c.href === pathname) && 'text-foreground',
+                        )}
                         onClick={() =>
                           setOpenSubmenu((prev) =>
                             prev === item.labelKey ? null : item.labelKey,
