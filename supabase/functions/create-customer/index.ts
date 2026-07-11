@@ -6,6 +6,7 @@
 // rulles alt tilbage (auth-bruger + virksomhed slettes; cascade rydder resten).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { sendInviteEmail } from '../_shared/invite-email.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -63,12 +64,19 @@ Deno.serve(async (req) => {
   if (!adminEmail) return json({ error: 'admin_email_required' }, 400)
 
   // 3) Opret auth-brugeren (invitation eller fast/genereret adgangskode).
+  //    Ved invitation genererer vi selv accept-linket (generateLink sender
+  //    ingen e-mail) og udsender via Resend efter provisioneringen.
   let newUserId: string | null = null
+  let inviteLink: string | null = null
   try {
     if (body.sendInvitation) {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(adminEmail)
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: 'invite',
+        email: adminEmail,
+      })
       if (error) throw error
       newUserId = data.user.id
+      inviteLink = data.properties?.action_link ?? null
     } else {
       const password = body.password && body.password.length >= 8
         ? body.password
@@ -128,5 +136,16 @@ Deno.serve(async (req) => {
     return json({ error: 'provisioning_failed', detail: String((e as Error).message) }, 400)
   }
 
-  return json({ companyId, userId: newUserId })
+  // 6) Send invitations-e-mailen via Resend (efter alt andet er lykkedes).
+  //    Fejler e-mailen, ruller vi IKKE tilbage — kunden findes; vi melder blot
+  //    at e-mailen ikke kom afsted, så manageren kan sende linket manuelt.
+  let emailSent = false
+  let emailError: string | undefined
+  if (body.sendInvitation && inviteLink) {
+    const r = await sendInviteEmail(admin, adminEmail, inviteLink)
+    emailSent = r.ok
+    emailError = r.error
+  }
+
+  return json({ companyId, userId: newUserId, emailSent, emailError })
 })

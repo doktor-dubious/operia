@@ -478,7 +478,7 @@ function NewCustomerDialog({
     setBusy(true)
     const productOf = new Map(catalog.features.map((f) => [f.key, f.product_key]))
     const effectiveFeatures = [...features].filter((f) => products.has(productOf.get(f) ?? ''))
-    const { error } = await supabase.functions.invoke('create-customer', {
+    const { data, error } = await supabase.functions.invoke('create-customer', {
       body: {
         companyName: name.trim(),
         adminEmail: email.trim(),
@@ -494,11 +494,15 @@ function NewCustomerDialog({
       toast.error(t('common.error'))
       return
     }
-    toast.success(
-      invite
-        ? t('customerDetail.invitedToast', { name: name.trim(), email: email.trim() })
-        : t('customerDetail.createdToast', { name: name.trim() }),
-    )
+    if (invite && data?.emailSent === false) {
+      toast.warning(t('common.emailFailed'))
+    } else {
+      toast.success(
+        invite
+          ? t('customerDetail.invitedToast', { name: name.trim(), email: email.trim() })
+          : t('customerDetail.createdToast', { name: name.trim() }),
+      )
+    }
     onCreated()
     handleOpenChange(false)
   }

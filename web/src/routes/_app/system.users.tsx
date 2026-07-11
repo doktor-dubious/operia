@@ -361,7 +361,7 @@ function InviteUserDialog({
   const submit = async () => {
     if (!companyId || !email.trim()) return
     setBusy(true)
-    const { error } = await supabase.functions.invoke('invite-user', {
+    const { data, error } = await supabase.functions.invoke('invite-user', {
       body: {
         companyId,
         email: email.trim(),
@@ -377,11 +377,15 @@ function InviteUserDialog({
       toast.error(t('common.error'))
       return
     }
-    toast.success(
-      invite
-        ? t('userDetail.invitedToast', { email: email.trim() })
-        : t('userDetail.createdToast', { email: email.trim() }),
-    )
+    if (invite && data?.emailSent === false) {
+      toast.warning(t('common.emailFailed'))
+    } else {
+      toast.success(
+        invite
+          ? t('userDetail.invitedToast', { email: email.trim() })
+          : t('userDetail.createdToast', { email: email.trim() }),
+      )
+    }
     onInvited()
     handleOpenChange(false)
   }

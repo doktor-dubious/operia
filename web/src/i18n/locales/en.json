@@ -165,6 +165,7 @@
     "search": "Search",
     "show": "Show",
     "hide": "Hide",
+    "emailFailed": "The user was created, but the invitation email could not be sent.",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "yes": "Yes",

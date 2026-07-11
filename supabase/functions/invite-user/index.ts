@@ -7,6 +7,7 @@
 // noget, rulles auth-brugeren tilbage (cascade rydder app_users/roller).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { sendInviteEmail } from '../_shared/invite-email.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -90,12 +91,15 @@ Deno.serve(async (req) => {
   if (!allowed) return json({ error: 'forbidden' }, 403)
 
   // 4) Opret auth-brugeren (invitation eller fast/genereret adgangskode).
+  //    Ved invitation genererer vi selv accept-linket og sender via Resend.
   let newUserId: string | null = null
+  let inviteLink: string | null = null
   try {
     if (body.sendInvitation) {
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(email)
+      const { data, error } = await admin.auth.admin.generateLink({ type: 'invite', email })
       if (error) throw error
       newUserId = data.user.id
+      inviteLink = data.properties?.action_link ?? null
     } else {
       const password = body.password && body.password.length >= 8
         ? body.password
@@ -133,5 +137,14 @@ Deno.serve(async (req) => {
     return json({ error: 'provisioning_failed', detail: String((e as Error).message) }, 400)
   }
 
-  return json({ userId: newUserId })
+  // 6) Send invitations-e-mailen via Resend (uden rollback ved e-mailfejl).
+  let emailSent = false
+  let emailError: string | undefined
+  if (body.sendInvitation && inviteLink) {
+    const r = await sendInviteEmail(admin, email, inviteLink)
+    emailSent = r.ok
+    emailError = r.error
+  }
+
+  return json({ userId: newUserId, emailSent, emailError })
 })

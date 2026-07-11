@@ -165,6 +165,7 @@
     "search": "Søg",
     "show": "Vis",
     "hide": "Skjul",
+    "emailFailed": "Brugeren blev oprettet, men invitations-e-mailen kunne ikke sendes.",
     "refresh": "Opdatér",
     "refreshing": "Opdaterer…",
     "yes": "Ja",
