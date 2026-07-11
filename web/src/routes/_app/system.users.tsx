@@ -359,7 +359,7 @@ function InviteUserDialog({
   }
 
   const submit = async () => {
-    if (!companyId || !email.trim()) return
+    if (!companyId || !email.trim() || roles.size === 0) return
     setBusy(true)
     const { data, error } = await supabase.functions.invoke('invite-user', {
       body: {
@@ -483,7 +483,7 @@ function InviteUserDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !email.trim() || !companyId} onClick={submit}>
+          <Button disabled={busy || !email.trim() || !companyId || roles.size === 0} onClick={submit}>
             {busy ? t('common.loading') : t('userDetail.invite')}
           </Button>
         </DialogFooter>
