@@ -2,14 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable, type ColumnDef } from '@/components/data-table'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
@@ -48,55 +41,78 @@ function ImportLogPage() {
   }
   if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
+  type Run = NonNullable<typeof data>[number]
+  const statusLabel = (run: Run) =>
+    t(`importPage.status${run.status.charAt(0).toUpperCase()}${run.status.slice(1)}`)
+  const resultLabel = (run: Run) =>
+    t('importPage.resultSummary', {
+      created: run.created_count,
+      updated: run.updated_count,
+      deactivated: run.deactivated_count,
+      rejected: run.rejected_count,
+    })
+
+  const columns: ColumnDef<Run>[] = [
+    {
+      key: 'created_at',
+      header: t('importPage.historyDate'),
+      sortable: true,
+      sortValue: (r) => r.created_at,
+      render: (r) => dateFormat.format(new Date(r.created_at)),
+    },
+    {
+      key: 'file_name',
+      header: t('importPage.historyFile'),
+      sortable: true,
+      sortValue: (r) => r.file_name,
+      render: (r) => <span className="block max-w-40 truncate">{r.file_name ?? '—'}</span>,
+    },
+    {
+      key: 'created_by_email',
+      header: t('importPage.historyBy'),
+      sortable: true,
+      sortValue: (r) => r.created_by_email,
+      render: (r) => <span className="block max-w-44 truncate">{r.created_by_email ?? '—'}</span>,
+    },
+    {
+      key: 'status',
+      header: t('importPage.historyStatus'),
+      sortable: true,
+      sortValue: (r) => r.status,
+      render: (r) => (
+        <span
+          className={cn(
+            r.status === 'applied' && 'text-status-good-to-neutral',
+            r.status === 'rejected' && 'text-status-neutral-to-bad',
+            r.status === 'failed' && 'text-destructive',
+          )}
+        >
+          {statusLabel(r)}
+        </span>
+      ),
+    },
+    {
+      key: 'result',
+      header: t('importPage.historyResult'),
+      render: (r) => <span className="text-muted-foreground">{resultLabel(r)}</span>,
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-lg font-medium">{t('importPage.logTitle')}</h1>
         <p className="mt-0.5 text-[13px] text-foreground-light">{t('importPage.logSubtitle')}</p>
       </div>
-      {data?.length ? (
-        <div className="overflow-x-auto rounded-md border bg-panel">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('importPage.historyDate')}</TableHead>
-                <TableHead>{t('importPage.historyFile')}</TableHead>
-                <TableHead>{t('importPage.historyBy')}</TableHead>
-                <TableHead>{t('importPage.historyStatus')}</TableHead>
-                <TableHead>{t('importPage.historyResult')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((run) => (
-                <TableRow key={run.id} className="hover:bg-table-row-hover">
-                  <TableCell>{dateFormat.format(new Date(run.created_at))}</TableCell>
-                  <TableCell className="max-w-40 truncate">{run.file_name ?? '—'}</TableCell>
-                  <TableCell className="max-w-44 truncate">{run.created_by_email ?? '—'}</TableCell>
-                  <TableCell
-                    className={cn(
-                      run.status === 'applied' && 'text-status-good-to-neutral',
-                      run.status === 'rejected' && 'text-status-neutral-to-bad',
-                      run.status === 'failed' && 'text-destructive',
-                    )}
-                  >
-                    {t(`importPage.status${run.status.charAt(0).toUpperCase()}${run.status.slice(1)}`)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {t('importPage.resultSummary', {
-                      created: run.created_count,
-                      updated: run.updated_count,
-                      deactivated: run.deactivated_count,
-                      rejected: run.rejected_count,
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t('importPage.historyEmpty')}</p>
-      )}
+      <DataTable
+        rows={data ?? []}
+        columns={columns}
+        entityLabel={t('importPage.runsEntity')}
+        searchText={(r) =>
+          [r.file_name, r.created_by_email, statusLabel(r)].filter(Boolean).join(' ')
+        }
+        storageKey="import-log"
+      />
     </div>
   )
 }

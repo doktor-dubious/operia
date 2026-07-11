@@ -378,7 +378,8 @@
     "remoteTitle": "Fjernfiler (SFTP)",
     "remoteBody": "Automatisk modtagelse af medarbejderfiler via SFTP eller e-mail er på vej. Pipelinen genbruger præcis samme validering og upsert-semantik som Lokale filer, og alle kørsler vil fremgå af loggen.",
     "logTitle": "Importlog",
-    "logSubtitle": "Alle importkørsler — også afviste og fejlede. Dette er alarmfladen for defekte filer."
+    "logSubtitle": "Alle importkørsler — også afviste og fejlede. Dette er alarmfladen for defekte filer.",
+    "runsEntity": "importkørsler"
   },
   "companySwitcher": {
     "search": "Søg virksomhed…",
