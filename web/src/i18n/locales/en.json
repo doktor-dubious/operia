@@ -167,6 +167,7 @@
     "show": "Show",
     "hide": "Hide",
     "emailFailed": "The user was created, but the invitation email could not be sent.",
+    "emailExists": "An account with that email already exists.",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "yes": "Yes",

@@ -90,7 +90,9 @@ Deno.serve(async (req) => {
       newUserId = data.user.id
     }
   } catch (e) {
-    return json({ error: 'create_user_failed', detail: String((e as Error).message) }, 400)
+    const err = e as { message?: string; code?: string }
+    const dup = err.code === 'email_exists' || /already|registered|exists/i.test(err.message ?? '')
+    return json({ error: dup ? 'email_exists' : 'create_user_failed', detail: err.message ?? '' }, 400)
   }
 
   // 4) Opret virksomhed + admin-binding + roller + entitlements. Rul tilbage

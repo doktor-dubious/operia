@@ -375,7 +375,7 @@ function InviteUserDialog({
     setBusy(false)
     if (error) {
       console.error('Kunne ikke invitere bruger:', error)
-      toast.error(await readEdgeError(error, t('common.error')))
+      toast.error(await readEdgeError(error, t('common.error'), { email_exists: t('common.emailExists') }))
       return
     }
     if (invite && data?.emailSent === false) {

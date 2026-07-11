@@ -167,6 +167,7 @@
     "show": "Vis",
     "hide": "Skjul",
     "emailFailed": "Brugeren blev oprettet, men invitations-e-mailen kunne ikke sendes.",
+    "emailExists": "Der findes allerede en konto med denne e-mail.",
     "refresh": "Opdatér",
     "refreshing": "Opdaterer…",
     "yes": "Ja",

@@ -22,6 +22,7 @@ import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
+import { readEdgeError } from '@/lib/edge'
 import { supabase } from '@/lib/supabase'
 
 // Platform → Kunder (DCA-ejet, kun platform-admins). Samme mønster som
@@ -491,7 +492,7 @@ function NewCustomerDialog({
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette kunde:', error)
-      toast.error(t('common.error'))
+      toast.error(await readEdgeError(error, t('common.error'), { email_exists: t('common.emailExists') }))
       return
     }
     if (invite && data?.emailSent === false) {
