@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,7 +10,6 @@ import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
-import { CompanyPicker } from '@/components/company-picker'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -115,10 +113,9 @@ function DepartmentDetailPane({
 
 function DepartmentsPage() {
   const { t } = useTranslation()
-  const { companyId, companies, setCompanyId } = useCompanyContext()
+  const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
   const { data: access } = useAccess()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -163,21 +160,6 @@ function DepartmentsPage() {
         entityLabel={t('nav.departments').toLowerCase()}
         searchText={(row) => row.name}
         storageKey="departments-list"
-        toolbar={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => navigate({ to: '/import' })}>
-              <Upload className="size-4" /> {t('importPage.importButton')}
-            </Button>
-            <CompanyPicker
-              companies={companies}
-              value={companyId}
-              onChange={(id) => {
-                setActiveId(null)
-                setCompanyId(id)
-              }}
-            />
-          </div>
-        }
         onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
         activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
