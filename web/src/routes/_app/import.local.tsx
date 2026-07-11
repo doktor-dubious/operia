@@ -577,7 +577,7 @@ function ImportPage() {
             </Card>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={resetWizard} disabled={busy}>
               {t('importPage.backButton')}
             </Button>
