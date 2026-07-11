@@ -121,3 +121,23 @@ with new_companies as (
 )
 insert into public.company_products (company_id, product_key)
 select id, 'parcels' from new_companies;
+
+-- Stamdata til testkunderne (afdelinger, placeringer, håndtering, fragt)
+with cos as (select id from public.companies where registration_no like '201100%')
+insert into public.departments (company_id, name)
+select cos.id, d.name from cos cross join (values ('Administration'),('Lager'),('Salg')) d(name);
+
+with cos as (select id from public.companies where registration_no like '201100%')
+insert into public.storage_locations (company_id, name, barcode)
+select cos.id, l.name, l.barcode from cos cross join (values
+  ('Reception', 'REC-01'), ('Reol B1', 'LOC-B1'), ('Postrum', null)) l(name, barcode);
+
+with cos as (select id from public.companies where registration_no like '201100%')
+insert into public.handling_classes (company_id, name, allow_proxy_collection, allow_leave_at_location, description)
+select cos.id, h.name, h.proxy, h.leave, h.descr from cos cross join (values
+  ('Standard', true, true, 'Almindelige pakker'),
+  ('Personlig overdragelse', false, false, 'Udleveres kun til modtageren')) h(name, proxy, leave, descr);
+
+with cos as (select id from public.companies where registration_no like '201100%')
+insert into public.carriers (company_id, name)
+select cos.id, c.name from cos cross join (values ('GLS'),('PostNord'),('Bring')) c(name);

@@ -38,23 +38,30 @@ export const Route = createFileRoute('/_app/import')({
 const HEADER_ALIASES: Record<string, string[]> = {
   employee_no: ['medarbejder_nr', 'medarbejdernr', 'medarbejdernummer', 'employee_no', 'employee_number'],
   full_name: ['navn', 'fulde_navn', 'name', 'full_name'],
+  first_name: ['fornavn', 'first_name'],
+  last_name: ['efternavn', 'last_name'],
   initials: ['initialer', 'initials'],
   email: ['email', 'e_mail', 'mail'],
   phone: ['telefon', 'phone', 'tlf', 'mobil'],
   department: ['afdeling', 'department'],
   language: ['sprog', 'language'],
+  nfc_card_id: ['nfc_kort_id', 'nfc_card_id', 'nfc_uid', 'nfc'],
+  role: ['rolle', 'role'],
 }
-const REQUIRED_FIELDS = ['employee_no', 'full_name']
 
 type CsvRow = {
   rowNumber: number
   employee_no: string
   full_name: string
+  first_name: string | null
+  last_name: string | null
   initials: string | null
   email: string | null
   phone: string | null
   department: string | null
   language: string | null
+  nfc_card_id: string | null
+  role: string | null
 }
 
 type RowError = { row: number; reason: string }
@@ -178,7 +185,12 @@ function ImportPage() {
         const hit = headers.find((h) => aliases.includes(h))
         if (hit) fieldFor[field] = hit
       }
-      const missing = REQUIRED_FIELDS.filter((f) => !fieldFor[f])
+      // navn kan leveres som 'navn' ELLER som 'fornavn'+'efternavn'
+      const hasNameColumns = !!fieldFor.full_name || (!!fieldFor.first_name && !!fieldFor.last_name)
+      const missing = [
+        ...(!fieldFor.employee_no ? ['medarbejder_nr'] : []),
+        ...(!hasNameColumns ? ['navn (eller fornavn + efternavn)'] : []),
+      ]
       if (missing.length) {
         setFileError(t('importPage.missingColumns', { cols: missing.join(', ') }))
         await logRun('rejected', file.name, { rows_total: parsed.data.length }, [
@@ -198,7 +210,12 @@ function ImportPage() {
       parsed.data.forEach((raw, i) => {
         const rowNumber = i + 2 // 1-indekseret + headerrække
         const employee_no = clean(raw[fieldFor.employee_no])
-        const full_name = clean(raw[fieldFor.full_name])
+        const first_name = fieldFor.first_name ? clean(raw[fieldFor.first_name]) : null
+        const last_name = fieldFor.last_name ? clean(raw[fieldFor.last_name]) : null
+        // 'navn' vinder; ellers afledes af fornavn + efternavn
+        const full_name =
+          (fieldFor.full_name ? clean(raw[fieldFor.full_name]) : null) ??
+          ([first_name, last_name].filter(Boolean).join(' ') || null)
         if (!employee_no) {
           errors.push({ row: rowNumber, reason: t('importPage.reasonMissingNo') })
           return
@@ -216,11 +233,15 @@ function ImportPage() {
           rowNumber,
           employee_no,
           full_name,
+          first_name,
+          last_name,
           initials: fieldFor.initials ? clean(raw[fieldFor.initials]) : null,
           email: fieldFor.email ? clean(raw[fieldFor.email]) : null,
           phone: fieldFor.phone ? clean(raw[fieldFor.phone]) : null,
           department: fieldFor.department ? clean(raw[fieldFor.department]) : null,
           language: fieldFor.language ? clean(raw[fieldFor.language]) : null,
+          nfc_card_id: fieldFor.nfc_card_id ? clean(raw[fieldFor.nfc_card_id]) : null,
+          role: fieldFor.role ? clean(raw[fieldFor.role]) : null,
         })
       })
 
@@ -228,7 +249,7 @@ function ImportPage() {
       const [employees, departments] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, employee_no, full_name, initials, email, phone, language, department_id, is_active, is_manual')
+          .select('id, employee_no, full_name, first_name, last_name, initials, email, phone, language, department_id, is_active, is_manual, nfc_card_id, role')
           .eq('company_id', companyId),
         supabase.from('departments').select('id, name').eq('company_id', companyId),
       ])
@@ -264,6 +285,10 @@ function ImportPage() {
           : null
         const changed =
           existing.full_name !== row.full_name ||
+          (existing.first_name ?? null) !== row.first_name ||
+          (existing.last_name ?? null) !== row.last_name ||
+          (existing.nfc_card_id ?? null) !== row.nfc_card_id ||
+          (existing.role ?? null) !== row.role ||
           (existing.initials ?? null) !== row.initials ||
           (existing.email ?? null) !== row.email ||
           (existing.phone ?? null) !== row.phone ||
@@ -335,6 +360,10 @@ function ImportPage() {
         company_id: companyId,
         employee_no: row.employee_no,
         full_name: row.full_name,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        nfc_card_id: row.nfc_card_id,
+        role: row.role,
         initials: row.initials,
         email: row.email,
         phone: row.phone,
@@ -487,7 +516,7 @@ function ImportPage() {
             <div className="text-xs text-muted-foreground">
               <p>{t('importPage.expectedColumns')}</p>
               <code className="mt-1 block rounded-md bg-muted p-2 font-mono">
-                medarbejder_nr; navn; initialer; email; telefon; afdeling; sprog
+                medarbejder_nr; navn (eller fornavn; efternavn); initialer; email; telefon; afdeling; sprog; nfc_kort_id; rolle
               </code>
               <p className="mt-1">{t('importPage.columnsRequired')}</p>
             </div>
