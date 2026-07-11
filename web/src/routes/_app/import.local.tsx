@@ -8,14 +8,7 @@ import { FileUp, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable } from '@/components/data-table'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
@@ -557,22 +550,32 @@ function ImportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-20">{t('importPage.rowNumber')}</TableHead>
-                      <TableHead>{t('importPage.reason')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {diff.errors.slice(0, 20).map((e, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{e.row}</TableCell>
-                        <TableCell className="text-muted-foreground">{e.reason}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <DataTable
+                  rows={diff.errors.map((e) => ({
+                    id: `${diff.fileName}:${e.row}`,
+                    row: e.row,
+                    reason: e.reason,
+                  }))}
+                  columns={[
+                    {
+                      key: 'row',
+                      header: t('importPage.rowNumber'),
+                      sortable: true,
+                      sortValue: (r) => r.row,
+                      className: 'w-20',
+                    },
+                    {
+                      key: 'reason',
+                      header: t('importPage.reason'),
+                      sortable: true,
+                      sortValue: (r) => r.reason,
+                      render: (r) => <span className="text-muted-foreground">{r.reason}</span>,
+                    },
+                  ]}
+                  entityLabel={t('importPage.rejectedRows').toLowerCase()}
+                  searchText={(r) => `${r.row} ${r.reason}`}
+                  storageKey="import-rejected"
+                />
               </CardContent>
             </Card>
           )}
