@@ -150,3 +150,25 @@ insert into public.lockers (company_id, name, keynius_bank_id, storage_location_
    '55555555-5555-5555-5555-555555555551', 12, 8, 4),
   ('11111111-1111-1111-1111-111111111111', 'Kælder – væg B', null,
    '55555555-5555-5555-5555-555555555553', 6, 6, 2);
+with cos as (
+  select id from public.companies
+  where registration_no in ('20110001','20110004','20110005','20110009')
+)
+insert into public.company_products (company_id, product_key)
+select id, 'lockers' from cos
+on conflict do nothing;
+
+insert into public.lockers (company_id, name, keynius_bank_id, storage_location_id, cap_small, cap_medium, cap_large)
+select c.id, l.name,
+       case when l.keynius then 'KEY-' || upper(substr(md5(c.id::text || l.name), 1, 6)) end,
+       sl.id, l.s, l.m, l.lg
+from public.companies c
+cross join (values
+  ('Indgang – væg 1', true,  'Reception', 10, 6, 3),
+  ('Lager – væg 2',   true,  'Reol B1',    8, 8, 4),
+  ('Postrum – mini',  false, 'Postrum',    4, 2, 0)
+) l(name, keynius, loc, s, m, lg)
+left join public.storage_locations sl on sl.company_id = c.id and sl.name = l.loc
+where c.registration_no in ('20110001','20110004','20110005','20110009')
+on conflict do nothing;
+
