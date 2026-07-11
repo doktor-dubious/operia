@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { InfoTip } from '@/components/info-tip'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -268,17 +269,12 @@ function LockerDetailPane({
             <Field label={t('lockersPage.name')}>
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label={t('lockersPage.keynius')}>
-              <div className="flex flex-col gap-1">
-                <Input
-                  value={keynius}
-                  className="font-mono"
-                  onChange={(e) => setKeynius(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('lockerDetail.keyniusDescription')}
-                </p>
-              </div>
+            <Field label={t('lockersPage.keynius')} info={t('lockerDetail.keyniusDescription')}>
+              <Input
+                value={keynius}
+                className="font-mono"
+                onChange={(e) => setKeynius(e.target.value)}
+              />
             </Field>
             <Field label={t('lockersPage.location')}>
               <LocationSelect companyId={companyId} value={locationId} onChange={setLocationId} />
@@ -416,9 +412,12 @@ function NewLockerDialog({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="new-locker-keynius" className="text-label">
-            {t('lockersPage.keynius')}
-          </Label>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="new-locker-keynius" className="text-label">
+              {t('lockersPage.keynius')}
+            </Label>
+            <InfoTip text={t('lockerDetail.keyniusDescription')} />
+          </div>
           <Input
             id="new-locker-keynius"
             value={keynius}
