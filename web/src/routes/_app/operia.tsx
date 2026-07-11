@@ -62,11 +62,14 @@ function OperiaLayout() {
             ))}
           </nav>
         </div>
-        <nav className="flex flex-col gap-0.5 pt-2">
-          {logsItems.map((i) => (
-            <NavLink key={i.href} href={i.href} labelKey={i.labelKey} />
-          ))}
-        </nav>
+        <div className="pt-5">
+          <SectionLabel>{t('operiaConfig.sectionLogs')}</SectionLabel>
+          <nav className="flex flex-col gap-0.5">
+            {logsItems.map((i) => (
+              <NavLink key={i.href} href={i.href} labelKey={i.labelKey} />
+            ))}
+          </nav>
+        </div>
       </aside>
       <div className="min-w-0 flex-1">
         <Outlet />

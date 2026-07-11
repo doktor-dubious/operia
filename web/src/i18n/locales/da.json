@@ -57,7 +57,8 @@
     "title": "Operia-konfiguration",
     "subtitle": "Platformindstillinger for DCA Logic",
     "sectionConfig": "Konfiguration",
-    "sectionBilling": "Fakturering"
+    "sectionBilling": "Fakturering",
+    "sectionLogs": "Logs"
   },
   "templatesPage": {
     "title": "Skabeloner",

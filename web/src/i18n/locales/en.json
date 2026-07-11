@@ -57,7 +57,8 @@
     "title": "Operia configuration",
     "subtitle": "Platform settings for DCA Logic",
     "sectionConfig": "Configuration",
-    "sectionBilling": "Billing"
+    "sectionBilling": "Billing",
+    "sectionLogs": "Logs"
   },
   "templatesPage": {
     "title": "Templates",
