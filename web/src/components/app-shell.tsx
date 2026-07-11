@@ -145,7 +145,13 @@ function ClassicSidebar() {
                 />
               </button>
             </SidebarGroupLabel>
-            {!collapsed && (
+            <div
+              className={cn(
+                'grid transition-[grid-template-rows] duration-200 ease-out',
+                collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
+              )}
+            >
+              <div className="overflow-hidden">
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {group.items.map((item) =>
@@ -208,7 +214,8 @@ function ClassicSidebar() {
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
-            )}
+              </div>
+            </div>
           </SidebarGroup>
           )
         })}
