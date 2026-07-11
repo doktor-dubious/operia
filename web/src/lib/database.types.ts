@@ -710,6 +710,7 @@ export type Database = {
         Row: {
           body: string
           key: string
+          lang: string
           name: string
           title: string
           updated_at: string
@@ -717,6 +718,7 @@ export type Database = {
         Insert: {
           body?: string
           key: string
+          lang?: string
           name: string
           title?: string
           updated_at?: string
@@ -724,6 +726,7 @@ export type Database = {
         Update: {
           body?: string
           key?: string
+          lang?: string
           name?: string
           title?: string
           updated_at?: string

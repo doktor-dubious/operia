@@ -62,6 +62,7 @@
     "title": "Skabeloner",
     "subtitle": "Rediger platformens skabeloner (fx invitations-e-mail).",
     "templateLabel": "Skabelon",
+    "languageLabel": "Sprog",
     "titleLabel": "Titel",
     "bodyLabel": "Brødtekst"
   },

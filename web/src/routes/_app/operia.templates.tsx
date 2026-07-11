@@ -17,13 +17,19 @@ import {
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
 
-// Operia → Skabeloner: platform-admin redigerer platformens skabeloner. Øverst
-// en combo-box der vælger skabelon; nedenfor Titel + Brødtekst med samme
-// gem/annullér-bjælke som stamdata-siderne (fx locations) — fuld bredde,
-// bundet til bunden med en topkant hele vejen over.
+// Operia → Skabeloner: platform-admin redigerer platformens skabeloner pr.
+// sprog. Combo-box vælger skabelon; sprogvælgeren til højre vælger sprog.
+// Titel + Brødtekst redigeres med samme fuldbredde-gem/annullér-bjælke som
+// stamdata-siderne (fx locations).
 export const Route = createFileRoute('/_app/operia/templates')({
   component: TemplatesPage,
 })
+
+// Sprog skabelonerne kan laves i (matcher appens i18n: dansk først, engelsk).
+const LANGS = [
+  { code: 'da', label: 'Dansk' },
+  { code: 'en', label: 'English' },
+]
 
 function useTemplates() {
   return useQuery({
@@ -31,7 +37,7 @@ function useTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('platform_templates')
-        .select('key, name, title, body')
+        .select('key, lang, name, title, body')
         .order('name')
       if (error) throw error
       return data
@@ -44,36 +50,40 @@ function TemplatesPage() {
   const { data, isPending } = useTemplates()
   const queryClient = useQueryClient()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [lang, setLang] = useState('da')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const templates = data ?? []
+  const rows = data ?? []
+  // Distinkte skabeloner (én pr. key) til combo-boxen.
+  const templates = [...new Map(rows.map((r) => [r.key, r.name])).entries()].map(
+    ([key, name]) => ({ key, name }),
+  )
   const activeKey = selectedKey ?? templates[0]?.key ?? null
-  const active = templates.find((tp) => tp.key === activeKey) ?? null
+  const active = rows.find((r) => r.key === activeKey && r.lang === lang) ?? null
 
-  // Indlæs felterne når den valgte skabelon skifter (eller data ankommer).
+  // Indlæs felterne når valgt skabelon/sprog skifter (eller data ankommer).
   useEffect(() => {
-    if (active) {
-      setTitle(active.title)
-      setBody(active.body)
-    }
-  }, [active?.key]) // eslint-disable-line react-hooks/exhaustive-deps
+    setTitle(active?.title ?? '')
+    setBody(active?.body ?? '')
+  }, [activeKey, lang, active?.title, active?.body])
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['platform-templates'] })
 
-  const dirty = !!active && (title !== active.title || body !== active.body)
+  const dirty = !!activeKey && (title !== (active?.title ?? '') || body !== (active?.body ?? ''))
 
   const save = async () => {
-    if (!active) return
+    if (!activeKey) return
+    const name = templates.find((tp) => tp.key === activeKey)?.name ?? activeKey
     setSaving(true)
-    const { data: updated, error } = await supabase
+    // Upsert på (key, lang): opretter oversættelsen hvis den mangler.
+    const { data: saved, error } = await supabase
       .from('platform_templates')
-      .update({ title, body })
-      .eq('key', active.key)
+      .upsert({ key: activeKey, lang, name, title, body })
       .select('key')
     setSaving(false)
-    if (error || !updated?.length) {
+    if (error || !saved?.length) {
       toast.error(error ? t('common.error') : t('common.noPermission'))
       return
     }
@@ -82,9 +92,8 @@ function TemplatesPage() {
   }
 
   const cancel = () => {
-    if (!active) return
-    setTitle(active.title)
-    setBody(active.body)
+    setTitle(active?.title ?? '')
+    setBody(active?.body ?? '')
   }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
@@ -97,23 +106,40 @@ function TemplatesPage() {
           <p className="mt-1 text-sm text-foreground-light">{t('templatesPage.subtitle')}</p>
         </header>
 
-        <div className="mb-6 flex flex-col gap-2">
-          <Label className="text-label">{t('templatesPage.templateLabel')}</Label>
-          <Select value={activeKey ?? undefined} onValueChange={setSelectedKey}>
-            <SelectTrigger className="w-full max-w-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((tp) => (
-                <SelectItem key={tp.key} value={tp.key}>
-                  {tp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="mb-6 flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-2">
+            <Label className="text-label">{t('templatesPage.templateLabel')}</Label>
+            <Select value={activeKey ?? undefined} onValueChange={setSelectedKey}>
+              <SelectTrigger className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((tp) => (
+                  <SelectItem key={tp.key} value={tp.key}>
+                    {tp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label className="text-label">{t('templatesPage.languageLabel')}</Label>
+            <Select value={lang} onValueChange={setLang}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGS.map((l) => (
+                  <SelectItem key={l.code} value={l.code}>
+                    {l.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {active && (
+        {activeKey && (
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label className="text-label">{t('templatesPage.titleLabel')}</Label>

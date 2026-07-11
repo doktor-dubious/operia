@@ -62,6 +62,7 @@
     "title": "Templates",
     "subtitle": "Edit the platform's templates (e.g. the invitation email).",
     "templateLabel": "Template",
+    "languageLabel": "Language",
     "titleLabel": "Title",
     "bodyLabel": "Body"
   },

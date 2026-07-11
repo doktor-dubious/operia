@@ -16,16 +16,23 @@ export async function sendInviteEmail(
   admin: SupabaseClient,
   email: string,
   actionLink: string,
+  lang = 'da',
 ): Promise<{ ok: boolean; error?: string }> {
   const apiKey = Deno.env.get('RESEND_API_KEY')
   if (!apiKey) return { ok: false, error: 'resend_not_configured' }
   const from = Deno.env.get('RESEND_FROM') ?? DEFAULT_FROM
 
-  const { data: tpl } = await admin
-    .from('platform_templates')
-    .select('title, body')
-    .eq('key', 'customer_invite')
-    .maybeSingle()
+  // Vælg skabelonen i modtagerens sprog; fald tilbage til dansk (first).
+  const loadTemplate = (l: string) =>
+    admin
+      .from('platform_templates')
+      .select('title, body')
+      .eq('key', 'customer_invite')
+      .eq('lang', l)
+      .maybeSingle()
+
+  let { data: tpl } = await loadTemplate(lang)
+  if (!tpl && lang !== 'da') ({ data: tpl } = await loadTemplate('da'))
 
   const subject = tpl?.title?.trim() || DEFAULT_SUBJECT
   let html = (tpl?.body?.trim() || DEFAULT_BODY)
