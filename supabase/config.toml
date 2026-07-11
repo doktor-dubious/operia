@@ -233,20 +233,24 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Egen afsenderadresse kræver en produktions-SMTP-server (Resend, Postmark,
+# SendGrid, SES, Mailgun …). Udfyld host/port/user, læg nøglen i .env som
+# SMTP_PASS, og sæt admin_email/sender_name til jeres eget domæne. Uden dette
+# sendes der fra Supabases delte sandkasse (noreply@mail.app.supabase.io),
+# som er kraftigt rate-limited og kun til test.
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
+# host = "smtp.resend.com"
 # port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# user = "resend"
+# pass = "env(SMTP_PASS)"
+# admin_email = "noreply@dcalogic.com"
+# sender_name = "Operia"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Operia-brandet invitations-e-mail (dansk). Emne + HTML-skabelon i git.
+[auth.email.template.invite]
+subject = "Du er blevet inviteret til Operia"
+content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
