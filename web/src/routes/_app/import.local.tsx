@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
@@ -22,7 +22,7 @@ import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/_app/import')({
+export const Route = createFileRoute('/_app/import/local')({
   component: ImportPage,
 })
 
@@ -113,21 +113,6 @@ function ImportPage() {
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const history = useQuery({
-    queryKey: ['import-runs', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('import_runs')
-        .select('*')
-        .eq('company_id', companyId!)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      if (error) throw error
-      return data
-    },
-  })
 
   const logRun = async (
     status: 'applied' | 'rejected' | 'failed',
@@ -453,8 +438,6 @@ function ImportPage() {
   }
   if (!companyId) return <Skeleton className="h-40 w-full" />
 
-  const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
-
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 py-6">
       <header>
@@ -632,53 +615,6 @@ function ImportPage() {
         </Card>
       )}
 
-      {/* Historik = Manager-alarmfladen */}
-      <section>
-        <h2 className="mb-3 text-lg font-medium">{t('importPage.historyTitle')}</h2>
-        {history.data?.length ? (
-          <div className="overflow-x-auto rounded-md border bg-panel">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('importPage.historyDate')}</TableHead>
-                  <TableHead>{t('importPage.historyFile')}</TableHead>
-                  <TableHead>{t('importPage.historyBy')}</TableHead>
-                  <TableHead>{t('importPage.historyStatus')}</TableHead>
-                  <TableHead>{t('importPage.historyResult')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.data.map((run) => (
-                  <TableRow key={run.id} className="hover:bg-table-row-hover">
-                    <TableCell>{dateFormat.format(new Date(run.created_at))}</TableCell>
-                    <TableCell className="max-w-40 truncate">{run.file_name ?? '—'}</TableCell>
-                    <TableCell className="max-w-44 truncate">{run.created_by_email ?? '—'}</TableCell>
-                    <TableCell
-                      className={cn(
-                        run.status === 'applied' && 'text-status-good-to-neutral',
-                        run.status === 'rejected' && 'text-status-neutral-to-bad',
-                        run.status === 'failed' && 'text-destructive',
-                      )}
-                    >
-                      {t(`importPage.status${run.status.charAt(0).toUpperCase()}${run.status.slice(1)}`)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {t('importPage.resultSummary', {
-                        created: run.created_count,
-                        updated: run.updated_count,
-                        deactivated: run.deactivated_count,
-                        rejected: run.rejected_count,
-                      })}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t('importPage.historyEmpty')}</p>
-        )}
-      </section>
     </div>
   )
 }

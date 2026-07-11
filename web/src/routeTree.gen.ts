@@ -17,12 +17,12 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppLockersRouteImport } from './routes/_app/lockers'
 import { Route as AppLocationsRouteImport } from './routes/_app/locations'
-import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppHandlingClassesRouteImport } from './routes/_app/handling-classes'
 import { Route as AppEmployeesRouteImport } from './routes/_app/employees'
 import { Route as AppDepartmentsRouteImport } from './routes/_app/departments'
 import { Route as AppCarriersRouteImport } from './routes/_app/carriers'
 import { Route as AppParcelsIndexRouteImport } from './routes/_app/parcels.index'
+import { Route as AppImportIndexRouteImport } from './routes/_app/import.index'
 import { Route as AppSystemUsersRouteImport } from './routes/_app/system.users'
 import { Route as AppSystemLabelTemplatesRouteImport } from './routes/_app/system.label-templates'
 import { Route as AppSystemEmailTemplatesRouteImport } from './routes/_app/system.email-templates'
@@ -35,6 +35,9 @@ import { Route as AppPlatformBrandingRouteImport } from './routes/_app/platform.
 import { Route as AppPlatformBillingRouteImport } from './routes/_app/platform.billing'
 import { Route as AppParcelsReceiveRouteImport } from './routes/_app/parcels.receive'
 import { Route as AppParcelsHandoutRouteImport } from './routes/_app/parcels.handout'
+import { Route as AppImportRemoteRouteImport } from './routes/_app/import.remote'
+import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
+import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -75,11 +78,6 @@ const AppLocationsRoute = AppLocationsRouteImport.update({
   path: '/locations',
   getParentRoute: () => AppRoute,
 } as any)
-const AppImportRoute = AppImportRouteImport.update({
-  id: '/import',
-  path: '/import',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppHandlingClassesRoute = AppHandlingClassesRouteImport.update({
   id: '/handling-classes',
   path: '/handling-classes',
@@ -103,6 +101,11 @@ const AppCarriersRoute = AppCarriersRouteImport.update({
 const AppParcelsIndexRoute = AppParcelsIndexRouteImport.update({
   id: '/parcels/',
   path: '/parcels/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportIndexRoute = AppImportIndexRouteImport.update({
+  id: '/import/',
+  path: '/import/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSystemUsersRoute = AppSystemUsersRouteImport.update({
@@ -165,6 +168,21 @@ const AppParcelsHandoutRoute = AppParcelsHandoutRouteImport.update({
   path: '/parcels/handout',
   getParentRoute: () => AppRoute,
 } as any)
+const AppImportRemoteRoute = AppImportRemoteRouteImport.update({
+  id: '/import/remote',
+  path: '/import/remote',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportLogRoute = AppImportLogRouteImport.update({
+  id: '/import/log',
+  path: '/import/log',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImportLocalRoute = AppImportLocalRouteImport.update({
+  id: '/import/local',
+  path: '/import/local',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -173,12 +191,14 @@ export interface FileRoutesByFullPath {
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
-  '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
   '/lockers': typeof AppLockersRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
+  '/import/local': typeof AppImportLocalRoute
+  '/import/log': typeof AppImportLogRoute
+  '/import/remote': typeof AppImportRemoteRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
   '/platform/billing': typeof AppPlatformBillingRoute
@@ -191,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/system/users': typeof AppSystemUsersRoute
+  '/import/': typeof AppImportIndexRoute
   '/parcels/': typeof AppParcelsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -199,13 +220,15 @@ export interface FileRoutesByTo {
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
-  '/import': typeof AppImportRoute
   '/locations': typeof AppLocationsRoute
   '/lockers': typeof AppLockersRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
   '/': typeof AppIndexRoute
+  '/import/local': typeof AppImportLocalRoute
+  '/import/log': typeof AppImportLogRoute
+  '/import/remote': typeof AppImportRemoteRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
   '/platform/billing': typeof AppPlatformBillingRoute
@@ -218,6 +241,7 @@ export interface FileRoutesByTo {
   '/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/system/users': typeof AppSystemUsersRoute
+  '/import': typeof AppImportIndexRoute
   '/parcels': typeof AppParcelsIndexRoute
 }
 export interface FileRoutesById {
@@ -228,13 +252,15 @@ export interface FileRoutesById {
   '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
   '/_app/handling-classes': typeof AppHandlingClassesRoute
-  '/_app/import': typeof AppImportRoute
   '/_app/locations': typeof AppLocationsRoute
   '/_app/lockers': typeof AppLockersRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stats': typeof AppStatsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/import/local': typeof AppImportLocalRoute
+  '/_app/import/log': typeof AppImportLogRoute
+  '/_app/import/remote': typeof AppImportRemoteRoute
   '/_app/parcels/handout': typeof AppParcelsHandoutRoute
   '/_app/parcels/receive': typeof AppParcelsReceiveRoute
   '/_app/platform/billing': typeof AppPlatformBillingRoute
@@ -247,6 +273,7 @@ export interface FileRoutesById {
   '/_app/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/_app/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/_app/system/users': typeof AppSystemUsersRoute
+  '/_app/import/': typeof AppImportIndexRoute
   '/_app/parcels/': typeof AppParcelsIndexRoute
 }
 export interface FileRouteTypes {
@@ -258,12 +285,14 @@ export interface FileRouteTypes {
     | '/departments'
     | '/employees'
     | '/handling-classes'
-    | '/import'
     | '/locations'
     | '/lockers'
     | '/reports'
     | '/settings'
     | '/stats'
+    | '/import/local'
+    | '/import/log'
+    | '/import/remote'
     | '/parcels/handout'
     | '/parcels/receive'
     | '/platform/billing'
@@ -276,6 +305,7 @@ export interface FileRouteTypes {
     | '/system/email-templates'
     | '/system/label-templates'
     | '/system/users'
+    | '/import/'
     | '/parcels/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -284,13 +314,15 @@ export interface FileRouteTypes {
     | '/departments'
     | '/employees'
     | '/handling-classes'
-    | '/import'
     | '/locations'
     | '/lockers'
     | '/reports'
     | '/settings'
     | '/stats'
     | '/'
+    | '/import/local'
+    | '/import/log'
+    | '/import/remote'
     | '/parcels/handout'
     | '/parcels/receive'
     | '/platform/billing'
@@ -303,6 +335,7 @@ export interface FileRouteTypes {
     | '/system/email-templates'
     | '/system/label-templates'
     | '/system/users'
+    | '/import'
     | '/parcels'
   id:
     | '__root__'
@@ -312,13 +345,15 @@ export interface FileRouteTypes {
     | '/_app/departments'
     | '/_app/employees'
     | '/_app/handling-classes'
-    | '/_app/import'
     | '/_app/locations'
     | '/_app/lockers'
     | '/_app/reports'
     | '/_app/settings'
     | '/_app/stats'
     | '/_app/'
+    | '/_app/import/local'
+    | '/_app/import/log'
+    | '/_app/import/remote'
     | '/_app/parcels/handout'
     | '/_app/parcels/receive'
     | '/_app/platform/billing'
@@ -331,6 +366,7 @@ export interface FileRouteTypes {
     | '/_app/system/email-templates'
     | '/_app/system/label-templates'
     | '/_app/system/users'
+    | '/_app/import/'
     | '/_app/parcels/'
   fileRoutesById: FileRoutesById
 }
@@ -397,13 +433,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLocationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/import': {
-      id: '/_app/import'
-      path: '/import'
-      fullPath: '/import'
-      preLoaderRoute: typeof AppImportRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/handling-classes': {
       id: '/_app/handling-classes'
       path: '/handling-classes'
@@ -437,6 +466,13 @@ declare module '@tanstack/react-router' {
       path: '/parcels'
       fullPath: '/parcels/'
       preLoaderRoute: typeof AppParcelsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/import/': {
+      id: '/_app/import/'
+      path: '/import'
+      fullPath: '/import/'
+      preLoaderRoute: typeof AppImportIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/system/users': {
@@ -523,6 +559,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppParcelsHandoutRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/import/remote': {
+      id: '/_app/import/remote'
+      path: '/import/remote'
+      fullPath: '/import/remote'
+      preLoaderRoute: typeof AppImportRemoteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/import/log': {
+      id: '/_app/import/log'
+      path: '/import/log'
+      fullPath: '/import/log'
+      preLoaderRoute: typeof AppImportLogRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/import/local': {
+      id: '/_app/import/local'
+      path: '/import/local'
+      fullPath: '/import/local'
+      preLoaderRoute: typeof AppImportLocalRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -531,13 +588,15 @@ interface AppRouteChildren {
   AppDepartmentsRoute: typeof AppDepartmentsRoute
   AppEmployeesRoute: typeof AppEmployeesRoute
   AppHandlingClassesRoute: typeof AppHandlingClassesRoute
-  AppImportRoute: typeof AppImportRoute
   AppLocationsRoute: typeof AppLocationsRoute
   AppLockersRoute: typeof AppLockersRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStatsRoute: typeof AppStatsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppImportLocalRoute: typeof AppImportLocalRoute
+  AppImportLogRoute: typeof AppImportLogRoute
+  AppImportRemoteRoute: typeof AppImportRemoteRoute
   AppParcelsHandoutRoute: typeof AppParcelsHandoutRoute
   AppParcelsReceiveRoute: typeof AppParcelsReceiveRoute
   AppPlatformBillingRoute: typeof AppPlatformBillingRoute
@@ -550,6 +609,7 @@ interface AppRouteChildren {
   AppSystemEmailTemplatesRoute: typeof AppSystemEmailTemplatesRoute
   AppSystemLabelTemplatesRoute: typeof AppSystemLabelTemplatesRoute
   AppSystemUsersRoute: typeof AppSystemUsersRoute
+  AppImportIndexRoute: typeof AppImportIndexRoute
   AppParcelsIndexRoute: typeof AppParcelsIndexRoute
 }
 
@@ -558,13 +618,15 @@ const AppRouteChildren: AppRouteChildren = {
   AppDepartmentsRoute: AppDepartmentsRoute,
   AppEmployeesRoute: AppEmployeesRoute,
   AppHandlingClassesRoute: AppHandlingClassesRoute,
-  AppImportRoute: AppImportRoute,
   AppLocationsRoute: AppLocationsRoute,
   AppLockersRoute: AppLockersRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStatsRoute: AppStatsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppImportLocalRoute: AppImportLocalRoute,
+  AppImportLogRoute: AppImportLogRoute,
+  AppImportRemoteRoute: AppImportRemoteRoute,
   AppParcelsHandoutRoute: AppParcelsHandoutRoute,
   AppParcelsReceiveRoute: AppParcelsReceiveRoute,
   AppPlatformBillingRoute: AppPlatformBillingRoute,
@@ -577,6 +639,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSystemEmailTemplatesRoute: AppSystemEmailTemplatesRoute,
   AppSystemLabelTemplatesRoute: AppSystemLabelTemplatesRoute,
   AppSystemUsersRoute: AppSystemUsersRoute,
+  AppImportIndexRoute: AppImportIndexRoute,
   AppParcelsIndexRoute: AppParcelsIndexRoute,
 }
 

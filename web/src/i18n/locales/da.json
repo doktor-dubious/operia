@@ -41,7 +41,10 @@
     "billing": "Fakturering",
     "integrations": "Integrationer",
     "import": "Import",
-    "lockersData": "Skabe"
+    "lockersData": "Skabe",
+    "importLocal": "Lokale filer",
+    "importRemote": "Fjernfiler",
+    "importLog": "Log"
   },
   "auth": {
     "email": "E-mail",
@@ -371,7 +374,11 @@
     "resultSummary": "{{created}} nye · {{updated}} opdat. · {{deactivated}} deakt. · {{rejected}} afvist",
     "fileRejected": "Filen blev afvist — intet er ændret.",
     "noCompany": "Vælg virksomhed først.",
-    "importButton": "Importér"
+    "importButton": "Importér",
+    "remoteTitle": "Fjernfiler (SFTP)",
+    "remoteBody": "Automatisk modtagelse af medarbejderfiler via SFTP eller e-mail er på vej. Pipelinen genbruger præcis samme validering og upsert-semantik som Lokale filer, og alle kørsler vil fremgå af loggen.",
+    "logTitle": "Importlog",
+    "logSubtitle": "Alle importkørsler — også afviste og fejlede. Dette er alarmfladen for defekte filer."
   },
   "companySwitcher": {
     "search": "Søg virksomhed…",

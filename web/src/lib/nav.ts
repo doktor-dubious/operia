@@ -45,6 +45,7 @@ export type NavItem = {
   href: string
   icon: LucideIcon
   productKey?: string
+  children?: { labelKey: string; href: string }[] // undermenu (fx Import)
 }
 
 export type NavGroup = {
@@ -75,7 +76,16 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
       { labelKey: 'carriers', href: '/carriers', icon: Truck },
       { labelKey: 'lockersData', href: '/lockers', icon: Lock, productKey: 'lockers' },
-      { labelKey: 'import', href: '/import', icon: Upload },
+      {
+        labelKey: 'import',
+        href: '/import/local',
+        icon: Upload,
+        children: [
+          { labelKey: 'importLocal', href: '/import/local' },
+          { labelKey: 'importRemote', href: '/import/remote' },
+          { labelKey: 'importLog', href: '/import/log' },
+        ],
+      },
     ],
   },
   {
@@ -138,4 +148,12 @@ export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {
     .filter((group) => group.items.length > 0)
 }
 
-export const allNavItems = [...navGroups.flatMap((g) => g.items), settingsNav]
+export const allNavItems = [
+  ...navGroups.flatMap((g) => g.items),
+  ...navGroups.flatMap((g) =>
+    g.items.flatMap((item) =>
+      (item.children ?? []).map((child) => ({ ...child, icon: item.icon })),
+    ),
+  ),
+  settingsNav,
+]

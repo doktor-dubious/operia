@@ -9,6 +9,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard'
@@ -91,15 +94,34 @@ export function UserNavDropdownContent({
               <div key={group.labelKey}>
                 <DropdownMenuSeparator />
                 <NavSectionLabel>{t(`nav.${group.labelKey}`)}</NavSectionLabel>
-                {items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.href}
-                    className="cursor-pointer text-xs font-[450] text-foreground-light"
-                    onClick={() => go(item.href)}
-                  >
-                    {t(`nav.${item.labelKey}`)}
-                  </DropdownMenuItem>
-                ))}
+                {items.map((item) =>
+                  item.children ? (
+                    <DropdownMenuSub key={item.href}>
+                      <DropdownMenuSubTrigger className="cursor-pointer text-xs font-[450] text-foreground-light">
+                        {t(`nav.${item.labelKey}`)}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {item.children.map((child) => (
+                          <DropdownMenuItem
+                            key={child.href}
+                            className="cursor-pointer text-xs font-[450] text-foreground-light"
+                            onClick={() => go(child.href)}
+                          >
+                            {t(`nav.${child.labelKey}`)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ) : (
+                    <DropdownMenuItem
+                      key={item.href}
+                      className="cursor-pointer text-xs font-[450] text-foreground-light"
+                      onClick={() => go(item.href)}
+                    >
+                      {t(`nav.${item.labelKey}`)}
+                    </DropdownMenuItem>
+                  ),
+                )}
               </div>
             )
           })}

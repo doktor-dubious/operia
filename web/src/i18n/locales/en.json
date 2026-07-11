@@ -41,7 +41,10 @@
     "billing": "Billing",
     "integrations": "Integrations",
     "import": "Import",
-    "lockersData": "Lockers"
+    "lockersData": "Lockers",
+    "importLocal": "Local files",
+    "importRemote": "Remote files",
+    "importLog": "Log"
   },
   "auth": {
     "email": "Email",
@@ -371,7 +374,11 @@
     "resultSummary": "{{created}} new · {{updated}} updated · {{deactivated}} deact. · {{rejected}} rejected",
     "fileRejected": "The file was rejected — nothing was changed.",
     "noCompany": "Choose a company first.",
-    "importButton": "Import"
+    "importButton": "Import",
+    "remoteTitle": "Remote files (SFTP)",
+    "remoteBody": "Automatic ingestion of employee files via SFTP or email is on the way. The pipeline reuses exactly the same validation and upsert semantics as Local files, and every run will appear in the log.",
+    "logTitle": "Import log",
+    "logSubtitle": "All import runs — including rejected and failed ones. This is the alert surface for malformed files."
   },
   "companySwitcher": {
     "search": "Search companies…",

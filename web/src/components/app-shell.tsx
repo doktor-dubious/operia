@@ -16,6 +16,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
 } from '@/components/ui/sidebar'
 import { CompanySwitcher } from '@/components/company-switcher'
@@ -96,7 +99,11 @@ function ClassicSidebar() {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === item.href}
+                      isActive={
+                        item.children
+                          ? item.children.some((c) => c.href === pathname)
+                          : pathname === item.href
+                      }
                       tooltip={t(`nav.${item.labelKey}`)}
                       className={menuItemClass}
                     >
@@ -105,6 +112,21 @@ function ClassicSidebar() {
                         <span>{t(`nav.${item.labelKey}`)}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {item.children && (
+                      <SidebarMenuSub>
+                        {item.children.map((child) => (
+                          <SidebarMenuSubItem key={child.href}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={pathname === child.href}
+                              className="h-6 text-xs text-muted-foreground hover:text-foreground data-[active=true]:text-foreground"
+                            >
+                              <Link to={child.href}>{t(`nav.${child.labelKey}`)}</Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
