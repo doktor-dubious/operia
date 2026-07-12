@@ -15,7 +15,7 @@ export function useAccess() {
       const [admin, manager, prods] = await Promise.all([
         supabase.rpc('is_platform_admin'),
         supabase.rpc('has_role', { r: 'manager' }),
-        supabase.from('company_products').select('product_key, valid_until'),
+        supabase.from('company_products').select('product_key, valid_until, product_catalog (enabled)'),
       ])
       const today = new Date().toISOString().slice(0, 10)
       return {
@@ -23,6 +23,7 @@ export function useAccess() {
         isManager: manager.data === true,
         products: new Set(
           (prods.data ?? [])
+            .filter((p) => p.product_catalog?.enabled !== false)
             .filter((p) => !p.valid_until || p.valid_until >= today)
             .map((p) => p.product_key),
         ),

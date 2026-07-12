@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/data-table'
 import { useAccess } from '@/hooks/use-access'
+import { IMPORT_CONFIG_DEFAULTS, useImportConfig } from '@/hooks/use-import-config'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
@@ -41,6 +42,25 @@ const HEADER_ALIASES: Record<string, string[]> = {
   nfc_card_id: ['nfc_kort_id', 'nfc_card_id', 'nfc_uid', 'nfc'],
   role: ['rolle', 'role'],
 }
+
+// Mellemform efter parsning, uanset om filen har headere (alias-opslag)
+// eller er positionel (konfigureret feltrækkefølge).
+type RawRecord = Partial<
+  Record<
+    | 'employee_no'
+    | 'full_name'
+    | 'first_name'
+    | 'last_name'
+    | 'initials'
+    | 'email'
+    | 'phone'
+    | 'department'
+    | 'language'
+    | 'nfc_card_id'
+    | 'role',
+    string
+  >
+>
 
 type CsvRow = {
   rowNumber: number
@@ -98,7 +118,17 @@ function ImportPage() {
   const { session } = useSession()
   const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
+  const { data: importCfg, isPending: cfgPending } = useImportConfig(companyId)
   const queryClient = useQueryClient()
+  // Konfigurationen er kontrakten — også når der ikke er gemt en række
+  // endnu (så gælder standarderne, som konfigurationssiden viser).
+  const saved = importCfg ?? IMPORT_CONFIG_DEFAULTS
+  const cfg = {
+    hasHeader: saved.has_header,
+    hasFooter: saved.has_footer,
+    separator: saved.separator,
+    fields: saved.fields,
+  }
 
   const [step, setStep] = useState<'upload' | 'preview' | 'receipt'>('upload')
   const [fileError, setFileError] = useState<string | null>(null)
@@ -135,7 +165,7 @@ function ImportPage() {
 
   // ── Trin 1: upload + parse + validering + tørkørsels-diff ────────────────
   const handleFile = async (file: File) => {
-    if (!companyId) return
+    if (!companyId || cfgPending) return
     setFileError(null)
     try {
       let text = await file.text() // afkodes som UTF-8
@@ -146,54 +176,139 @@ function ImportPage() {
       }
       if (text.charCodeAt(0) === 0xfeff) text = text.slice(1) // BOM
 
-      const parsed = Papa.parse<Record<string, string>>(text, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: normalizeHeader,
-      })
-      if (parsed.errors.some((e) => e.type === 'Delimiter')) {
-        setFileError(t('importPage.parseError'))
-        return
+      // ── Parsning → RawRecord[] efter konfigurationen ──
+      let records: RawRecord[] = []
+      let firstDataRow: number // filens 1-indekserede række for første datarække
+
+      // "Forkert separator" er langt mere sandsynlig end en ægte enkelt-
+      // kolonnefil: hvis den konfigurerede separator kun giver én kolonne,
+      // spørger vi Papa hvad filen selv ligner, og melder separatorfejl.
+      const detectSeparatorMismatch = (columnsFound: number): string | null => {
+        if (columnsFound > 1 || cfg.fields.length <= 1) return null
+        const sniff = Papa.parse<string[]>(text, { skipEmptyLines: true, preview: 5 })
+        const detected = sniff.meta.delimiter
+        if (detected && detected !== cfg.separator && (sniff.data[0]?.length ?? 0) > 1)
+          return detected
+        return null
+      }
+      const separatorName = (sep: string) => (sep === '\t' ? t('importPage.tabSeparator') : sep)
+
+      if (!cfg.hasHeader) {
+        // Positionel: kolonnerne mappes efter den konfigurerede rækkefølge.
+        const parsed = Papa.parse<string[]>(text, {
+          delimiter: cfg.separator,
+          skipEmptyLines: true,
+        })
+        if (parsed.errors.some((e) => e.type === 'Delimiter')) {
+          setFileError(t('importPage.parseError'))
+          return
+        }
+        const mismatch = detectSeparatorMismatch(parsed.data[0]?.length ?? 0)
+        if (mismatch) {
+          const message = t('importPage.separatorMismatch', {
+            sep: cfg.separator,
+            found: separatorName(mismatch),
+          })
+          setFileError(message)
+          await logRun('rejected', file.name, { rows_total: parsed.data.length }, [
+            { row: 0, reason: message },
+          ])
+          return
+        }
+        let dataRows = parsed.data
+        if (cfg.hasFooter && dataRows.length) dataRows = dataRows.slice(0, -1)
+        firstDataRow = 1
+        records = dataRows.map((cols) => {
+          const rec: RawRecord = {}
+          cfg.fields.forEach((key, i) => {
+            const mapped = key === 'name' ? 'full_name' : (key as keyof RawRecord)
+            rec[mapped] = cols[i]
+          })
+          return rec
+        })
+      } else {
+        // Headerrække: kolonner findes via aliaser med den konfigurerede
+        // separator, og kun de aktive felter importeres.
+        const parsed = Papa.parse<Record<string, string>>(text, {
+          header: true,
+          delimiter: cfg.separator,
+          skipEmptyLines: true,
+          transformHeader: normalizeHeader,
+        })
+        if (parsed.errors.some((e) => e.type === 'Delimiter')) {
+          setFileError(t('importPage.parseError'))
+          return
+        }
+
+        // Aktive felter begrænser hvad der importeres; 'name' dækker også
+        // fornavn/efternavn-varianten.
+        const activeFields = new Set(
+          cfg.fields
+            .map((k) => (k === 'name' ? 'full_name' : k))
+            .concat(cfg.fields.includes('name') ? ['first_name', 'last_name'] : []),
+        )
+
+        const headers = parsed.meta.fields ?? []
+        const mismatch = detectSeparatorMismatch(headers.length)
+        if (mismatch) {
+          const message = t('importPage.separatorMismatch', {
+            sep: cfg.separator,
+            found: separatorName(mismatch),
+          })
+          setFileError(message)
+          await logRun('rejected', file.name, { rows_total: parsed.data.length }, [
+            { row: 0, reason: message },
+          ])
+          return
+        }
+        const fieldFor: Record<string, string> = {}
+        for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+          if (!activeFields.has(field)) continue
+          const hit = headers.find((h) => aliases.includes(h))
+          if (hit) fieldFor[field] = hit
+        }
+        // navn kan leveres som 'navn' ELLER som 'fornavn'+'efternavn'
+        const hasNameColumns = !!fieldFor.full_name || (!!fieldFor.first_name && !!fieldFor.last_name)
+        const missing = [
+          ...(!fieldFor.employee_no ? [t('importPage.colEmployeeNo')] : []),
+          ...(!hasNameColumns ? [t('importPage.colName')] : []),
+        ]
+        if (missing.length) {
+          const message = t('importPage.missingColumns', { cols: missing.join(', ') })
+          setFileError(message)
+          await logRun('rejected', file.name, { rows_total: parsed.data.length }, [
+            { row: 0, reason: message },
+          ])
+          return
+        }
+        let dataRows = parsed.data
+        if (cfg.hasFooter && dataRows.length) dataRows = dataRows.slice(0, -1)
+        firstDataRow = 2
+        records = dataRows.map((raw) => {
+          const rec: RawRecord = {}
+          for (const [field, col] of Object.entries(fieldFor))
+            rec[field as keyof RawRecord] = raw[col]
+          return rec
+        })
       }
 
-      // map normaliserede headers -> feltnavne
-      const headers = parsed.meta.fields ?? []
-      const fieldFor: Record<string, string> = {}
-      for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
-        const hit = headers.find((h) => aliases.includes(h))
-        if (hit) fieldFor[field] = hit
-      }
-      // navn kan leveres som 'navn' ELLER som 'fornavn'+'efternavn'
-      const hasNameColumns = !!fieldFor.full_name || (!!fieldFor.first_name && !!fieldFor.last_name)
-      const missing = [
-        ...(!fieldFor.employee_no ? ['medarbejder_nr'] : []),
-        ...(!hasNameColumns ? ['navn (eller fornavn + efternavn)'] : []),
-      ]
-      if (missing.length) {
-        setFileError(t('importPage.missingColumns', { cols: missing.join(', ') }))
-        await logRun('rejected', file.name, { rows_total: parsed.data.length }, [
-          { row: 0, reason: `Manglende kolonner: ${missing.join(', ')}` },
-        ])
-        return
-      }
-      if (parsed.data.length === 0) {
+      if (records.length === 0) {
         setFileError(t('importPage.emptyFile'))
         return
       }
 
-      // rækkevalidering
+      // rækkevalidering (fælles for begge tilstande)
       const rows: CsvRow[] = []
       const errors: RowError[] = []
       const seen = new Map<string, number>()
-      parsed.data.forEach((raw, i) => {
-        const rowNumber = i + 2 // 1-indekseret + headerrække
-        const employee_no = clean(raw[fieldFor.employee_no])
-        const first_name = fieldFor.first_name ? clean(raw[fieldFor.first_name]) : null
-        const last_name = fieldFor.last_name ? clean(raw[fieldFor.last_name]) : null
+      records.forEach((rec, i) => {
+        const rowNumber = i + firstDataRow
+        const employee_no = clean(rec.employee_no)
+        const first_name = clean(rec.first_name)
+        const last_name = clean(rec.last_name)
         // 'navn' vinder; ellers afledes af fornavn + efternavn
         const full_name =
-          (fieldFor.full_name ? clean(raw[fieldFor.full_name]) : null) ??
-          ([first_name, last_name].filter(Boolean).join(' ') || null)
+          clean(rec.full_name) ?? ([first_name, last_name].filter(Boolean).join(' ') || null)
         if (!employee_no) {
           errors.push({ row: rowNumber, reason: t('importPage.reasonMissingNo') })
           return
@@ -213,13 +328,13 @@ function ImportPage() {
           full_name,
           first_name,
           last_name,
-          initials: fieldFor.initials ? clean(raw[fieldFor.initials]) : null,
-          email: fieldFor.email ? clean(raw[fieldFor.email]) : null,
-          phone: fieldFor.phone ? clean(raw[fieldFor.phone]) : null,
-          department: fieldFor.department ? clean(raw[fieldFor.department]) : null,
-          language: fieldFor.language ? clean(raw[fieldFor.language]) : null,
-          nfc_card_id: fieldFor.nfc_card_id ? clean(raw[fieldFor.nfc_card_id]) : null,
-          role: fieldFor.role ? clean(raw[fieldFor.role]) : null,
+          initials: clean(rec.initials),
+          email: clean(rec.email),
+          phone: clean(rec.phone),
+          department: clean(rec.department),
+          language: clean(rec.language),
+          nfc_card_id: clean(rec.nfc_card_id),
+          role: clean(rec.role),
         })
       })
 
@@ -489,13 +604,6 @@ function ImportPage() {
               }}
             />
             {fileError && <p className="text-sm text-destructive">{fileError}</p>}
-            <div className="text-xs text-muted-foreground">
-              <p>{t('importPage.expectedColumns')}</p>
-              <code className="mt-1 block rounded-md bg-muted p-2 font-mono">
-                medarbejder_nr; navn (eller fornavn; efternavn); initialer; email; telefon; afdeling; sprog; nfc_kort_id; rolle
-              </code>
-              <p className="mt-1">{t('importPage.columnsRequired')}</p>
-            </div>
           </CardContent>
         </Card>
       )}

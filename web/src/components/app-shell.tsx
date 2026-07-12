@@ -28,9 +28,10 @@ import {
 import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
+import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
-import { allNavItems, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
+import { allNavItems, configureNav, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
@@ -95,7 +96,11 @@ function ClassicSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
+  const { companyId } = useCompanyContext()
   const groups = visibleNavGroups(access)
+  // Konfiguration: managers for egen virksomhed; platform-admins når en
+  // kunde er valgt i CompanySwitcheren.
+  const showConfigure = !!companyId && (access?.isManager || access?.isPlatformAdmin)
 
   // Undermenuer er foldet sammen som udgangspunkt; klik folder ud, og kun
   // én kan være åben ad gangen (accordion). Aktiv child-rute åbner sin forælder.
@@ -235,24 +240,43 @@ function ClassicSidebar() {
           </SidebarGroup>
           )
         })}
-        {/* Operia-konfiguration nederst — kun for platform-admins (superbrugere) */}
-        {access?.isPlatformAdmin && (
+        {/* Nederst: Konfiguration (virksomhedens egen — managers, samt
+            platform-admins med valgt kunde) og Operia (kun platform-admins,
+            der har adgang til alt). */}
+        {(showConfigure || access?.isPlatformAdmin) && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(operiaNav.href)}
-                    tooltip={t('nav.operia')}
-                    className={menuItemClass}
-                  >
-                    <Link to={operiaNav.href}>
-                      <operiaNav.icon />
-                      <span>{t('nav.operia')}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {showConfigure && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith(configureNav.href)}
+                      tooltip={t('nav.configure')}
+                      className={menuItemClass}
+                    >
+                      <Link to={configureNav.href}>
+                        <configureNav.icon />
+                        <span>{t('nav.configure')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+                {access?.isPlatformAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith(operiaNav.href)}
+                      tooltip={t('nav.operia')}
+                      className={menuItemClass}
+                    >
+                      <Link to={operiaNav.href}>
+                        <operiaNav.icon />
+                        <span>{t('nav.operia')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

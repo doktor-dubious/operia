@@ -2,9 +2,11 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
   Banknote,
+  Boxes,
   Building2,
   CalendarRange,
   Cog,
+  Download,
   FileText,
   Handshake,
   LayoutDashboard,
@@ -19,9 +21,9 @@ import {
   Palette,
   Radio,
   Route,
-  ScanLine,
   Settings,
   Ship,
+  SlidersHorizontal,
   Tag,
   Truck,
   Upload,
@@ -73,19 +75,77 @@ export const navGroups: NavGroup[] = [
     items: [
       { labelKey: 'employees', href: '/employees', icon: Users },
       { labelKey: 'departments', href: '/departments', icon: Network },
-      { labelKey: 'locations', href: '/locations', icon: MapPin },
-      { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
-      { labelKey: 'carriers', href: '/carriers', icon: Truck },
       { labelKey: 'lockersData', href: '/lockers', icon: Lock, productKey: 'lockers' },
       {
         labelKey: 'import',
         href: '/import/local',
         icon: Upload,
         children: [
+          { labelKey: 'importConfig', href: '/import/config' },
           { labelKey: 'importLocal', href: '/import/local' },
           { labelKey: 'importRemote', href: '/import/remote' },
           { labelKey: 'importLog', href: '/import/log' },
         ],
+      },
+    ],
+  },
+  {
+    // Pakkernes egen stamdata — flyttet fra Stamdata, som nu kun er de
+    // fælles registre (medarbejdere/afdelinger/skabe/import).
+    labelKey: 'groupParcelManagement',
+    requires: 'manager',
+    items: [
+      { labelKey: 'locations', href: '/locations', icon: MapPin },
+      { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
+      { labelKey: 'carriers', href: '/carriers', icon: Truck },
+    ],
+  },
+  {
+    // Aktiver-modulet (pladsholdere indtil modulet bygges). Gates på
+    // assets-produktet pr. punkt.
+    labelKey: 'groupAssetManagement',
+    items: [
+      { labelKey: 'assets', href: '/assets', icon: Archive, productKey: 'assets' },
+      { labelKey: 'assetCategories', href: '/assets/categories', icon: Tag, productKey: 'assets' },
+      { labelKey: 'assetLocations', href: '/assets/locations', icon: MapPin, productKey: 'assets' },
+      {
+        labelKey: 'assetImport',
+        href: '/assets/import/assets',
+        icon: Upload,
+        productKey: 'assets',
+        children: [
+          { labelKey: 'assetImportAssets', href: '/assets/import/assets' },
+        ],
+      },
+      {
+        labelKey: 'assetExport',
+        href: '/assets/export/assets',
+        icon: Download,
+        productKey: 'assets',
+        children: [
+          { labelKey: 'assetExportAssets', href: '/assets/export/assets' },
+        ],
+      },
+    ],
+  },
+  {
+    // Lager-modulet (Lager-produktet) — lagervarer på antal.
+    labelKey: 'groupInventoryManagement',
+    items: [
+      { labelKey: 'inventoryItems', href: '/inventory', icon: Boxes, productKey: 'lager' },
+      {
+        labelKey: 'inventoryImport',
+        href: '/inventory/import/items',
+        icon: Upload,
+        productKey: 'lager',
+        children: [{ labelKey: 'inventoryImportItems', href: '/inventory/import/items' }],
+      },
+      {
+        labelKey: 'inventoryExport',
+        href: '/inventory/export/items',
+        icon: Download,
+        productKey: 'lager',
+        children: [{ labelKey: 'inventoryExportItems', href: '/inventory/export/items' }],
       },
     ],
   },
@@ -102,7 +162,6 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'groupProducts',
     items: [
-      { labelKey: 'assets', href: '/products/assets', icon: Archive, productKey: 'assets' },
       { labelKey: 'lockers', href: '/products/lockers', icon: Lock, productKey: 'lockers' },
       { labelKey: 'iot', href: '/products/iot', icon: Radio, productKey: 'iot' },
       { labelKey: 'shipping', href: '/products/shipping', icon: Ship, productKey: 'shipping' },
@@ -114,8 +173,6 @@ export const navGroups: NavGroup[] = [
     labelKey: 'groupPlatform',
     requires: 'platform',
     items: [
-      { labelKey: 'customers', href: '/platform/customers', icon: Building2 },
-      { labelKey: 'entitlements', href: '/platform/entitlements', icon: ScanLine },
       { labelKey: 'branding', href: '/platform/branding', icon: Palette },
       { labelKey: 'billing', href: '/platform/billing', icon: Banknote },
       { labelKey: 'integrations', href: '/platform/integrations', icon: Network },
@@ -129,6 +186,26 @@ export const settingsNav: NavItem = {
   icon: Settings,
 }
 
+// Virksomhedskonfiguration — nederst i sidemenuen, over Operia. Vises for
+// managers (egen virksomhed) og for platform-admins når en kunde er valgt i
+// CompanySwitcheren. Samme sekundærmenu-layout som Operia-konfigurationen.
+export const configureNav: NavItem = {
+  labelKey: 'configure',
+  href: '/configure',
+  icon: SlidersHorizontal,
+}
+
+export const configureConfigNav: { labelKey: string; href: string }[] = [
+  { labelKey: 'configureProducts', href: '/configure/products' },
+  { labelKey: 'configureTemplates', href: '/configure/templates' },
+  { labelKey: 'configureLocalization', href: '/configure/localization' },
+  { labelKey: 'configureNotifications', href: '/configure/notifications' },
+  { labelKey: 'configureBilling', href: '/configure/billing' },
+  { labelKey: 'configureShipping', href: '/configure/shipping' },
+  { labelKey: 'configureLogo', href: '/configure/logo' },
+  { labelKey: 'configureAppearance', href: '/configure/appearance' },
+]
+
 // Operia-konfiguration (kun platform-admins) — nederst i sidemenuen. Åbner en
 // Supabase-settings-lignende side med egen venstremenu (operiaConfigNav).
 export const operiaNav: NavItem = {
@@ -139,10 +216,15 @@ export const operiaNav: NavItem = {
 
 export const operiaConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'operiaCustomers', href: '/operia/customers' },
+  { labelKey: 'operiaProducts', href: '/operia/products' },
   { labelKey: 'operiaCarriers', href: '/operia/carriers' },
+  { labelKey: 'operiaShipping', href: '/operia/shipping' },
+  { labelKey: 'operiaAssets', href: '/operia/assets' },
   { labelKey: 'operiaBilling', href: '/operia/billing' },
   { labelKey: 'operiaApiKeys', href: '/operia/apikeys' },
   { labelKey: 'operiaTemplates', href: '/operia/templates' },
+  { labelKey: 'operiaLocalization', href: '/operia/localization' },
+  { labelKey: 'operiaNotifications', href: '/operia/notifications' },
   { labelKey: 'operiaLogs', href: '/operia/logs' },
 ]
 
@@ -174,6 +256,8 @@ export const allNavItems = [
     ),
   ),
   settingsNav,
+  configureNav,
+  ...configureConfigNav.map((c) => ({ ...c, icon: configureNav.icon })),
   operiaNav,
   ...operiaConfigNav.map((c) => ({ ...c, icon: operiaNav.icon })),
 ]

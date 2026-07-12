@@ -22,31 +22,52 @@ import { Route as AppLocationsRouteImport } from './routes/_app/locations'
 import { Route as AppHandlingClassesRouteImport } from './routes/_app/handling-classes'
 import { Route as AppEmployeesRouteImport } from './routes/_app/employees'
 import { Route as AppDepartmentsRouteImport } from './routes/_app/departments'
+import { Route as AppConfigureRouteImport } from './routes/_app/configure'
 import { Route as AppCarriersRouteImport } from './routes/_app/carriers'
 import { Route as AppParcelsIndexRouteImport } from './routes/_app/parcels.index'
 import { Route as AppOperiaIndexRouteImport } from './routes/_app/operia.index'
+import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
 import { Route as AppImportIndexRouteImport } from './routes/_app/import.index'
+import { Route as AppAssetsIndexRouteImport } from './routes/_app/assets.index'
 import { Route as AppSystemUsersRouteImport } from './routes/_app/system.users'
 import { Route as AppSystemLabelTemplatesRouteImport } from './routes/_app/system.label-templates'
 import { Route as AppSystemEmailTemplatesRouteImport } from './routes/_app/system.email-templates'
 import { Route as AppSystemCompanyRouteImport } from './routes/_app/system.company'
 import { Route as AppProductsProductKeyRouteImport } from './routes/_app/products.$productKey'
 import { Route as AppPlatformIntegrationsRouteImport } from './routes/_app/platform.integrations'
-import { Route as AppPlatformEntitlementsRouteImport } from './routes/_app/platform.entitlements'
-import { Route as AppPlatformCustomersRouteImport } from './routes/_app/platform.customers'
 import { Route as AppPlatformBrandingRouteImport } from './routes/_app/platform.branding'
 import { Route as AppPlatformBillingRouteImport } from './routes/_app/platform.billing'
 import { Route as AppParcelsReceiveRouteImport } from './routes/_app/parcels.receive'
 import { Route as AppParcelsHandoutRouteImport } from './routes/_app/parcels.handout'
 import { Route as AppOperiaTemplatesRouteImport } from './routes/_app/operia.templates'
+import { Route as AppOperiaShippingRouteImport } from './routes/_app/operia.shipping'
+import { Route as AppOperiaProductsRouteImport } from './routes/_app/operia.products'
+import { Route as AppOperiaNotificationsRouteImport } from './routes/_app/operia.notifications'
 import { Route as AppOperiaLogsRouteImport } from './routes/_app/operia.logs'
+import { Route as AppOperiaLocalizationRouteImport } from './routes/_app/operia.localization'
 import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.customers'
 import { Route as AppOperiaCarriersRouteImport } from './routes/_app/operia.carriers'
 import { Route as AppOperiaBillingRouteImport } from './routes/_app/operia.billing'
+import { Route as AppOperiaAssetsRouteImport } from './routes/_app/operia.assets'
 import { Route as AppOperiaApikeysRouteImport } from './routes/_app/operia.apikeys'
 import { Route as AppImportRemoteRouteImport } from './routes/_app/import.remote'
 import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
 import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
+import { Route as AppImportConfigRouteImport } from './routes/_app/import.config'
+import { Route as AppConfigureTemplatesRouteImport } from './routes/_app/configure.templates'
+import { Route as AppConfigureShippingRouteImport } from './routes/_app/configure.shipping'
+import { Route as AppConfigureProductsRouteImport } from './routes/_app/configure.products'
+import { Route as AppConfigureNotificationsRouteImport } from './routes/_app/configure.notifications'
+import { Route as AppConfigureLogoRouteImport } from './routes/_app/configure.logo'
+import { Route as AppConfigureLocalizationRouteImport } from './routes/_app/configure.localization'
+import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
+import { Route as AppConfigureAppearanceRouteImport } from './routes/_app/configure.appearance'
+import { Route as AppAssetsLocationsRouteImport } from './routes/_app/assets.locations'
+import { Route as AppAssetsCategoriesRouteImport } from './routes/_app/assets.categories'
+import { Route as AppInventoryImportItemsRouteImport } from './routes/_app/inventory.import.items'
+import { Route as AppInventoryExportItemsRouteImport } from './routes/_app/inventory.export.items'
+import { Route as AppAssetsImportAssetsRouteImport } from './routes/_app/assets.import.assets'
+import { Route as AppAssetsExportAssetsRouteImport } from './routes/_app/assets.export.assets'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -112,6 +133,11 @@ const AppDepartmentsRoute = AppDepartmentsRouteImport.update({
   path: '/departments',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfigureRoute = AppConfigureRouteImport.update({
+  id: '/configure',
+  path: '/configure',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCarriersRoute = AppCarriersRouteImport.update({
   id: '/carriers',
   path: '/carriers',
@@ -127,9 +153,19 @@ const AppOperiaIndexRoute = AppOperiaIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppInventoryIndexRoute = AppInventoryIndexRouteImport.update({
+  id: '/inventory/',
+  path: '/inventory/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppImportIndexRoute = AppImportIndexRouteImport.update({
   id: '/import/',
   path: '/import/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsIndexRoute = AppAssetsIndexRouteImport.update({
+  id: '/assets/',
+  path: '/assets/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSystemUsersRoute = AppSystemUsersRouteImport.update({
@@ -162,16 +198,6 @@ const AppPlatformIntegrationsRoute = AppPlatformIntegrationsRouteImport.update({
   path: '/platform/integrations',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPlatformEntitlementsRoute = AppPlatformEntitlementsRouteImport.update({
-  id: '/platform/entitlements',
-  path: '/platform/entitlements',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPlatformCustomersRoute = AppPlatformCustomersRouteImport.update({
-  id: '/platform/customers',
-  path: '/platform/customers',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppPlatformBrandingRoute = AppPlatformBrandingRouteImport.update({
   id: '/platform/branding',
   path: '/platform/branding',
@@ -197,9 +223,29 @@ const AppOperiaTemplatesRoute = AppOperiaTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaShippingRoute = AppOperiaShippingRouteImport.update({
+  id: '/shipping',
+  path: '/shipping',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
+const AppOperiaProductsRoute = AppOperiaProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
+const AppOperiaNotificationsRoute = AppOperiaNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaLogsRoute = AppOperiaLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
+const AppOperiaLocalizationRoute = AppOperiaLocalizationRouteImport.update({
+  id: '/localization',
+  path: '/localization',
   getParentRoute: () => AppOperiaRoute,
 } as any)
 const AppOperiaCustomersRoute = AppOperiaCustomersRouteImport.update({
@@ -215,6 +261,11 @@ const AppOperiaCarriersRoute = AppOperiaCarriersRouteImport.update({
 const AppOperiaBillingRoute = AppOperiaBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
+const AppOperiaAssetsRoute = AppOperiaAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => AppOperiaRoute,
 } as any)
 const AppOperiaApikeysRoute = AppOperiaApikeysRouteImport.update({
@@ -237,12 +288,90 @@ const AppImportLocalRoute = AppImportLocalRouteImport.update({
   path: '/import/local',
   getParentRoute: () => AppRoute,
 } as any)
+const AppImportConfigRoute = AppImportConfigRouteImport.update({
+  id: '/import/config',
+  path: '/import/config',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfigureTemplatesRoute = AppConfigureTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureShippingRoute = AppConfigureShippingRouteImport.update({
+  id: '/shipping',
+  path: '/shipping',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureProductsRoute = AppConfigureProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureNotificationsRoute =
+  AppConfigureNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AppConfigureRoute,
+  } as any)
+const AppConfigureLogoRoute = AppConfigureLogoRouteImport.update({
+  id: '/logo',
+  path: '/logo',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureLocalizationRoute =
+  AppConfigureLocalizationRouteImport.update({
+    id: '/localization',
+    path: '/localization',
+    getParentRoute: () => AppConfigureRoute,
+  } as any)
+const AppConfigureBillingRoute = AppConfigureBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureAppearanceRoute = AppConfigureAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppAssetsLocationsRoute = AppAssetsLocationsRouteImport.update({
+  id: '/assets/locations',
+  path: '/assets/locations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsCategoriesRoute = AppAssetsCategoriesRouteImport.update({
+  id: '/assets/categories',
+  path: '/assets/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryImportItemsRoute = AppInventoryImportItemsRouteImport.update({
+  id: '/inventory/import/items',
+  path: '/inventory/import/items',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryExportItemsRoute = AppInventoryExportItemsRouteImport.update({
+  id: '/inventory/export/items',
+  path: '/inventory/export/items',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsImportAssetsRoute = AppAssetsImportAssetsRouteImport.update({
+  id: '/assets/import/assets',
+  path: '/assets/import/assets',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsExportAssetsRoute = AppAssetsExportAssetsRouteImport.update({
+  id: '/assets/export/assets',
+  path: '/assets/export/assets',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
+  '/configure': typeof AppConfigureRouteWithChildren
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
@@ -252,35 +381,56 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
+  '/assets/categories': typeof AppAssetsCategoriesRoute
+  '/assets/locations': typeof AppAssetsLocationsRoute
+  '/configure/appearance': typeof AppConfigureAppearanceRoute
+  '/configure/billing': typeof AppConfigureBillingRoute
+  '/configure/localization': typeof AppConfigureLocalizationRoute
+  '/configure/logo': typeof AppConfigureLogoRoute
+  '/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/configure/products': typeof AppConfigureProductsRoute
+  '/configure/shipping': typeof AppConfigureShippingRoute
+  '/configure/templates': typeof AppConfigureTemplatesRoute
+  '/import/config': typeof AppImportConfigRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
   '/import/remote': typeof AppImportRemoteRoute
   '/operia/apikeys': typeof AppOperiaApikeysRoute
+  '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
+  '/operia/localization': typeof AppOperiaLocalizationRoute
   '/operia/logs': typeof AppOperiaLogsRoute
+  '/operia/notifications': typeof AppOperiaNotificationsRoute
+  '/operia/products': typeof AppOperiaProductsRoute
+  '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
   '/platform/billing': typeof AppPlatformBillingRoute
   '/platform/branding': typeof AppPlatformBrandingRoute
-  '/platform/customers': typeof AppPlatformCustomersRoute
-  '/platform/entitlements': typeof AppPlatformEntitlementsRoute
   '/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/system/company': typeof AppSystemCompanyRoute
   '/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/system/users': typeof AppSystemUsersRoute
+  '/assets/': typeof AppAssetsIndexRoute
   '/import/': typeof AppImportIndexRoute
+  '/inventory/': typeof AppInventoryIndexRoute
   '/operia/': typeof AppOperiaIndexRoute
   '/parcels/': typeof AppParcelsIndexRoute
+  '/assets/export/assets': typeof AppAssetsExportAssetsRoute
+  '/assets/import/assets': typeof AppAssetsImportAssetsRoute
+  '/inventory/export/items': typeof AppInventoryExportItemsRoute
+  '/inventory/import/items': typeof AppInventoryImportItemsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
+  '/configure': typeof AppConfigureRouteWithChildren
   '/departments': typeof AppDepartmentsRoute
   '/employees': typeof AppEmployeesRoute
   '/handling-classes': typeof AppHandlingClassesRoute
@@ -290,30 +440,50 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
   '/': typeof AppIndexRoute
+  '/assets/categories': typeof AppAssetsCategoriesRoute
+  '/assets/locations': typeof AppAssetsLocationsRoute
+  '/configure/appearance': typeof AppConfigureAppearanceRoute
+  '/configure/billing': typeof AppConfigureBillingRoute
+  '/configure/localization': typeof AppConfigureLocalizationRoute
+  '/configure/logo': typeof AppConfigureLogoRoute
+  '/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/configure/products': typeof AppConfigureProductsRoute
+  '/configure/shipping': typeof AppConfigureShippingRoute
+  '/configure/templates': typeof AppConfigureTemplatesRoute
+  '/import/config': typeof AppImportConfigRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
   '/import/remote': typeof AppImportRemoteRoute
   '/operia/apikeys': typeof AppOperiaApikeysRoute
+  '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
+  '/operia/localization': typeof AppOperiaLocalizationRoute
   '/operia/logs': typeof AppOperiaLogsRoute
+  '/operia/notifications': typeof AppOperiaNotificationsRoute
+  '/operia/products': typeof AppOperiaProductsRoute
+  '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
   '/platform/billing': typeof AppPlatformBillingRoute
   '/platform/branding': typeof AppPlatformBrandingRoute
-  '/platform/customers': typeof AppPlatformCustomersRoute
-  '/platform/entitlements': typeof AppPlatformEntitlementsRoute
   '/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/system/company': typeof AppSystemCompanyRoute
   '/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/system/users': typeof AppSystemUsersRoute
+  '/assets': typeof AppAssetsIndexRoute
   '/import': typeof AppImportIndexRoute
+  '/inventory': typeof AppInventoryIndexRoute
   '/operia': typeof AppOperiaIndexRoute
   '/parcels': typeof AppParcelsIndexRoute
+  '/assets/export/assets': typeof AppAssetsExportAssetsRoute
+  '/assets/import/assets': typeof AppAssetsImportAssetsRoute
+  '/inventory/export/items': typeof AppInventoryExportItemsRoute
+  '/inventory/import/items': typeof AppInventoryImportItemsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -321,6 +491,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/_app/carriers': typeof AppCarriersRoute
+  '/_app/configure': typeof AppConfigureRouteWithChildren
   '/_app/departments': typeof AppDepartmentsRoute
   '/_app/employees': typeof AppEmployeesRoute
   '/_app/handling-classes': typeof AppHandlingClassesRoute
@@ -331,30 +502,50 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stats': typeof AppStatsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/assets/categories': typeof AppAssetsCategoriesRoute
+  '/_app/assets/locations': typeof AppAssetsLocationsRoute
+  '/_app/configure/appearance': typeof AppConfigureAppearanceRoute
+  '/_app/configure/billing': typeof AppConfigureBillingRoute
+  '/_app/configure/localization': typeof AppConfigureLocalizationRoute
+  '/_app/configure/logo': typeof AppConfigureLogoRoute
+  '/_app/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/_app/configure/products': typeof AppConfigureProductsRoute
+  '/_app/configure/shipping': typeof AppConfigureShippingRoute
+  '/_app/configure/templates': typeof AppConfigureTemplatesRoute
+  '/_app/import/config': typeof AppImportConfigRoute
   '/_app/import/local': typeof AppImportLocalRoute
   '/_app/import/log': typeof AppImportLogRoute
   '/_app/import/remote': typeof AppImportRemoteRoute
   '/_app/operia/apikeys': typeof AppOperiaApikeysRoute
+  '/_app/operia/assets': typeof AppOperiaAssetsRoute
   '/_app/operia/billing': typeof AppOperiaBillingRoute
   '/_app/operia/carriers': typeof AppOperiaCarriersRoute
   '/_app/operia/customers': typeof AppOperiaCustomersRoute
+  '/_app/operia/localization': typeof AppOperiaLocalizationRoute
   '/_app/operia/logs': typeof AppOperiaLogsRoute
+  '/_app/operia/notifications': typeof AppOperiaNotificationsRoute
+  '/_app/operia/products': typeof AppOperiaProductsRoute
+  '/_app/operia/shipping': typeof AppOperiaShippingRoute
   '/_app/operia/templates': typeof AppOperiaTemplatesRoute
   '/_app/parcels/handout': typeof AppParcelsHandoutRoute
   '/_app/parcels/receive': typeof AppParcelsReceiveRoute
   '/_app/platform/billing': typeof AppPlatformBillingRoute
   '/_app/platform/branding': typeof AppPlatformBrandingRoute
-  '/_app/platform/customers': typeof AppPlatformCustomersRoute
-  '/_app/platform/entitlements': typeof AppPlatformEntitlementsRoute
   '/_app/platform/integrations': typeof AppPlatformIntegrationsRoute
   '/_app/products/$productKey': typeof AppProductsProductKeyRoute
   '/_app/system/company': typeof AppSystemCompanyRoute
   '/_app/system/email-templates': typeof AppSystemEmailTemplatesRoute
   '/_app/system/label-templates': typeof AppSystemLabelTemplatesRoute
   '/_app/system/users': typeof AppSystemUsersRoute
+  '/_app/assets/': typeof AppAssetsIndexRoute
   '/_app/import/': typeof AppImportIndexRoute
+  '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/operia/': typeof AppOperiaIndexRoute
   '/_app/parcels/': typeof AppParcelsIndexRoute
+  '/_app/assets/export/assets': typeof AppAssetsExportAssetsRoute
+  '/_app/assets/import/assets': typeof AppAssetsImportAssetsRoute
+  '/_app/inventory/export/items': typeof AppInventoryExportItemsRoute
+  '/_app/inventory/import/items': typeof AppInventoryImportItemsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -363,6 +554,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/carriers'
+    | '/configure'
     | '/departments'
     | '/employees'
     | '/handling-classes'
@@ -372,35 +564,56 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/stats'
+    | '/assets/categories'
+    | '/assets/locations'
+    | '/configure/appearance'
+    | '/configure/billing'
+    | '/configure/localization'
+    | '/configure/logo'
+    | '/configure/notifications'
+    | '/configure/products'
+    | '/configure/shipping'
+    | '/configure/templates'
+    | '/import/config'
     | '/import/local'
     | '/import/log'
     | '/import/remote'
     | '/operia/apikeys'
+    | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
     | '/operia/customers'
+    | '/operia/localization'
     | '/operia/logs'
+    | '/operia/notifications'
+    | '/operia/products'
+    | '/operia/shipping'
     | '/operia/templates'
     | '/parcels/handout'
     | '/parcels/receive'
     | '/platform/billing'
     | '/platform/branding'
-    | '/platform/customers'
-    | '/platform/entitlements'
     | '/platform/integrations'
     | '/products/$productKey'
     | '/system/company'
     | '/system/email-templates'
     | '/system/label-templates'
     | '/system/users'
+    | '/assets/'
     | '/import/'
+    | '/inventory/'
     | '/operia/'
     | '/parcels/'
+    | '/assets/export/assets'
+    | '/assets/import/assets'
+    | '/inventory/export/items'
+    | '/inventory/import/items'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/welcome'
     | '/carriers'
+    | '/configure'
     | '/departments'
     | '/employees'
     | '/handling-classes'
@@ -410,36 +623,57 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/'
+    | '/assets/categories'
+    | '/assets/locations'
+    | '/configure/appearance'
+    | '/configure/billing'
+    | '/configure/localization'
+    | '/configure/logo'
+    | '/configure/notifications'
+    | '/configure/products'
+    | '/configure/shipping'
+    | '/configure/templates'
+    | '/import/config'
     | '/import/local'
     | '/import/log'
     | '/import/remote'
     | '/operia/apikeys'
+    | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
     | '/operia/customers'
+    | '/operia/localization'
     | '/operia/logs'
+    | '/operia/notifications'
+    | '/operia/products'
+    | '/operia/shipping'
     | '/operia/templates'
     | '/parcels/handout'
     | '/parcels/receive'
     | '/platform/billing'
     | '/platform/branding'
-    | '/platform/customers'
-    | '/platform/entitlements'
     | '/platform/integrations'
     | '/products/$productKey'
     | '/system/company'
     | '/system/email-templates'
     | '/system/label-templates'
     | '/system/users'
+    | '/assets'
     | '/import'
+    | '/inventory'
     | '/operia'
     | '/parcels'
+    | '/assets/export/assets'
+    | '/assets/import/assets'
+    | '/inventory/export/items'
+    | '/inventory/import/items'
   id:
     | '__root__'
     | '/_app'
     | '/login'
     | '/welcome'
     | '/_app/carriers'
+    | '/_app/configure'
     | '/_app/departments'
     | '/_app/employees'
     | '/_app/handling-classes'
@@ -450,30 +684,50 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/stats'
     | '/_app/'
+    | '/_app/assets/categories'
+    | '/_app/assets/locations'
+    | '/_app/configure/appearance'
+    | '/_app/configure/billing'
+    | '/_app/configure/localization'
+    | '/_app/configure/logo'
+    | '/_app/configure/notifications'
+    | '/_app/configure/products'
+    | '/_app/configure/shipping'
+    | '/_app/configure/templates'
+    | '/_app/import/config'
     | '/_app/import/local'
     | '/_app/import/log'
     | '/_app/import/remote'
     | '/_app/operia/apikeys'
+    | '/_app/operia/assets'
     | '/_app/operia/billing'
     | '/_app/operia/carriers'
     | '/_app/operia/customers'
+    | '/_app/operia/localization'
     | '/_app/operia/logs'
+    | '/_app/operia/notifications'
+    | '/_app/operia/products'
+    | '/_app/operia/shipping'
     | '/_app/operia/templates'
     | '/_app/parcels/handout'
     | '/_app/parcels/receive'
     | '/_app/platform/billing'
     | '/_app/platform/branding'
-    | '/_app/platform/customers'
-    | '/_app/platform/entitlements'
     | '/_app/platform/integrations'
     | '/_app/products/$productKey'
     | '/_app/system/company'
     | '/_app/system/email-templates'
     | '/_app/system/label-templates'
     | '/_app/system/users'
+    | '/_app/assets/'
     | '/_app/import/'
+    | '/_app/inventory/'
     | '/_app/operia/'
     | '/_app/parcels/'
+    | '/_app/assets/export/assets'
+    | '/_app/assets/import/assets'
+    | '/_app/inventory/export/items'
+    | '/_app/inventory/import/items'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -575,6 +829,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDepartmentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/configure': {
+      id: '/_app/configure'
+      path: '/configure'
+      fullPath: '/configure'
+      preLoaderRoute: typeof AppConfigureRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/carriers': {
       id: '/_app/carriers'
       path: '/carriers'
@@ -596,11 +857,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaIndexRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/inventory/': {
+      id: '/_app/inventory/'
+      path: '/inventory'
+      fullPath: '/inventory/'
+      preLoaderRoute: typeof AppInventoryIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/import/': {
       id: '/_app/import/'
       path: '/import'
       fullPath: '/import/'
       preLoaderRoute: typeof AppImportIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/': {
+      id: '/_app/assets/'
+      path: '/assets'
+      fullPath: '/assets/'
+      preLoaderRoute: typeof AppAssetsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/system/users': {
@@ -645,20 +920,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPlatformIntegrationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/platform/entitlements': {
-      id: '/_app/platform/entitlements'
-      path: '/platform/entitlements'
-      fullPath: '/platform/entitlements'
-      preLoaderRoute: typeof AppPlatformEntitlementsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/platform/customers': {
-      id: '/_app/platform/customers'
-      path: '/platform/customers'
-      fullPath: '/platform/customers'
-      preLoaderRoute: typeof AppPlatformCustomersRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/platform/branding': {
       id: '/_app/platform/branding'
       path: '/platform/branding'
@@ -694,11 +955,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaTemplatesRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/shipping': {
+      id: '/_app/operia/shipping'
+      path: '/shipping'
+      fullPath: '/operia/shipping'
+      preLoaderRoute: typeof AppOperiaShippingRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
+    '/_app/operia/products': {
+      id: '/_app/operia/products'
+      path: '/products'
+      fullPath: '/operia/products'
+      preLoaderRoute: typeof AppOperiaProductsRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
+    '/_app/operia/notifications': {
+      id: '/_app/operia/notifications'
+      path: '/notifications'
+      fullPath: '/operia/notifications'
+      preLoaderRoute: typeof AppOperiaNotificationsRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/logs': {
       id: '/_app/operia/logs'
       path: '/logs'
       fullPath: '/operia/logs'
       preLoaderRoute: typeof AppOperiaLogsRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
+    '/_app/operia/localization': {
+      id: '/_app/operia/localization'
+      path: '/localization'
+      fullPath: '/operia/localization'
+      preLoaderRoute: typeof AppOperiaLocalizationRouteImport
       parentRoute: typeof AppOperiaRoute
     }
     '/_app/operia/customers': {
@@ -720,6 +1009,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/operia/billing'
       preLoaderRoute: typeof AppOperiaBillingRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
+    '/_app/operia/assets': {
+      id: '/_app/operia/assets'
+      path: '/assets'
+      fullPath: '/operia/assets'
+      preLoaderRoute: typeof AppOperiaAssetsRouteImport
       parentRoute: typeof AppOperiaRoute
     }
     '/_app/operia/apikeys': {
@@ -750,25 +1046,166 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportLocalRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/import/config': {
+      id: '/_app/import/config'
+      path: '/import/config'
+      fullPath: '/import/config'
+      preLoaderRoute: typeof AppImportConfigRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/configure/templates': {
+      id: '/_app/configure/templates'
+      path: '/templates'
+      fullPath: '/configure/templates'
+      preLoaderRoute: typeof AppConfigureTemplatesRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/shipping': {
+      id: '/_app/configure/shipping'
+      path: '/shipping'
+      fullPath: '/configure/shipping'
+      preLoaderRoute: typeof AppConfigureShippingRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/products': {
+      id: '/_app/configure/products'
+      path: '/products'
+      fullPath: '/configure/products'
+      preLoaderRoute: typeof AppConfigureProductsRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/notifications': {
+      id: '/_app/configure/notifications'
+      path: '/notifications'
+      fullPath: '/configure/notifications'
+      preLoaderRoute: typeof AppConfigureNotificationsRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/logo': {
+      id: '/_app/configure/logo'
+      path: '/logo'
+      fullPath: '/configure/logo'
+      preLoaderRoute: typeof AppConfigureLogoRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/localization': {
+      id: '/_app/configure/localization'
+      path: '/localization'
+      fullPath: '/configure/localization'
+      preLoaderRoute: typeof AppConfigureLocalizationRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/billing': {
+      id: '/_app/configure/billing'
+      path: '/billing'
+      fullPath: '/configure/billing'
+      preLoaderRoute: typeof AppConfigureBillingRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/appearance': {
+      id: '/_app/configure/appearance'
+      path: '/appearance'
+      fullPath: '/configure/appearance'
+      preLoaderRoute: typeof AppConfigureAppearanceRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/assets/locations': {
+      id: '/_app/assets/locations'
+      path: '/assets/locations'
+      fullPath: '/assets/locations'
+      preLoaderRoute: typeof AppAssetsLocationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/categories': {
+      id: '/_app/assets/categories'
+      path: '/assets/categories'
+      fullPath: '/assets/categories'
+      preLoaderRoute: typeof AppAssetsCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory/import/items': {
+      id: '/_app/inventory/import/items'
+      path: '/inventory/import/items'
+      fullPath: '/inventory/import/items'
+      preLoaderRoute: typeof AppInventoryImportItemsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory/export/items': {
+      id: '/_app/inventory/export/items'
+      path: '/inventory/export/items'
+      fullPath: '/inventory/export/items'
+      preLoaderRoute: typeof AppInventoryExportItemsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/import/assets': {
+      id: '/_app/assets/import/assets'
+      path: '/assets/import/assets'
+      fullPath: '/assets/import/assets'
+      preLoaderRoute: typeof AppAssetsImportAssetsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/export/assets': {
+      id: '/_app/assets/export/assets'
+      path: '/assets/export/assets'
+      fullPath: '/assets/export/assets'
+      preLoaderRoute: typeof AppAssetsExportAssetsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppConfigureRouteChildren {
+  AppConfigureAppearanceRoute: typeof AppConfigureAppearanceRoute
+  AppConfigureBillingRoute: typeof AppConfigureBillingRoute
+  AppConfigureLocalizationRoute: typeof AppConfigureLocalizationRoute
+  AppConfigureLogoRoute: typeof AppConfigureLogoRoute
+  AppConfigureNotificationsRoute: typeof AppConfigureNotificationsRoute
+  AppConfigureProductsRoute: typeof AppConfigureProductsRoute
+  AppConfigureShippingRoute: typeof AppConfigureShippingRoute
+  AppConfigureTemplatesRoute: typeof AppConfigureTemplatesRoute
+}
+
+const AppConfigureRouteChildren: AppConfigureRouteChildren = {
+  AppConfigureAppearanceRoute: AppConfigureAppearanceRoute,
+  AppConfigureBillingRoute: AppConfigureBillingRoute,
+  AppConfigureLocalizationRoute: AppConfigureLocalizationRoute,
+  AppConfigureLogoRoute: AppConfigureLogoRoute,
+  AppConfigureNotificationsRoute: AppConfigureNotificationsRoute,
+  AppConfigureProductsRoute: AppConfigureProductsRoute,
+  AppConfigureShippingRoute: AppConfigureShippingRoute,
+  AppConfigureTemplatesRoute: AppConfigureTemplatesRoute,
+}
+
+const AppConfigureRouteWithChildren = AppConfigureRoute._addFileChildren(
+  AppConfigureRouteChildren,
+)
+
 interface AppOperiaRouteChildren {
   AppOperiaApikeysRoute: typeof AppOperiaApikeysRoute
+  AppOperiaAssetsRoute: typeof AppOperiaAssetsRoute
   AppOperiaBillingRoute: typeof AppOperiaBillingRoute
   AppOperiaCarriersRoute: typeof AppOperiaCarriersRoute
   AppOperiaCustomersRoute: typeof AppOperiaCustomersRoute
+  AppOperiaLocalizationRoute: typeof AppOperiaLocalizationRoute
   AppOperiaLogsRoute: typeof AppOperiaLogsRoute
+  AppOperiaNotificationsRoute: typeof AppOperiaNotificationsRoute
+  AppOperiaProductsRoute: typeof AppOperiaProductsRoute
+  AppOperiaShippingRoute: typeof AppOperiaShippingRoute
   AppOperiaTemplatesRoute: typeof AppOperiaTemplatesRoute
   AppOperiaIndexRoute: typeof AppOperiaIndexRoute
 }
 
 const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaApikeysRoute: AppOperiaApikeysRoute,
+  AppOperiaAssetsRoute: AppOperiaAssetsRoute,
   AppOperiaBillingRoute: AppOperiaBillingRoute,
   AppOperiaCarriersRoute: AppOperiaCarriersRoute,
   AppOperiaCustomersRoute: AppOperiaCustomersRoute,
+  AppOperiaLocalizationRoute: AppOperiaLocalizationRoute,
   AppOperiaLogsRoute: AppOperiaLogsRoute,
+  AppOperiaNotificationsRoute: AppOperiaNotificationsRoute,
+  AppOperiaProductsRoute: AppOperiaProductsRoute,
+  AppOperiaShippingRoute: AppOperiaShippingRoute,
   AppOperiaTemplatesRoute: AppOperiaTemplatesRoute,
   AppOperiaIndexRoute: AppOperiaIndexRoute,
 }
@@ -779,6 +1216,7 @@ const AppOperiaRouteWithChildren = AppOperiaRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppCarriersRoute: typeof AppCarriersRoute
+  AppConfigureRoute: typeof AppConfigureRouteWithChildren
   AppDepartmentsRoute: typeof AppDepartmentsRoute
   AppEmployeesRoute: typeof AppEmployeesRoute
   AppHandlingClassesRoute: typeof AppHandlingClassesRoute
@@ -789,6 +1227,9 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppStatsRoute: typeof AppStatsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppAssetsCategoriesRoute: typeof AppAssetsCategoriesRoute
+  AppAssetsLocationsRoute: typeof AppAssetsLocationsRoute
+  AppImportConfigRoute: typeof AppImportConfigRoute
   AppImportLocalRoute: typeof AppImportLocalRoute
   AppImportLogRoute: typeof AppImportLogRoute
   AppImportRemoteRoute: typeof AppImportRemoteRoute
@@ -796,20 +1237,25 @@ interface AppRouteChildren {
   AppParcelsReceiveRoute: typeof AppParcelsReceiveRoute
   AppPlatformBillingRoute: typeof AppPlatformBillingRoute
   AppPlatformBrandingRoute: typeof AppPlatformBrandingRoute
-  AppPlatformCustomersRoute: typeof AppPlatformCustomersRoute
-  AppPlatformEntitlementsRoute: typeof AppPlatformEntitlementsRoute
   AppPlatformIntegrationsRoute: typeof AppPlatformIntegrationsRoute
   AppProductsProductKeyRoute: typeof AppProductsProductKeyRoute
   AppSystemCompanyRoute: typeof AppSystemCompanyRoute
   AppSystemEmailTemplatesRoute: typeof AppSystemEmailTemplatesRoute
   AppSystemLabelTemplatesRoute: typeof AppSystemLabelTemplatesRoute
   AppSystemUsersRoute: typeof AppSystemUsersRoute
+  AppAssetsIndexRoute: typeof AppAssetsIndexRoute
   AppImportIndexRoute: typeof AppImportIndexRoute
+  AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppParcelsIndexRoute: typeof AppParcelsIndexRoute
+  AppAssetsExportAssetsRoute: typeof AppAssetsExportAssetsRoute
+  AppAssetsImportAssetsRoute: typeof AppAssetsImportAssetsRoute
+  AppInventoryExportItemsRoute: typeof AppInventoryExportItemsRoute
+  AppInventoryImportItemsRoute: typeof AppInventoryImportItemsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppCarriersRoute: AppCarriersRoute,
+  AppConfigureRoute: AppConfigureRouteWithChildren,
   AppDepartmentsRoute: AppDepartmentsRoute,
   AppEmployeesRoute: AppEmployeesRoute,
   AppHandlingClassesRoute: AppHandlingClassesRoute,
@@ -820,6 +1266,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppStatsRoute: AppStatsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppAssetsCategoriesRoute: AppAssetsCategoriesRoute,
+  AppAssetsLocationsRoute: AppAssetsLocationsRoute,
+  AppImportConfigRoute: AppImportConfigRoute,
   AppImportLocalRoute: AppImportLocalRoute,
   AppImportLogRoute: AppImportLogRoute,
   AppImportRemoteRoute: AppImportRemoteRoute,
@@ -827,16 +1276,20 @@ const AppRouteChildren: AppRouteChildren = {
   AppParcelsReceiveRoute: AppParcelsReceiveRoute,
   AppPlatformBillingRoute: AppPlatformBillingRoute,
   AppPlatformBrandingRoute: AppPlatformBrandingRoute,
-  AppPlatformCustomersRoute: AppPlatformCustomersRoute,
-  AppPlatformEntitlementsRoute: AppPlatformEntitlementsRoute,
   AppPlatformIntegrationsRoute: AppPlatformIntegrationsRoute,
   AppProductsProductKeyRoute: AppProductsProductKeyRoute,
   AppSystemCompanyRoute: AppSystemCompanyRoute,
   AppSystemEmailTemplatesRoute: AppSystemEmailTemplatesRoute,
   AppSystemLabelTemplatesRoute: AppSystemLabelTemplatesRoute,
   AppSystemUsersRoute: AppSystemUsersRoute,
+  AppAssetsIndexRoute: AppAssetsIndexRoute,
   AppImportIndexRoute: AppImportIndexRoute,
+  AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppParcelsIndexRoute: AppParcelsIndexRoute,
+  AppAssetsExportAssetsRoute: AppAssetsExportAssetsRoute,
+  AppAssetsImportAssetsRoute: AppAssetsImportAssetsRoute,
+  AppInventoryExportItemsRoute: AppInventoryExportItemsRoute,
+  AppInventoryImportItemsRoute: AppInventoryImportItemsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

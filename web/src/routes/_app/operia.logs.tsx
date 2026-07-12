@@ -67,9 +67,9 @@ function useCompanyNames() {
 type LogRow = NonNullable<ReturnType<typeof useAuditLog>['data']>[number]
 
 function dotColor(action: string) {
-  if (/(deleted|removed|rejected|failed)/.test(action)) return 'bg-red-500'
-  if (/(deactivated|anonymized|returned)/.test(action)) return 'bg-amber-500'
-  if (/(created|invited|delivered|applied)/.test(action)) return 'bg-emerald-500'
+  if (/(deleted|removed|rejected|failed|revoked)/.test(action)) return 'bg-red-500'
+  if (/(deactivated|anonymized|returned|replaced|_changed|reset|disabled)/.test(action)) return 'bg-amber-500'
+  if (/(created|invited|delivered|applied|granted|activated|enabled)/.test(action)) return 'bg-emerald-500'
   if (action.startsWith('parcel.')) return 'bg-sky-500'
   return 'bg-muted-foreground/40'
 }
@@ -79,6 +79,16 @@ function message(r: LogRow) {
   const parts: string[] = []
   if (r.summary) parts.push(r.summary)
   if (d.from_status || d.to_status) parts.push(`${d.from_status ?? '—'} → ${d.to_status ?? '—'}`)
+  // Ændringshændelser (udløb, sprog, valuta, …): vis fra → til fra detail.
+  const fmtChange = (v: unknown): string => {
+    if (v == null) return '—'
+    if (Array.isArray(v)) return v.join(', ')
+    const s = String(v)
+    return /^\d{4}-\d{2}-\d{2}T/.test(s) ? s.slice(0, 10) : s
+  }
+  if (r.action.endsWith('_changed') && ('from' in d || 'to' in d))
+    parts.push(`${fmtChange(d.from)} → ${fmtChange(d.to)}`)
+  else if (d.valid_until) parts.push(`→ ${String(d.valid_until).slice(0, 10)}`)
   if (r.action.startsWith('import.'))
     parts.push(`+${d.created ?? 0} / ~${d.updated ?? 0} / -${d.deactivated ?? 0} / ✗${d.rejected ?? 0}`)
   return parts.join('   ·   ')

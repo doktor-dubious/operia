@@ -74,6 +74,149 @@ export type Database = {
           },
         ]
       }
+      asset_categories: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          track: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          track?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          track?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_locations: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          asset_tag: string | null
+          category_id: string | null
+          company_id: string
+          condition: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          location_id: string | null
+          name: string
+          purchase_price: number | null
+          purchased_at: string | null
+          serial_no: string | null
+          status: string | null
+          warranty_until: string | null
+        }
+        Insert: {
+          asset_tag?: string | null
+          category_id?: string | null
+          company_id: string
+          condition?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name: string
+          purchase_price?: number | null
+          purchased_at?: string | null
+          serial_no?: string | null
+          status?: string | null
+          warranty_until?: string | null
+        }
+        Update: {
+          asset_tag?: string | null
+          category_id?: string | null
+          company_id?: string
+          condition?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name?: string
+          purchase_price?: number | null
+          purchased_at?: string | null
+          serial_no?: string | null
+          status?: string | null
+          warranty_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "asset_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -109,6 +252,59 @@ export type Database = {
           summary?: string | null
         }
         Relationships: []
+      }
+      carrier_agreements: {
+        Row: {
+          account_no: string | null
+          agreement_type: string
+          api_key: string | null
+          api_user: string | null
+          company_id: string | null
+          created_at: string
+          has_key: boolean | null
+          id: string
+          is_active: boolean
+          name: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          account_no?: string | null
+          agreement_type: string
+          api_key?: string | null
+          api_user?: string | null
+          company_id?: string | null
+          created_at?: string
+          has_key?: boolean | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          account_no?: string | null
+          agreement_type?: string
+          api_key?: string | null
+          api_user?: string | null
+          company_id?: string | null
+          created_at?: string
+          has_key?: boolean | null
+          id?: string
+          is_active?: boolean
+          name?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_agreements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       carriers: {
         Row: {
@@ -148,45 +344,81 @@ export type Database = {
       companies: {
         Row: {
           created_at: string
+          default_currency: string
           default_language: string
           id: string
           is_active: boolean
           logo_url: string | null
           name: string
+          parcel_reminder_1_days: number | null
+          parcel_reminder_1_enabled: boolean | null
+          parcel_reminder_2_days: number | null
+          parcel_reminder_2_enabled: boolean | null
+          parcel_reminder_max: number | null
           purchasing_email: string | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           registration_no: string | null
+          shipping_byoc_fee: number | null
+          shipping_byoc_subscription: number | null
+          shipping_margin_fixed: number | null
+          shipping_margin_percent: number | null
+          shipping_model: string | null
+          supported_currencies: string[]
           supported_languages: string[]
           timezone: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          default_currency?: string
           default_language?: string
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name: string
+          parcel_reminder_1_days?: number | null
+          parcel_reminder_1_enabled?: boolean | null
+          parcel_reminder_2_days?: number | null
+          parcel_reminder_2_enabled?: boolean | null
+          parcel_reminder_max?: number | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          shipping_byoc_fee?: number | null
+          shipping_byoc_subscription?: number | null
+          shipping_margin_fixed?: number | null
+          shipping_margin_percent?: number | null
+          shipping_model?: string | null
+          supported_currencies?: string[]
           supported_languages?: string[]
           timezone?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          default_currency?: string
           default_language?: string
           id?: string
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          parcel_reminder_1_days?: number | null
+          parcel_reminder_1_enabled?: boolean | null
+          parcel_reminder_2_days?: number | null
+          parcel_reminder_2_enabled?: boolean | null
+          parcel_reminder_max?: number | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          shipping_byoc_fee?: number | null
+          shipping_byoc_subscription?: number | null
+          shipping_margin_fixed?: number | null
+          shipping_margin_percent?: number | null
+          shipping_model?: string | null
+          supported_currencies?: string[]
           supported_languages?: string[]
           timezone?: string
           updated_at?: string
@@ -262,6 +494,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_catalog"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      company_templates: {
+        Row: {
+          body: string
+          company_id: string
+          key: string
+          kind: string
+          lang: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          company_id: string
+          key: string
+          kind?: string
+          lang?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          company_id?: string
+          key?: string
+          kind?: string
+          lang?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -381,20 +651,29 @@ export type Database = {
       feature_catalog: {
         Row: {
           description: string | null
+          description_en: string | null
+          enabled: boolean
           key: string
           name: string
+          name_en: string | null
           product_key: string
         }
         Insert: {
           description?: string | null
+          description_en?: string | null
+          enabled?: boolean
           key: string
           name: string
+          name_en?: string | null
           product_key: string
         }
         Update: {
           description?: string | null
+          description_en?: string | null
+          enabled?: boolean
           key?: string
           name?: string
+          name_en?: string | null
           product_key?: string
         }
         Relationships: [
@@ -441,6 +720,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "handling_classes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_configs: {
+        Row: {
+          company_id: string
+          fields: string[]
+          has_footer: boolean
+          has_header: boolean
+          import_type: string
+          separator: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          fields?: string[]
+          has_footer?: boolean
+          has_header?: boolean
+          import_type?: string
+          separator?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          fields?: string[]
+          has_footer?: boolean
+          has_header?: boolean
+          import_type?: string
+          separator?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_configs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -512,6 +829,76 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          category_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          location_id: string | null
+          name: string
+          on_order: number
+          quantity: number
+          reorder_point: number | null
+          sku: string | null
+          unit: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name: string
+          on_order?: number
+          quantity?: number
+          reorder_point?: number | null
+          sku?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name?: string
+          on_order?: number
+          quantity?: number
+          reorder_point?: number | null
+          sku?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "asset_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -766,10 +1153,99 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_asset_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          track: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          track?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          track?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          default_currency: string
+          default_language: string
+          id: boolean
+          locker_loan_ttl_hours: number | null
+          parcel_reminder_1_days: number
+          parcel_reminder_1_enabled: boolean
+          parcel_reminder_2_days: number
+          parcel_reminder_2_enabled: boolean
+          parcel_reminder_max: number
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          shipping_byoc_fee: number
+          shipping_byoc_subscription: number
+          shipping_margin_fixed: number
+          shipping_margin_percent: number
+          shipping_model: string
+          supported_currencies: string[]
+          supported_languages: string[]
+          updated_at: string
+        }
+        Insert: {
+          default_currency?: string
+          default_language?: string
+          id?: boolean
+          locker_loan_ttl_hours?: number | null
+          parcel_reminder_1_days?: number
+          parcel_reminder_1_enabled?: boolean
+          parcel_reminder_2_days?: number
+          parcel_reminder_2_enabled?: boolean
+          parcel_reminder_max?: number
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          shipping_byoc_fee?: number
+          shipping_byoc_subscription?: number
+          shipping_margin_fixed?: number
+          shipping_margin_percent?: number
+          shipping_model?: string
+          supported_currencies?: string[]
+          supported_languages?: string[]
+          updated_at?: string
+        }
+        Update: {
+          default_currency?: string
+          default_language?: string
+          id?: boolean
+          locker_loan_ttl_hours?: number | null
+          parcel_reminder_1_days?: number
+          parcel_reminder_1_enabled?: boolean
+          parcel_reminder_2_days?: number
+          parcel_reminder_2_enabled?: boolean
+          parcel_reminder_max?: number
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          shipping_byoc_fee?: number
+          shipping_byoc_subscription?: number
+          shipping_margin_fixed?: number
+          shipping_margin_percent?: number
+          shipping_model?: string
+          supported_currencies?: string[]
+          supported_languages?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_templates: {
         Row: {
           body: string
+          company_editable: boolean
           key: string
+          kind: string
           lang: string
           name: string
           title: string
@@ -777,7 +1253,9 @@ export type Database = {
         }
         Insert: {
           body?: string
+          company_editable?: boolean
           key: string
+          kind?: string
           lang?: string
           name: string
           title?: string
@@ -785,7 +1263,9 @@ export type Database = {
         }
         Update: {
           body?: string
+          company_editable?: boolean
           key?: string
+          kind?: string
           lang?: string
           name?: string
           title?: string
@@ -796,20 +1276,29 @@ export type Database = {
       product_catalog: {
         Row: {
           description: string | null
+          description_en: string | null
+          enabled: boolean
           key: string
           name: string
+          name_en: string | null
           sort_order: number
         }
         Insert: {
           description?: string | null
+          description_en?: string | null
+          enabled?: boolean
           key: string
           name: string
+          name_en?: string | null
           sort_order?: number
         }
         Update: {
           description?: string | null
+          description_en?: string | null
+          enabled?: boolean
           key?: string
           name?: string
+          name_en?: string | null
           sort_order?: number
         }
         Relationships: []
