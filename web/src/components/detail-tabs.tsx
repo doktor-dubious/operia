@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { AnimateIcon } from '@/components/animate-ui/icons/icon'
+import { Maximize } from '@/components/animate-ui/icons/maximize'
+import { Minimize } from '@/components/animate-ui/icons/minimize'
 import { Button } from '@/components/ui/button'
+import { useDetailMaximized } from '@/hooks/use-detail-maximized'
 import { cn } from '@/lib/utils'
 
 // Fanelinje til detaljepanelet (gorm.ai-mønsteret): faner deler bredden,
@@ -21,8 +26,10 @@ export function DetailTabs({
   onClose?: () => void
   children: React.ReactNode
 }) {
+  const { t } = useTranslation()
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const [bar, setBar] = useState({ left: 0, width: 0 })
+  const [maximized, toggleMaximized] = useDetailMaximized()
 
   useEffect(() => {
     const el = refs.current[active]
@@ -50,6 +57,19 @@ export function DetailTabs({
             {tab.label}
           </button>
         ))}
+        {/* Maksimér/gendan: skjuler tabellen over panelet så det fylder højden */}
+        <AnimateIcon animateOnHover asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={toggleMaximized}
+            aria-label={maximized ? t('detail.restore') : t('detail.maximize')}
+            title={maximized ? t('detail.restore') : t('detail.maximize')}
+          >
+            {maximized ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+          </Button>
+        </AnimateIcon>
         {onClose && (
           <Button
             variant="ghost"

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -15,8 +16,16 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { ComingSoon } from '@/components/coming-soon'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
@@ -36,6 +45,17 @@ export const Route = createFileRoute('/_app/platform/customers')({
 })
 
 const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
+
+// Sprogvalg som i prototypen — vist med deres egne navne, så de er
+// genkendelige uanset brugerfladens sprog.
+const LANG_OPTIONS = [
+  { code: 'da', name: 'Dansk' },
+  { code: 'no', name: 'Norsk' },
+  { code: 'sv', name: 'Svensk' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'English' },
+  { code: 'fr', name: 'Français' },
+]
 
 type Catalog = {
   products: { key: string; name: string; description: string | null; sort_order: number }[]
@@ -58,6 +78,20 @@ function useCatalog() {
   })
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Fjerner filer i virksomhedens logo-mappe — undtagen den fil keepUrl peger
+// på. Bucket'en er offentlig, så udskiftede/fjernede logoer må ikke blive
+// liggende tilgængelige (GDPR); kaldes efter gem og efter sletning af kunden.
+async function cleanupLogos(companyId: string, keepUrl: string | null) {
+  const { data: files } = await supabase.storage.from('company-logos').list(companyId)
+  if (!files?.length) return
+  const stale = files
+    .map((f) => `${companyId}/${f.name}`)
+    .filter((path) => !keepUrl?.endsWith(path))
+  if (stale.length) await supabase.storage.from('company-logos').remove(stale)
+}
+
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
 function useRows() {
@@ -67,7 +101,9 @@ function useRows() {
       const { data, error } = await supabase
         .from('companies')
         .select(
-          'id, name, registration_no, is_active, created_at, company_products (product_key), company_features (feature_key)',
+          // Én sammenhængende literal — sammensatte strenge mister literal-
+          // typen, og så kan supabase-js ikke udlede rækketypen.
+          'id, name, registration_no, is_active, created_at, purchasing_email, logo_url, default_language, timezone, supported_languages, quiet_hours_start, quiet_hours_end, company_products (product_key), company_features (feature_key)',
         )
         .order('name')
       if (error) throw error
@@ -182,6 +218,21 @@ function EntitlementPicker({
   )
 }
 
+// Én oversættelse fra DB-række til formularfelter, delt af useState-
+// initialisering, dirty-sammenligning og annullér, så de tre ikke kan glide
+// fra hinanden. DB'ens time-type er "HH:MM:SS"; <input type="time"> "HH:MM".
+const toForm = (row: Row) => ({
+  name: row.name,
+  regNo: row.registration_no ?? '',
+  purchEmail: row.purchasing_email ?? '',
+  logoUrl: row.logo_url ?? '',
+  defaultLang: row.default_language,
+  timezone: row.timezone,
+  supportedLangs: new Set(row.supported_languages),
+  quietStart: row.quiet_hours_start?.slice(0, 5) ?? '',
+  quietEnd: row.quiet_hours_end?.slice(0, 5) ?? '',
+})
+
 function CustomerDetailPane({
   row,
   catalog,
@@ -199,8 +250,10 @@ function CustomerDetailPane({
 }) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('details')
-  const [name, setName] = useState(row.name)
-  const [regNo, setRegNo] = useState(row.registration_no ?? '')
+  // Aktuelle DB-værdier på formularform — følger med når rækken refetches.
+  const form = toForm(row)
+  const [name, setName] = useState(form.name)
+  const [regNo, setRegNo] = useState(form.regNo)
   const initialProducts = useMemo(
     () => row.company_products.map((p) => p.product_key),
     [row],
@@ -211,13 +264,33 @@ function CustomerDetailPane({
   )
   const [products, setProducts] = useState<Set<string>>(new Set(initialProducts))
   const [features, setFeatures] = useState<Set<string>>(new Set(initialFeatures))
+  const [purchEmail, setPurchEmail] = useState(form.purchEmail)
+  const [logoUrl, setLogoUrl] = useState(form.logoUrl)
+  const [defaultLang, setDefaultLang] = useState(form.defaultLang)
+  const [timezone, setTimezone] = useState(form.timezone)
+  const [supportedLangs, setSupportedLangs] = useState<Set<string>>(
+    new Set(form.supportedLangs),
+  )
+  const [quietStart, setQuietStart] = useState(form.quietStart)
+  const [quietEnd, setQuietEnd] = useState(form.quietEnd)
+  const [uploading, setUploading] = useState(false)
+  const logoFileRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const setKey = (s: Iterable<string>) => [...s].sort().join(',')
+  const companyDirty =
+    name !== form.name ||
+    regNo !== form.regNo ||
+    purchEmail !== form.purchEmail ||
+    logoUrl !== form.logoUrl ||
+    defaultLang !== form.defaultLang ||
+    timezone !== form.timezone ||
+    setKey(supportedLangs) !== setKey(form.supportedLangs) ||
+    quietStart !== form.quietStart ||
+    quietEnd !== form.quietEnd
   const dirty =
-    name !== row.name ||
-    regNo !== (row.registration_no ?? '') ||
+    companyDirty ||
     setKey(products) !== setKey(initialProducts) ||
     setKey(features) !== setKey(initialFeatures)
 
@@ -228,14 +301,38 @@ function CustomerDetailPane({
   }, [dirty])
 
   const saveAll = async () => {
+    const trimmedEmail = purchEmail.trim()
+    if (trimmedEmail && !EMAIL_RE.test(trimmedEmail)) {
+      toast.error(t('customerDetail.purchasingEmailInvalid'))
+      return
+    }
+    if (!supportedLangs.has(defaultLang)) {
+      toast.error(t('customerDetail.languagesInvalid'))
+      return
+    }
     setSaving(true)
     const trimmedName = name.trim()
     const trimmedReg = regNo.trim()
 
-    if (trimmedName !== row.name || trimmedReg !== (row.registration_no ?? '')) {
+    if (companyDirty) {
       const { data, error } = await supabase
         .from('companies')
-        .update({ name: trimmedName, registration_no: trimmedReg || null })
+        .update({
+          name: trimmedName,
+          registration_no: trimmedReg || null,
+          purchasing_email: trimmedEmail || null,
+          logo_url: logoUrl.trim() || null,
+          default_language: defaultLang,
+          timezone: timezone.trim() || 'Europe/Copenhagen',
+          // Stabil rækkefølge (som LANG_OPTIONS) uanset klikrækkefølgen;
+          // koder uden for listen (seedet via SQL/import) bevares.
+          supported_languages: [
+            ...LANG_OPTIONS.map((l) => l.code).filter((c) => supportedLangs.has(c)),
+            ...[...supportedLangs].filter((c) => !LANG_OPTIONS.some((l) => l.code === c)),
+          ],
+          quiet_hours_start: quietStart || null,
+          quiet_hours_end: quietEnd || null,
+        })
         .eq('id', row.id)
         .select('id')
       if (error || !data?.length) {
@@ -243,6 +340,8 @@ function CustomerDetailPane({
         toast.error(error ? t('common.error') : t('common.noPermission'))
         return
       }
+      // Nu er det gemte logo sandheden — udskiftede uploads kan fjernes.
+      void cleanupLogos(row.id, logoUrl.trim() || null)
     }
 
     // Produkter
@@ -286,6 +385,9 @@ function CustomerDetailPane({
     setSaving(false)
     setName(trimmedName)
     setRegNo(trimmedReg)
+    setPurchEmail(trimmedEmail)
+    setLogoUrl(logoUrl.trim())
+    setTimezone(timezone.trim() || 'Europe/Copenhagen')
     setFeatures(new Set(effective))
     toast.success(t('settings.saved'))
     refresh()
@@ -298,10 +400,35 @@ function CustomerDetailPane({
   }
 
   const cancel = () => {
-    setName(row.name)
-    setRegNo(row.registration_no ?? '')
+    setName(form.name)
+    setRegNo(form.regNo)
+    setPurchEmail(form.purchEmail)
+    setLogoUrl(form.logoUrl)
+    setDefaultLang(form.defaultLang)
+    setTimezone(form.timezone)
+    setSupportedLangs(new Set(form.supportedLangs))
+    setQuietStart(form.quietStart)
+    setQuietEnd(form.quietEnd)
     setProducts(new Set(initialProducts))
     setFeatures(new Set(initialFeatures))
+  }
+
+  // Upload til den offentlige company-logos-bucket; den offentlige URL lægges
+  // i logo-feltet, og selve gemningen sker via den fælles gem-bjælke.
+  const uploadLogo = async (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
+    const path = `${row.id}/logo-${Date.now()}.${ext}`
+    setUploading(true)
+    const { error } = await supabase.storage.from('company-logos').upload(path, file, {
+      upsert: true,
+    })
+    setUploading(false)
+    if (error) {
+      console.error('Kunne ikke uploade logo:', error)
+      toast.error(t('common.error'))
+      return
+    }
+    setLogoUrl(supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl)
   }
 
   const setActive = async (is_active: boolean) => {
@@ -325,6 +452,7 @@ function CustomerDetailPane({
       toast.error(t('common.noPermission'))
       throw new Error('RLS afviste sletning')
     }
+    void cleanupLogos(row.id, null)
     toast.success(t('customerDetail.deletedToast', { name: row.name }))
     onDeleted()
     refresh()
@@ -334,6 +462,10 @@ function CustomerDetailPane({
     { key: 'details', label: t('detail.tabDetails') },
     { key: 'products', label: t('customerDetail.tabProducts') },
     { key: 'features', label: t('customerDetail.tabFeatures') },
+    { key: 'billing', label: t('customerDetail.tabBilling') },
+    { key: 'logo', label: t('customerDetail.tabLogo') },
+    { key: 'localization', label: t('customerDetail.tabLocalization') },
+    { key: 'appearance', label: t('customerDetail.tabAppearance') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -382,6 +514,133 @@ function CustomerDetailPane({
             />
           </div>
         )}
+        {tab === 'billing' && (
+          <div className="flex flex-col gap-5">
+            <Field
+              label={`${t('customerDetail.purchasingEmail')} (${t('customerDetail.optional')})`}
+            >
+              <Input
+                type="email"
+                value={purchEmail}
+                placeholder="indkoeb@firma.dk"
+                onChange={(e) => setPurchEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('customerDetail.purchasingEmailHint')}
+              </p>
+            </Field>
+          </div>
+        )}
+        {tab === 'logo' && (
+          <div className="flex flex-col gap-5">
+            <Field label={`${t('customerDetail.logoUrl')} (${t('customerDetail.optional')})`}>
+              <Input
+                value={logoUrl}
+                placeholder="https://…/logo.png"
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t('customerDetail.logoHint')}</p>
+            </Field>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => logoFileRef.current?.click()}
+              >
+                <Upload className="size-4" />
+                {uploading ? t('common.loading') : t('customerDetail.uploadLogo')}
+              </Button>
+              {logoUrl && (
+                <Button size="sm" variant="ghost" onClick={() => setLogoUrl('')}>
+                  {t('customerDetail.removeLogo')}
+                </Button>
+              )}
+              <input
+                ref={logoFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) uploadLogo(file)
+                  e.target.value = ''
+                }}
+              />
+            </div>
+            <Field label={t('customerDetail.logoPreview')}>
+              {logoUrl ? (
+                <div className="flex h-24 items-center justify-center rounded-md border bg-muted/30 p-3">
+                  <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  {t('customerDetail.logoEmpty')}
+                </p>
+              )}
+            </Field>
+          </div>
+        )}
+        {tab === 'localization' && (
+          <div className="grid max-w-2xl gap-5 sm:grid-cols-2">
+            <Field label={t('customerDetail.defaultLanguage')}>
+              <Select value={defaultLang} onValueChange={setDefaultLang}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANG_OPTIONS.map((l) => (
+                    <SelectItem key={l.code} value={l.code}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label={t('customerDetail.timezone')}>
+              <Input
+                value={timezone}
+                placeholder="Europe/Copenhagen"
+                onChange={(e) => setTimezone(e.target.value)}
+              />
+            </Field>
+            <Field label={t('customerDetail.supportedLanguages')}>
+              <div className="flex min-h-9 flex-wrap items-center gap-x-5 gap-y-2 rounded-md border px-3 py-2">
+                {LANG_OPTIONS.map((l) => (
+                  <label
+                    key={l.code}
+                    className="flex cursor-pointer items-center gap-2 text-[13px] font-[450]"
+                  >
+                    <Checkbox
+                      checked={supportedLangs.has(l.code)}
+                      onCheckedChange={(v) => {
+                        const next = new Set(supportedLangs)
+                        if (v === true) next.add(l.code)
+                        else next.delete(l.code)
+                        setSupportedLangs(next)
+                      }}
+                    />
+                    {l.name}
+                  </label>
+                ))}
+              </div>
+            </Field>
+            <Field
+              label={t('customerDetail.quietHoursStart')}
+              info={t('customerDetail.quietHoursHint')}
+            >
+              <Input
+                type="time"
+                value={quietStart}
+                onChange={(e) => setQuietStart(e.target.value)}
+              />
+            </Field>
+            <Field label={t('customerDetail.quietHoursEnd')}>
+              <Input type="time" value={quietEnd} onChange={(e) => setQuietEnd(e.target.value)} />
+            </Field>
+          </div>
+        )}
+        {tab === 'appearance' && <ComingSoon titleKey="customerDetail.tabAppearance" />}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
             <div className="flex items-center justify-between rounded-md border p-4">
@@ -630,6 +889,7 @@ function CustomersPage() {
       toast.error(t('common.noPermission'))
       throw new Error('RLS afviste (delvist) sletning')
     }
+    ids.forEach((id) => void cleanupLogos(id, null))
     if (activeId && ids.includes(activeId)) setActiveId(null)
     await refresh()
   }

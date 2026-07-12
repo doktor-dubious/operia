@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useDetailMaximized } from '@/hooks/use-detail-maximized'
 import { cn } from '@/lib/utils'
 
 // Datatabel efter gorm.ai's mønster: sortérbare kolonner, søgning øverst til
@@ -114,6 +115,9 @@ export function DataTable<Row extends { id: string }>({
   toolbar?: React.ReactNode
 }) {
   const { t } = useTranslation()
+  // Skjuler sig selv når detaljepanelet er maksimeret, så siderne ikke hver
+  // især skal huske at koble maksimering til tabellen.
+  const [maximized] = useDetailMaximized()
   const [initial] = useState(() => loadTableState(storageKey))
   const [query, setQuery] = useState(initial.query ?? '')
   const [sort, setSort] = useState<SortState>(initial.sort ?? null)
@@ -229,7 +233,7 @@ export function DataTable<Row extends { id: string }>({
   const deleteConfirmed = deleteAck && DELETE_WORDS.includes(deleteWord.trim().toLowerCase())
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={cn('flex flex-col gap-3', maximized && activeRowId && 'hidden')}>
       <div className="flex items-center justify-between gap-3">
         <div>{toolbar}</div>
         <div className="relative w-64">
