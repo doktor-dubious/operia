@@ -8,9 +8,9 @@ type ParcelStatus = Database['public']['Enums']['parcel_status']
 // grønt = i mål, sand/orange = undervejs/kræver handling, rød = undtagelser.
 const statusColor: Record<ParcelStatus, string> = {
   unassigned: 'var(--status-bad)',
-  registered: 'var(--status-neutral)',
+  registered: '#13315C',
   in_storage: 'var(--status-good-to-neutral)',
-  in_transit: 'var(--status-neutral)',
+  in_transit: '#13315C',
   in_locker: 'var(--status-good-to-neutral)',
   delivered: 'var(--status-good)',
   rejected: 'var(--status-neutral-to-bad)',
@@ -40,5 +40,5 @@ export function ParcelStatusBadge({ status }: { status: ParcelStatus }) {
   )
 }
 
-export { statusLabelKey }
+export { statusLabelKey, statusColor }
 export type { ParcelStatus }

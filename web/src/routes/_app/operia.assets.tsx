@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -86,7 +87,7 @@ function AssetsConfigPage() {
       .select('id')
     setSaving(false)
     if (error || !saved?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -106,7 +107,7 @@ function AssetsConfigPage() {
       .select('id')
     setBusy(false)
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     setAddOpen(false)
@@ -123,7 +124,7 @@ function AssetsConfigPage() {
       .eq('id', id)
       .select('id')
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('assetsConfig.categoryDeleted', { name }))

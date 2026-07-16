@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -111,7 +112,7 @@ function TemplatesPage() {
       .select('key')
     setSaving(false)
     if (error || !saved?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))

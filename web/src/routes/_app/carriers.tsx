@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -55,12 +56,14 @@ function useRows(companyId: string | null) {
 
 function CarrierDetailPane({
   row,
+  existingNames,
   onClose,
   onDirtyChange,
   onDeleted,
   refresh,
 }: {
   row: Row
+  existingNames: string[]
   onClose: () => void
   onDirtyChange: (dirty: boolean) => void
   onDeleted: () => void
@@ -73,6 +76,12 @@ function CarrierDetailPane({
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const dirty = name !== row.name
+
+  // Samme unikke-navn-tjek som "+ Ny", men mod de øvrige rækker (egen udeladt).
+  const trimmedName = name.trim()
+  const duplicate =
+    trimmedName !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmedName.toLowerCase())
 
   useEffect(() => {
     onDirtyChange(dirty)
@@ -90,7 +99,8 @@ function CarrierDetailPane({
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme fragtfirma:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation på (company_id, name) — vis et præcist navn-svar
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return false
     }
     if (!data?.length) {
@@ -104,8 +114,8 @@ function CarrierDetailPane({
   }
 
   const saveName = async () => {
-    const trimmed = name.trim()
-    if (await save({ name: trimmed })) setName(trimmed)
+    if (duplicate) return
+    if (await save({ name: trimmedName })) setName(trimmedName)
   }
 
   const remove = async () => {
@@ -143,7 +153,14 @@ function CarrierDetailPane({
               </div>
             </Field>
             <Field label={t('carriersPage.name')}>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                value={name}
+                aria-invalid={duplicate}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {duplicate && (
+                <p className="mt-1.5 text-xs text-destructive">{t('common.nameTaken')}</p>
+              )}
             </Field>
           </div>
         )}
@@ -194,7 +211,7 @@ function CarrierDetailPane({
           >
             {t('common.cancel')}
           </Button>
-          <Button size="sm" onClick={saveName} disabled={saving || !name.trim()}>
+          <Button size="sm" onClick={saveName} disabled={saving || !name.trim() || duplicate}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>
@@ -217,16 +234,26 @@ function NewCarrierDialog({
   open,
   onOpenChange,
   companyId,
+  existingNames,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   companyId: string | null
+  existingNames: string[]
   onCreated: () => void
 }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Navnet skal være unikt pr. virksomhed (DB: unique (company_id, name)).
+  // Tjek det allerede mens der skrives, så brugeren ikke først får en fejl
+  // ved gem. Sammenligning er uafhængig af store/små bogstaver og mellemrum.
+  const trimmed = name.trim()
+  const duplicate =
+    trimmed !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmed.toLowerCase())
 
   // Én lukkevej: nulstiller altid feltet (review-fund: genåbning viste
   // forrige navn, fordi create/annullér gik uden om nulstillingen).
@@ -236,18 +263,19 @@ function NewCarrierDialog({
   }
 
   const create = async () => {
-    if (!companyId || !name.trim()) return
+    if (!companyId || !trimmed || duplicate) return
     setBusy(true)
     const { error } = await supabase
       .from('carriers')
-      .insert({ company_id: companyId, name: name.trim() })
+      .insert({ company_id: companyId, name: trimmed })
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette fragtfirma:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation (fx et race med en anden manager)
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return
     }
-    toast.success(t('carrierDetail.createdToast', { name: name.trim() }))
+    toast.success(t('carrierDetail.createdToast', { name: trimmed }))
     onCreated()
     handleOpenChange(false)
   }
@@ -266,14 +294,16 @@ function NewCarrierDialog({
             id="new-carrier-name"
             value={name}
             autoFocus
+            aria-invalid={duplicate}
             onChange={(e) => setName(e.target.value)}
           />
+          {duplicate && <p className="text-xs text-destructive">{t('common.nameTaken')}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
+          <Button disabled={busy || !name.trim() || duplicate || !companyId} onClick={create}>
             {busy ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>
@@ -346,6 +376,7 @@ function CarriersPage() {
         <CarrierDetailPane
           key={activeRow.id}
           row={activeRow}
+          existingNames={(data ?? []).filter((r) => r.id !== activeRow.id).map((r) => r.name)}
           onClose={() => guarded(() => setActiveId(null))}
           onDirtyChange={setPaneDirty}
           onDeleted={() => setActiveId(null)}
@@ -356,6 +387,7 @@ function CarriersPage() {
         open={newOpen}
         onOpenChange={setNewOpen}
         companyId={companyId}
+        existingNames={(data ?? []).map((row) => row.name)}
         onCreated={refresh}
       />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -68,7 +69,7 @@ function ProductsPage() {
         .select('key')
       if (error || !saved?.length) {
         setSaving(false)
-        toast.error(error ? t('common.error') : t('common.noPermission'))
+        toast.error(error ? describeError(error, t) : t('common.noPermission'))
         return
       }
     }
@@ -80,7 +81,7 @@ function ProductsPage() {
         .select('key')
       if (error || !saved?.length) {
         setSaving(false)
-        toast.error(error ? t('common.error') : t('common.noPermission'))
+        toast.error(error ? describeError(error, t) : t('common.noPermission'))
         return
       }
     }

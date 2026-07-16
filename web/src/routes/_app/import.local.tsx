@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 import { FileUp, Upload } from 'lucide-react'
@@ -13,6 +14,7 @@ import { useAccess } from '@/hooks/use-access'
 import { IMPORT_CONFIG_DEFAULTS, useImportConfig } from '@/hooks/use-import-config'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
+import { fetchAllPages, stripFooter } from '@/lib/import-utils'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -79,16 +81,21 @@ type CsvRow = {
 
 type RowError = { row: number; reason: string }
 
+type EmployeeUpsert = import('@/lib/database.types').Database['public']['Tables']['employees']['Insert']
+
 type Diff = {
   fileName: string
   rows: CsvRow[]
   errors: RowError[]
   creates: CsvRow[]
-  updates: { row: CsvRow; existingId: string }[]
+  updates: { row: CsvRow; existingId: string; existingLanguage: string | null }[]
   unchanged: number
   skippedManual: number
   deactivations: { id: string; name: string }[]
   newDepartments: string[]
+  // Felter filen ejer (kolonne til stede) — kun disse skrives ved anvendelse,
+  // så fx et NFC-kort tildelt i appen ikke slettes af en fil uden NFC-kolonne.
+  owned: string[]
 }
 
 type Receipt = {
@@ -175,10 +182,13 @@ function ImportPage() {
         return
       }
       if (text.charCodeAt(0) === 0xfeff) text = text.slice(1) // BOM
+      if (cfg.hasFooter) text = stripFooter(text)
 
       // ── Parsning → RawRecord[] efter konfigurationen ──
       let records: RawRecord[] = []
       let firstDataRow: number // filens 1-indekserede række for første datarække
+      // Felter filen ejer (kolonne til stede). Kun disse sammenlignes/skrives.
+      const owned = new Set<string>()
 
       // "Forkert separator" er langt mere sandsynlig end en ægte enkelt-
       // kolonnefil: hvis den konfigurerede separator kun giver én kolonne,
@@ -215,10 +225,15 @@ function ImportPage() {
           ])
           return
         }
-        let dataRows = parsed.data
-        if (cfg.hasFooter && dataRows.length) dataRows = dataRows.slice(0, -1)
         firstDataRow = 1
-        records = dataRows.map((cols) => {
+        for (const key of cfg.fields) {
+          if (key === 'name') owned.add('full_name')
+          else if (key === 'first_name' || key === 'last_name') {
+            owned.add(key)
+            owned.add('full_name')
+          } else if (key !== 'employee_no') owned.add(key)
+        }
+        records = parsed.data.map((cols) => {
           const rec: RawRecord = {}
           cfg.fields.forEach((key, i) => {
             const mapped = key === 'name' ? 'full_name' : (key as keyof RawRecord)
@@ -281,10 +296,17 @@ function ImportPage() {
           ])
           return
         }
-        let dataRows = parsed.data
-        if (cfg.hasFooter && dataRows.length) dataRows = dataRows.slice(0, -1)
+        if (fieldFor.full_name) owned.add('full_name')
+        if (fieldFor.first_name && fieldFor.last_name) {
+          owned.add('first_name')
+          owned.add('last_name')
+          owned.add('full_name') // afledes af fornavn + efternavn
+        }
+        for (const f of ['initials', 'email', 'phone', 'department', 'language', 'nfc_card_id', 'role']) {
+          if (fieldFor[f]) owned.add(f)
+        }
         firstDataRow = 2
-        records = dataRows.map((raw) => {
+        records = parsed.data.map((raw) => {
           const rec: RawRecord = {}
           for (const [field, col] of Object.entries(fieldFor))
             rec[field as keyof RawRecord] = raw[col]
@@ -338,24 +360,28 @@ function ImportPage() {
         })
       })
 
-      // tørkørsel mod databasen
+      // tørkørsel mod databasen (sidevis — se fetchAllPages)
       const [employees, departments] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('id, employee_no, full_name, first_name, last_name, initials, email, phone, language, department_id, is_active, is_manual, nfc_card_id, role')
-          .eq('company_id', companyId),
-        supabase.from('departments').select('id, name').eq('company_id', companyId),
+        fetchAllPages((from, to) =>
+          supabase
+            .from('employees')
+            .select('id, employee_no, full_name, first_name, last_name, initials, email, phone, language, department_id, is_active, is_manual, nfc_card_id, role')
+            .eq('company_id', companyId)
+            .order('id')
+            .range(from, to),
+        ),
+        fetchAllPages((from, to) =>
+          supabase.from('departments').select('id, name').eq('company_id', companyId).order('id').range(from, to),
+        ),
       ])
-      if (employees.error) throw employees.error
-      if (departments.error) throw departments.error
 
-      const deptByName = new Map(departments.data.map((d) => [d.name.toLowerCase(), d]))
+      const deptByName = new Map(departments.map((d) => [d.name.toLowerCase(), d]))
       const byNo = new Map(
-        employees.data.filter((e) => e.employee_no).map((e) => [e.employee_no as string, e]),
+        employees.filter((e) => e.employee_no).map((e) => [e.employee_no as string, e]),
       )
 
       const creates: CsvRow[] = []
-      const updates: { row: CsvRow; existingId: string }[] = []
+      const updates: { row: CsvRow; existingId: string; existingLanguage: string | null }[] = []
       let unchanged = 0
       let skippedManual = 0
       const newDepartments = new Set<string>()
@@ -377,23 +403,24 @@ function ImportPage() {
           ? (deptByName.get(row.department.toLowerCase())?.id ?? 'NEW')
           : null
         const changed =
-          existing.full_name !== row.full_name ||
-          (existing.first_name ?? null) !== row.first_name ||
-          (existing.last_name ?? null) !== row.last_name ||
-          (existing.nfc_card_id ?? null) !== row.nfc_card_id ||
-          (existing.role ?? null) !== row.role ||
-          (existing.initials ?? null) !== row.initials ||
-          (existing.email ?? null) !== row.email ||
-          (existing.phone ?? null) !== row.phone ||
-          (row.language !== null && existing.language !== row.language) ||
-          (existing.department_id ?? null) !== (targetDept === 'NEW' ? 'NEW' : targetDept) ||
+          (owned.has('full_name') && existing.full_name !== row.full_name) ||
+          (owned.has('first_name') && (existing.first_name ?? null) !== row.first_name) ||
+          (owned.has('last_name') && (existing.last_name ?? null) !== row.last_name) ||
+          (owned.has('nfc_card_id') && (existing.nfc_card_id ?? null) !== row.nfc_card_id) ||
+          (owned.has('role') && (existing.role ?? null) !== row.role) ||
+          (owned.has('initials') && (existing.initials ?? null) !== row.initials) ||
+          (owned.has('email') && (existing.email ?? null) !== row.email) ||
+          (owned.has('phone') && (existing.phone ?? null) !== row.phone) ||
+          (owned.has('language') && row.language !== null && existing.language !== row.language) ||
+          (owned.has('department') &&
+            (existing.department_id ?? null) !== (targetDept === 'NEW' ? 'NEW' : targetDept)) ||
           !existing.is_active
-        if (changed) updates.push({ row, existingId: existing.id })
+        if (changed) updates.push({ row, existingId: existing.id, existingLanguage: existing.language ?? null })
         else unchanged++
       }
 
       const fileNos = new Set(rows.map((r) => r.employee_no))
-      const deactivations = employees.data
+      const deactivations = employees
         .filter((e) => !e.is_manual && e.is_active && e.employee_no && !fileNos.has(e.employee_no))
         .map((e) => ({ id: e.id, name: e.full_name }))
 
@@ -407,6 +434,7 @@ function ImportPage() {
         skippedManual,
         deactivations,
         newDepartments: [...newDepartments],
+        owned: [...owned],
       })
       setStep('preview')
     } catch (error) {
@@ -419,6 +447,18 @@ function ImportPage() {
   const apply = async () => {
     if (!diff || !companyId) return
     setBusy(true)
+    // Samme lås som den automatiske SFTP/e-mail-runner: uden den kan et manuelt
+    // "Anvend" interleave med en baggrundsimport og kollidere på unik-indekset
+    // (eller deaktivere forkert) — begge diffs er beregnet før skrivningen.
+    const { data: locked, error: lockError } = await supabase.rpc('try_import_lock_self', {
+      p_company_id: companyId,
+    })
+    if (lockError || locked !== true) {
+      if (lockError) console.error('try_import_lock_self fejlede:', lockError)
+      toast.error(t('importPage.applyBusy'))
+      setBusy(false)
+      return
+    }
     const counts = {
       rows_total: diff.rows.length + diff.errors.length,
       created: 0,
@@ -431,11 +471,9 @@ function ImportPage() {
     try {
       // 1) nye afdelinger
       const deptIdByName = new Map<string, string>()
-      const { data: existingDepts, error: deptErr } = await supabase
-        .from('departments')
-        .select('id, name')
-        .eq('company_id', companyId)
-      if (deptErr) throw deptErr
+      const existingDepts = await fetchAllPages((from, to) =>
+        supabase.from('departments').select('id, name').eq('company_id', companyId).order('id').range(from, to),
+      )
       existingDepts.forEach((d) => deptIdByName.set(d.name.toLowerCase(), d.id))
 
       if (diff.newDepartments.length) {
@@ -449,31 +487,41 @@ function ImportPage() {
         counts.departments = created.length
       }
 
-      const mapRow = (row: CsvRow) => ({
-        company_id: companyId,
-        employee_no: row.employee_no,
-        full_name: row.full_name,
-        first_name: row.first_name,
-        last_name: row.last_name,
-        nfc_card_id: row.nfc_card_id,
-        role: row.role,
-        initials: row.initials,
-        email: row.email,
-        phone: row.phone,
-        language: row.language ?? 'da',
-        department_id: row.department
-          ? (deptIdByName.get(row.department.toLowerCase()) ?? null)
-          : null,
-        is_active: true,
-        is_manual: false,
-      })
+      // Kun ejede felter (kolonne i filen) skrives; resten forbliver urørt i
+      // databasen. Sprog med tom celle beholder den eksisterende værdi
+      // (currentLanguage) — kolonnen er not-null.
+      const owned = new Set(diff.owned)
+      const mapRow = (row: CsvRow, currentLanguage: string | null = null) => {
+        // full_name er altid ejet — navnekolonnen er obligatorisk i konfigurationen.
+        const rec: EmployeeUpsert = {
+          company_id: companyId,
+          employee_no: row.employee_no,
+          full_name: row.full_name,
+          is_active: true,
+          is_manual: false,
+        }
+        if (owned.has('first_name')) rec.first_name = row.first_name
+        if (owned.has('last_name')) rec.last_name = row.last_name
+        if (owned.has('nfc_card_id')) rec.nfc_card_id = row.nfc_card_id
+        if (owned.has('role')) rec.role = row.role
+        if (owned.has('initials')) rec.initials = row.initials
+        if (owned.has('email')) rec.email = row.email
+        if (owned.has('phone')) rec.phone = row.phone
+        if (owned.has('language')) rec.language = row.language ?? currentLanguage ?? 'da'
+        if (owned.has('department')) {
+          rec.department_id = row.department
+            ? (deptIdByName.get(row.department.toLowerCase()) ?? null)
+            : null
+        }
+        return rec
+      }
 
       // 2) nye medarbejdere (i bidder af 500)
       for (let i = 0; i < diff.creates.length; i += 500) {
         const chunk = diff.creates.slice(i, i + 500)
         const { data, error } = await supabase
           .from('employees')
-          .insert(chunk.map(mapRow))
+          .insert(chunk.map((row) => mapRow(row)))
           .select('id')
         if (error) throw error
         if (data.length !== chunk.length) throw new Error('RLS afviste oprettelser')
@@ -485,7 +533,7 @@ function ImportPage() {
         const chunk = diff.updates.slice(i, i + 500)
         const { data, error } = await supabase
           .from('employees')
-          .upsert(chunk.map((u) => ({ id: u.existingId, ...mapRow(u.row) })))
+          .upsert(chunk.map((u) => ({ id: u.existingId, ...mapRow(u.row, u.existingLanguage) })))
           .select('id')
         if (error) throw error
         if (data.length !== chunk.length) throw new Error('RLS afviste opdateringer')
@@ -528,8 +576,12 @@ function ImportPage() {
         rejected: diff.errors.length,
       })
       setStep('receipt')
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
     } finally {
+      const { error: unlockError } = await supabase.rpc('release_import_lock_self', {
+        p_company_id: companyId,
+      })
+      if (unlockError) console.error('release_import_lock_self fejlede:', unlockError)
       setBusy(false)
     }
   }

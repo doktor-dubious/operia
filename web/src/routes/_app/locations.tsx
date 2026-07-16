@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -53,10 +54,12 @@ function useRows(companyId: string | null) {
 
 function LocationDetailPane({
   row,
+  existingNames,
   onClose,
   onDirtyChange,
 }: {
   row: Row
+  existingNames: string[]
   onClose: () => void
   onDirtyChange: (dirty: boolean) => void
 }) {
@@ -78,6 +81,12 @@ function LocationDetailPane({
     notes !== (row.notes ?? '') ||
     barcode !== (row.barcode ?? '')
 
+  // Samme unikke-navn-tjek som "+ Ny", men mod de øvrige rækker (egen udeladt).
+  const trimmedName = name.trim()
+  const duplicate =
+    trimmedName !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmedName.toLowerCase())
+
   useEffect(() => {
     onDirtyChange(dirty)
     return () => onDirtyChange(false)
@@ -94,7 +103,8 @@ function LocationDetailPane({
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme placering:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation på (company_id, name) — vis et præcist navn-svar
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return false
     }
     if (!data?.length) {
@@ -108,6 +118,7 @@ function LocationDetailPane({
   }
 
   const saveAll = async () => {
+    if (duplicate) return
     const ok = await save({
       name: name.trim(),
       description: description.trim() || null,
@@ -170,7 +181,14 @@ function LocationDetailPane({
               </div>
             </Field>
             <Field label={t('locations.name')}>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                value={name}
+                aria-invalid={duplicate}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {duplicate && (
+                <p className="mt-1.5 text-xs text-destructive">{t('common.nameTaken')}</p>
+              )}
             </Field>
             <Field label={t('locationDetail.description')}>
               <Textarea
@@ -235,7 +253,7 @@ function LocationDetailPane({
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim()}>
+          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim() || duplicate}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>
@@ -258,17 +276,26 @@ function NewLocationDialog({
   open,
   onOpenChange,
   companyId,
+  existingNames,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   companyId: string | null
+  existingNames: string[]
   onCreated: () => void
 }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
   const [barcode, setBarcode] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Navnet skal være unikt pr. virksomhed (DB: unique (company_id, name)) —
+  // tjek det mens der skrives, uafhængigt af store/små bogstaver og mellemrum.
+  const trimmed = name.trim()
+  const duplicate =
+    trimmed !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmed.toLowerCase())
 
   // Én lukkevej: nulstiller altid felterne
   const handleOpenChange = (next: boolean) => {
@@ -280,20 +307,21 @@ function NewLocationDialog({
   }
 
   const create = async () => {
-    if (!companyId || !name.trim()) return
+    if (!companyId || !trimmed || duplicate) return
     setBusy(true)
     const { error } = await supabase.from('storage_locations').insert({
       company_id: companyId,
-      name: name.trim(),
+      name: trimmed,
       barcode: barcode.trim() || null,
     })
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette placering:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation (fx et race med en anden manager)
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return
     }
-    toast.success(t('locationDetail.createdToast', { name: name.trim() }))
+    toast.success(t('locationDetail.createdToast', { name: trimmed }))
     onCreated()
     handleOpenChange(false)
   }
@@ -310,8 +338,10 @@ function NewLocationDialog({
             id="new-loc-name"
             value={name}
             autoFocus
+            aria-invalid={duplicate}
             onChange={(e) => setName(e.target.value)}
           />
+          {duplicate && <p className="text-xs text-destructive">{t('common.nameTaken')}</p>}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="new-loc-barcode" className="text-label">{t('locations.barcode')}</Label>
@@ -327,7 +357,7 @@ function NewLocationDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
+          <Button disabled={busy || !name.trim() || duplicate || !companyId} onClick={create}>
             {busy ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>
@@ -412,6 +442,7 @@ function LocationsPage() {
         <LocationDetailPane
           key={activeRow.id}
           row={activeRow}
+          existingNames={(data ?? []).filter((r) => r.id !== activeRow.id).map((r) => r.name)}
           onClose={() => guarded(() => setActiveId(null))}
           onDirtyChange={setPaneDirty}
         />
@@ -420,6 +451,7 @@ function LocationsPage() {
         open={newOpen}
         onOpenChange={setNewOpen}
         companyId={companyId}
+        existingNames={(data ?? []).map((row) => row.name)}
         onCreated={() => queryClient.invalidateQueries({ queryKey: ['storage-locations'] })}
       />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>

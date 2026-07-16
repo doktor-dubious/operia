@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -142,6 +143,7 @@ function LocationSelect({
 function LockerDetailPane({
   row,
   companyId,
+  existingNames,
   onClose,
   onDirtyChange,
   onDeleted,
@@ -149,6 +151,7 @@ function LockerDetailPane({
 }: {
   row: Row
   companyId: string | null
+  existingNames: string[]
   onClose: () => void
   onDirtyChange: (dirty: boolean) => void
   onDeleted: () => void
@@ -175,6 +178,12 @@ function LockerDetailPane({
     caps.medium !== String(row.cap_medium) ||
     caps.large !== String(row.cap_large)
 
+  // Samme unikke-navn-tjek som "+ Ny", men mod de øvrige rækker (egen udeladt).
+  const trimmedNameCheck = name.trim()
+  const duplicate =
+    trimmedNameCheck !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmedNameCheck.toLowerCase())
+
   useEffect(() => {
     onDirtyChange(dirty)
     return () => onDirtyChange(false)
@@ -191,7 +200,8 @@ function LockerDetailPane({
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme skab:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation på (company_id, name) — vis et præcist navn-svar
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return false
     }
     if (!data?.length) {
@@ -204,6 +214,7 @@ function LockerDetailPane({
   }
 
   const saveAll = async () => {
+    if (duplicate) return
     const trimmedName = name.trim()
     const trimmedKeynius = keynius.trim()
     const ok = await save({
@@ -267,7 +278,14 @@ function LockerDetailPane({
               </div>
             </Field>
             <Field label={t('lockersPage.name')}>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                value={name}
+                aria-invalid={duplicate}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {duplicate && (
+                <p className="mt-1.5 text-xs text-destructive">{t('common.nameTaken')}</p>
+              )}
             </Field>
             <Field label={t('lockersPage.keynius')} info={t('lockerDetail.keyniusDescription')}>
               <Input
@@ -324,7 +342,7 @@ function LockerDetailPane({
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim()}>
+          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim() || duplicate}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>
@@ -347,11 +365,13 @@ function NewLockerDialog({
   open,
   onOpenChange,
   companyId,
+  existingNames,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   companyId: string | null
+  existingNames: string[]
   onCreated: () => void
 }) {
   const { t } = useTranslation()
@@ -360,6 +380,13 @@ function NewLockerDialog({
   const [locationId, setLocationId] = useState(NONE)
   const [caps, setCaps] = useState({ small: '0', medium: '0', large: '0' })
   const [busy, setBusy] = useState(false)
+
+  // Navnet skal være unikt pr. virksomhed (DB: unique (company_id, name)) —
+  // tjek det mens der skrives, uafhængigt af store/små bogstaver og mellemrum.
+  const trimmed = name.trim()
+  const duplicate =
+    trimmed !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmed.toLowerCase())
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
@@ -372,11 +399,11 @@ function NewLockerDialog({
   }
 
   const create = async () => {
-    if (!companyId || !name.trim()) return
+    if (!companyId || !trimmed || duplicate) return
     setBusy(true)
     const { error } = await supabase.from('lockers').insert({
       company_id: companyId,
-      name: name.trim(),
+      name: trimmed,
       keynius_bank_id: keynius.trim() || null,
       storage_location_id: locationId === NONE ? null : locationId,
       cap_small: Math.max(0, parseInt(caps.small, 10) || 0),
@@ -386,10 +413,11 @@ function NewLockerDialog({
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette skab:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation (fx et race med en anden manager)
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return
     }
-    toast.success(t('lockerDetail.createdToast', { name: name.trim() }))
+    toast.success(t('lockerDetail.createdToast', { name: trimmed }))
     onCreated()
     handleOpenChange(false)
   }
@@ -408,8 +436,10 @@ function NewLockerDialog({
             id="new-locker-name"
             value={name}
             autoFocus
+            aria-invalid={duplicate}
             onChange={(e) => setName(e.target.value)}
           />
+          {duplicate && <p className="text-xs text-destructive">{t('common.nameTaken')}</p>}
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
@@ -434,7 +464,7 @@ function NewLockerDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
+          <Button disabled={busy || !name.trim() || duplicate || !companyId} onClick={create}>
             {busy ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>
@@ -531,6 +561,7 @@ function LockersPage() {
           key={activeRow.id}
           row={activeRow}
           companyId={companyId}
+          existingNames={(data ?? []).filter((r) => r.id !== activeRow.id).map((r) => r.name)}
           onClose={() => guarded(() => setActiveId(null))}
           onDirtyChange={setPaneDirty}
           onDeleted={() => setActiveId(null)}
@@ -541,6 +572,7 @@ function LockersPage() {
         open={newOpen}
         onOpenChange={setNewOpen}
         companyId={companyId}
+        existingNames={(data ?? []).map((row) => row.name)}
         onCreated={refresh}
       />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>

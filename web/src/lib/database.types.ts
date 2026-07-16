@@ -221,34 +221,40 @@ export type Database = {
         Row: {
           action: string
           actor_user_id: string | null
+          category: string | null
           company_id: string | null
           created_at: string
           detail: Json
           entity_id: string | null
           entity_type: string
           id: number
+          level: string | null
           summary: string | null
         }
         Insert: {
           action: string
           actor_user_id?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           detail?: Json
           entity_id?: string | null
           entity_type: string
           id?: never
+          level?: string | null
           summary?: string | null
         }
         Update: {
           action?: string
           actor_user_id?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           detail?: Json
           entity_id?: string | null
           entity_type?: string
           id?: never
+          level?: string | null
           summary?: string | null
         }
         Relationships: []
@@ -425,6 +431,85 @@ export type Database = {
         }
         Relationships: []
       }
+      company_data_transfer: {
+        Row: {
+          company_id: string
+          created_at: string
+          email_enabled: boolean
+          import_schedule_enabled: boolean
+          import_schedule_time: string | null
+          sftp_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email_enabled?: boolean
+          import_schedule_enabled?: boolean
+          import_schedule_time?: string | null
+          sftp_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email_enabled?: boolean
+          import_schedule_enabled?: boolean
+          import_schedule_time?: string | null
+          sftp_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_data_transfer_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_data_transfer_secret: {
+        Row: {
+          company_id: string
+          created_at: string
+          email_allowed_senders: string[]
+          email_name: string | null
+          sftp_password: string | null
+          sftp_password_set: boolean | null
+          sftp_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email_allowed_senders?: string[]
+          email_name?: string | null
+          sftp_password?: string | null
+          sftp_password_set?: boolean | null
+          sftp_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email_allowed_senders?: string[]
+          email_name?: string | null
+          sftp_password?: string | null
+          sftp_password_set?: boolean | null
+          sftp_username?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_data_transfer_secret_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_features: {
         Row: {
           company_id: string
@@ -458,6 +543,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "feature_catalog"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      company_home_config: {
+        Row: {
+          company_id: string
+          created_at: string
+          home_design: Json
+          home_tiles: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          home_design?: Json
+          home_tiles?: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          home_design?: Json
+          home_tiles?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_home_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -765,6 +882,29 @@ export type Database = {
           },
         ]
       }
+      import_locks: {
+        Row: {
+          company_id: string
+          locked_at: string
+        }
+        Insert: {
+          company_id: string
+          locked_at?: string
+        }
+        Update: {
+          company_id?: string
+          locked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_locks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_runs: {
         Row: {
           company_id: string
@@ -829,6 +969,60 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inbound_files: {
+        Row: {
+          company_id: string
+          file_name: string | null
+          file_size: number | null
+          id: string
+          import_run_id: string | null
+          message_id: string | null
+          object_path: string
+          received_at: string
+          source: string
+          status: string
+        }
+        Insert: {
+          company_id: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          import_run_id?: string | null
+          message_id?: string | null
+          object_path: string
+          received_at?: string
+          source: string
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          import_run_id?: string | null
+          message_id?: string | null
+          object_path?: string
+          received_at?: string
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbound_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbound_files_import_run_id_fkey"
+            columns: ["import_run_id"]
+            isOneToOne: false
+            referencedRelation: "import_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -960,6 +1154,68 @@ export type Database = {
           },
         ]
       }
+      log_drains: {
+        Row: {
+          company_id: string | null
+          config: Json
+          created_at: string
+          destination: string
+          enabled: boolean
+          endpoint: string | null
+          id: string
+          last_delivered_id: number
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          secret: string | null
+          secret_set: boolean
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          config?: Json
+          created_at?: string
+          destination?: string
+          enabled?: boolean
+          endpoint?: string | null
+          id?: string
+          last_delivered_id?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          secret?: string | null
+          secret_set?: boolean
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          config?: Json
+          created_at?: string
+          destination?: string
+          enabled?: boolean
+          endpoint?: string | null
+          id?: string
+          last_delivered_id?: number
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          secret?: string | null
+          secret_set?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "log_drains_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcel_events: {
         Row: {
           actor_user_id: string | null
@@ -1021,6 +1277,7 @@ export type Database = {
         Row: {
           barcode: string | null
           carrier_id: string | null
+          client_key: string | null
           company_id: string
           condition_note: string | null
           condition_photo_path: string | null
@@ -1046,6 +1303,7 @@ export type Database = {
         Insert: {
           barcode?: string | null
           carrier_id?: string | null
+          client_key?: string | null
           company_id: string
           condition_note?: string | null
           condition_photo_path?: string | null
@@ -1071,6 +1329,7 @@ export type Database = {
         Update: {
           barcode?: string | null
           carrier_id?: string | null
+          client_key?: string | null
           company_id?: string
           condition_note?: string | null
           condition_photo_path?: string | null
@@ -1176,10 +1435,22 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          audit_retention_days: number | null
           default_currency: string
           default_language: string
+          email_allowlist_required: boolean
+          email_antispoof_enabled: boolean
+          email_antispoof_strict: boolean
+          email_base_domain: string | null
+          email_enabled: boolean
+          home_design: Json
+          home_tiles: Json
           id: boolean
+          import_retention_days: number | null
+          import_schedule_enabled: boolean
+          import_schedule_time: string | null
           locker_loan_ttl_hours: number | null
+          maps_provider: string
           parcel_reminder_1_days: number
           parcel_reminder_1_enabled: boolean
           parcel_reminder_2_days: number
@@ -1187,6 +1458,9 @@ export type Database = {
           parcel_reminder_max: number
           quiet_hours_end: string | null
           quiet_hours_start: string | null
+          refresh_interval_seconds: number
+          sftp_enabled: boolean
+          sftp_host: string | null
           shipping_byoc_fee: number
           shipping_byoc_subscription: number
           shipping_margin_fixed: number
@@ -1197,10 +1471,22 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audit_retention_days?: number | null
           default_currency?: string
           default_language?: string
+          email_allowlist_required?: boolean
+          email_antispoof_enabled?: boolean
+          email_antispoof_strict?: boolean
+          email_base_domain?: string | null
+          email_enabled?: boolean
+          home_design?: Json
+          home_tiles?: Json
           id?: boolean
+          import_retention_days?: number | null
+          import_schedule_enabled?: boolean
+          import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
+          maps_provider?: string
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
           parcel_reminder_2_days?: number
@@ -1208,6 +1494,9 @@ export type Database = {
           parcel_reminder_max?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
+          refresh_interval_seconds?: number
+          sftp_enabled?: boolean
+          sftp_host?: string | null
           shipping_byoc_fee?: number
           shipping_byoc_subscription?: number
           shipping_margin_fixed?: number
@@ -1218,10 +1507,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audit_retention_days?: number | null
           default_currency?: string
           default_language?: string
+          email_allowlist_required?: boolean
+          email_antispoof_enabled?: boolean
+          email_antispoof_strict?: boolean
+          email_base_domain?: string | null
+          email_enabled?: boolean
+          home_design?: Json
+          home_tiles?: Json
           id?: boolean
+          import_retention_days?: number | null
+          import_schedule_enabled?: boolean
+          import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
+          maps_provider?: string
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
           parcel_reminder_2_days?: number
@@ -1229,6 +1530,9 @@ export type Database = {
           parcel_reminder_max?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
+          refresh_interval_seconds?: number
+          sftp_enabled?: boolean
+          sftp_host?: string | null
           shipping_byoc_fee?: number
           shipping_byoc_subscription?: number
           shipping_margin_fixed?: number
@@ -1273,6 +1577,60 @@ export type Database = {
         }
         Relationships: []
       }
+      product_appearance: {
+        Row: {
+          company_id: string
+          created_at: string
+          header_color: string | null
+          header_name: string | null
+          id: string
+          logo_url: string | null
+          product_key: string
+          theme: string | null
+          updated_at: string
+          watermark_url: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          header_color?: string | null
+          header_name?: string | null
+          id?: string
+          logo_url?: string | null
+          product_key: string
+          theme?: string | null
+          updated_at?: string
+          watermark_url?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          header_color?: string | null
+          header_name?: string | null
+          id?: string
+          logo_url?: string | null
+          product_key?: string
+          theme?: string | null
+          updated_at?: string
+          watermark_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_appearance_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_appearance_product_key_fkey"
+            columns: ["product_key"]
+            isOneToOne: false
+            referencedRelation: "product_catalog"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       product_catalog: {
         Row: {
           description: string | null
@@ -1302,6 +1660,140 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      product_text_override: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          lang: string
+          product_key: string
+          text_key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          lang?: string
+          product_key: string
+          text_key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          lang?: string
+          product_key?: string
+          text_key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_text_override_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_text_override_product_key_fkey"
+            columns: ["product_key"]
+            isOneToOne: false
+            referencedRelation: "product_catalog"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          distance_m: number | null
+          drivers: Json
+          duration_s: number | null
+          from_address: string | null
+          from_lat: number | null
+          from_lng: number | null
+          geometry: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          num_cars: number
+          optimize_stops: boolean
+          round_trip: boolean
+          stops: Json
+          to_address: string | null
+          to_lat: number | null
+          to_lng: number | null
+          transport_type: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          distance_m?: number | null
+          drivers?: Json
+          duration_s?: number | null
+          from_address?: string | null
+          from_lat?: number | null
+          from_lng?: number | null
+          geometry?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          num_cars?: number
+          optimize_stops?: boolean
+          round_trip?: boolean
+          stops?: Json
+          to_address?: string | null
+          to_lat?: number | null
+          to_lng?: number | null
+          transport_type?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          distance_m?: number | null
+          drivers?: Json
+          duration_s?: number | null
+          from_address?: string | null
+          from_lat?: number | null
+          from_lng?: number | null
+          geometry?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          num_cars?: number
+          optimize_stops?: boolean
+          round_trip?: boolean
+          stops?: Json
+          to_address?: string | null
+          to_lat?: number | null
+          to_lng?: number | null
+          transport_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storage_locations: {
         Row: {
@@ -1378,6 +1870,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_user_emails: {
+        Args: never
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
+      audit_category: { Args: { p_action: string }; Returns: string }
+      audit_level: {
+        Args: { p_action: string; p_detail: Json }
+        Returns: string
+      }
       current_company_id: { Args: never; Returns: string }
       has_feature: { Args: { f: string }; Returns: boolean }
       has_product: { Args: { p: string }; Returns: boolean }
@@ -1386,6 +1890,15 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      log_gateway_event: {
+        Args: {
+          p_action: string
+          p_company_id: string
+          p_detail?: Json
+          p_summary: string
+        }
+        Returns: undefined
+      }
       parcel_transition_allowed: {
         Args: {
           from_s: Database["public"]["Enums"]["parcel_status"]
@@ -1405,6 +1918,31 @@ export type Database = {
         }
         Returns: undefined
       }
+      release_import_lock: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      release_import_lock_self: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      replace_product_texts: {
+        Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
+        Returns: undefined
+      }
+      run_retention_purge: { Args: never; Returns: undefined }
+      set_company_sftp_password: {
+        Args: { p_company_id: string; p_password: string }
+        Returns: undefined
+      }
+      sftp_auth_lookup: {
+        Args: { p_password: string; p_username: string }
+        Returns: {
+          company_id: string
+        }[]
+      }
+      try_import_lock: { Args: { p_company_id: string }; Returns: boolean }
+      try_import_lock_self: { Args: { p_company_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "manager" | "parcel_handler" | "final_receiver"

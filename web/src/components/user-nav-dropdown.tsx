@@ -14,15 +14,15 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
-import { LayoutDashboard } from '@/components/animate-ui/icons/layout-dashboard'
 import { LogOut } from '@/components/animate-ui/icons/log-out'
 import { Sparkles } from '@/components/animate-ui/icons/sparkles'
 import { User } from '@/components/animate-ui/icons/user'
 import { flushPreferences } from '@/components/preferences-sync'
 import { useTheme } from '@/components/theme-provider'
 import { useSession } from '@/hooks/use-session'
-import { visibleNavGroups } from '@/lib/nav'
+import { configureNav, operiaNav, visibleNavGroups } from '@/lib/nav'
 import { useAccess } from '@/hooks/use-access'
+import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
 // Brugermenu struktureret som Supabase Studios (uden "Feature previews" og
@@ -61,6 +61,10 @@ export function UserNavDropdownContent({
   const { session } = useSession()
   const { theme, setTheme } = useTheme()
   const { data: access } = useAccess()
+  const { companyId } = useCompanyContext()
+  // Konfiguration: managers for egen virksomhed; platform-admins når en kunde
+  // er valgt. Operia: kun platform-admins. Samme gating som den klassiske menu.
+  const showConfigure = !!companyId && (access?.isManager || access?.isPlatformAdmin)
 
   const go = (href: string) => navigate({ to: href })
 
@@ -77,17 +81,19 @@ export function UserNavDropdownContent({
         {session?.user.email ?? t('app.name')}
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
+      {/* Home — øverste menupunkt, med en separator under. */}
+      <DropdownMenuItem
+        className="cursor-pointer text-xs font-[450] text-foreground-light"
+        onClick={() => go('/')}
+      >
+        {t('nav.home')}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
       {includeNav && (
         <>
-          <AnimateIcon animateOnHover asChild>
-            <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light" onClick={() => go('/')}>
-              {t('nav.dashboard')}
-              <DropdownMenuShortcut>
-                <LayoutDashboard size={16} />
-              </DropdownMenuShortcut>
-            </DropdownMenuItem>
-          </AnimateIcon>
-          {visibleNavGroups(access).map((group) => {
+          {visibleNavGroups(access)
+            .filter((group) => group.labelKey !== 'groupParcels')
+            .map((group) => {
             const items = group.items.filter((item) => item.href !== '/')
             if (!items.length) return null
             return (
@@ -125,41 +131,68 @@ export function UserNavDropdownContent({
               </div>
             )
           })}
+          {(showConfigure || access?.isPlatformAdmin) && (
+            <>
+              <DropdownMenuSeparator />
+              {showConfigure && (
+                <DropdownMenuItem
+                  className="cursor-pointer text-xs font-[450] text-foreground-light"
+                  onClick={() => go(configureNav.href)}
+                >
+                  {t('nav.configure')}
+                </DropdownMenuItem>
+              )}
+              {access?.isPlatformAdmin && (
+                <DropdownMenuItem
+                  className="cursor-pointer text-xs font-[450] text-foreground-light"
+                  onClick={() => go(operiaNav.href)}
+                >
+                  {t('nav.operia')}
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
           <DropdownMenuSeparator />
         </>
       )}
-      <AnimateIcon animateOnHover asChild>
-        <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light gap-2" onClick={() => go('/settings')}>
-          <User size={14} className="text-muted-foreground" />
-          {t('menu.account')}
-        </DropdownMenuItem>
-      </AnimateIcon>
-      <AnimateIcon animateOnHover asChild>
-        <DropdownMenuItem
-          className="cursor-pointer text-xs font-[450] text-foreground-light gap-2"
-          onClick={() => toast.info(t('common.comingSoon'))}
-        >
-          <Sparkles size={14} className="text-muted-foreground" />
-          {t('menu.changelog')}
-        </DropdownMenuItem>
-      </AnimateIcon>
-      <DropdownMenuSeparator />
-      <SectionLabel>{t('nav.theme')}</SectionLabel>
-      <DropdownMenuRadioGroup
-        value={theme}
-        onValueChange={(v) => setTheme(v as 'system' | 'light' | 'dark')}
-      >
-        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="system">
-          {t('theme.system')}
-        </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="dark">
-          {t('theme.dark')}
-        </DropdownMenuRadioItem>
-        <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="light">
-          {t('theme.light')}
-        </DropdownMenuRadioItem>
-      </DropdownMenuRadioGroup>
-      <DropdownMenuSeparator />
+      {/* Konto/Changelog/Tema udelades i den moderne bundmenu (includeNav);
+          de findes stadig i header-dropdownen øverst til højre. */}
+      {!includeNav && (
+        <>
+          <AnimateIcon animateOnHover asChild>
+            <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light gap-2" onClick={() => go('/settings')}>
+              <User size={14} className="text-muted-foreground" />
+              {t('menu.account')}
+            </DropdownMenuItem>
+          </AnimateIcon>
+          <AnimateIcon animateOnHover asChild>
+            <DropdownMenuItem
+              className="cursor-pointer text-xs font-[450] text-foreground-light gap-2"
+              onClick={() => toast.info(t('common.comingSoon'))}
+            >
+              <Sparkles size={14} className="text-muted-foreground" />
+              {t('menu.changelog')}
+            </DropdownMenuItem>
+          </AnimateIcon>
+          <DropdownMenuSeparator />
+          <SectionLabel>{t('nav.theme')}</SectionLabel>
+          <DropdownMenuRadioGroup
+            value={theme}
+            onValueChange={(v) => setTheme(v as 'system' | 'light' | 'dark')}
+          >
+            <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="system">
+              {t('theme.system')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="dark">
+              {t('theme.dark')}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem className="cursor-pointer text-xs font-[450] text-foreground-light pl-4" value="light">
+              {t('theme.light')}
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+        </>
+      )}
       <AnimateIcon animateOnHover asChild>
         <DropdownMenuItem className="cursor-pointer text-xs font-[450] text-foreground-light" onClick={signOut}>
           {t('auth.signOut')}

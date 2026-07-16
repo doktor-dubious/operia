@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { PackageX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -173,7 +174,7 @@ function InventoryPage() {
       .select('id')
     if (error) {
       console.error('Deaktivering fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     if ((updated?.length ?? 0) !== ids.length) {

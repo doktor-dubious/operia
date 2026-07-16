@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { ImageUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -423,7 +424,7 @@ export function CompanyLogoFields({
     setUploading(false)
     if (error) {
       console.error('Kunne ikke uploade logo:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     onLogoUrlChange(supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl)

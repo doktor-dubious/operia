@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,15 +17,21 @@ function OperiaLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { data: access } = useAccess()
 
+  // Husk sidst valgte Operia-menupunkt, så /operia vender tilbage hertil.
+  useEffect(() => {
+    if (pathname.startsWith('/operia/')) localStorage.setItem('operia-last-path', pathname)
+  }, [pathname])
+
   if (!access) return <Skeleton className="h-40 w-full" />
   if (!access.isPlatformAdmin) {
     return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
   }
 
-  const bottomHrefs = ['/operia/billing', '/operia/logs']
+  const logsHrefs = ['/operia/logs', '/operia/log-drains']
+  const bottomHrefs = ['/operia/billing', ...logsHrefs]
   const configItems = operiaConfigNav.filter((i) => !bottomHrefs.includes(i.href))
   const billingItems = operiaConfigNav.filter((i) => i.href === '/operia/billing')
-  const logsItems = operiaConfigNav.filter((i) => i.href === '/operia/logs')
+  const logsItems = operiaConfigNav.filter((i) => logsHrefs.includes(i.href))
 
   const NavLink = ({ href, labelKey }: { href: string; labelKey: string }) => (
     <Link

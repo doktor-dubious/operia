@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import {
   ArrowDown,
@@ -9,6 +10,8 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Focus,
+  LayoutGrid,
+  List,
   Search,
   Star,
   Trash2,
@@ -79,7 +82,12 @@ type PersistedState = {
   page: number
   selected: string[]
   onlySelected: boolean
+  view: 'list' | 'grid'
 }
+
+// Gittervisning giver kun mening for små tabeller — over denne grænse skjules
+// vælgeren helt og tabellen vises altid som liste.
+const GRID_MAX_ROWS = 8
 
 function loadTableState(storageKey: string): Partial<PersistedState> {
   try {
@@ -125,6 +133,7 @@ export function DataTable<Row extends { id: string }>({
   const [selected, setSelected] = useState<Set<string>>(new Set(initial.selected ?? []))
   const [stars, setStars] = useState<Set<string>>(() => loadStars(storageKey))
   const [onlySelected, setOnlySelected] = useState(initial.onlySelected ?? false)
+  const [view, setView] = useState<'list' | 'grid'>(initial.view ?? 'list')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteAck, setDeleteAck] = useState(false)
   const [deleteWord, setDeleteWord] = useState('')
@@ -135,9 +144,9 @@ export function DataTable<Row extends { id: string }>({
   }, [stars, storageKey])
 
   useEffect(() => {
-    const state: PersistedState = { query, sort, page, selected: [...selected], onlySelected }
+    const state: PersistedState = { query, sort, page, selected: [...selected], onlySelected, view }
     localStorage.setItem(`operia-table-${storageKey}`, JSON.stringify(state))
-  }, [query, sort, page, selected, onlySelected, storageKey])
+  }, [query, sort, page, selected, onlySelected, view, storageKey])
 
   // Rækker der er forsvundet (slettet/omfiltreret) skal ikke spøge i valget
   useEffect(() => {
@@ -145,10 +154,18 @@ export function DataTable<Row extends { id: string }>({
     setSelected((prev) => new Set([...prev].filter((id) => ids.has(id))))
   }, [rows])
 
+  // "Vis kun valgte" giver ingen mening uden et valg. Når valget tømmes (fx den
+  // sidste række afmarkeres), slås tilstanden fra igen — ellers filtreres
+  // tabellen til nul rækker, og toggle-knappen sidder i valg-bjælken, som er
+  // skjult uden et valg, så der ikke er nogen vej tilbage til alle rækker.
+  useEffect(() => {
+    if (selected.size === 0) setOnlySelected(false)
+  }, [selected])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     let result = q ? rows.filter((row) => searchText(row).toLowerCase().includes(q)) : rows
-    if (onlySelected) result = result.filter((row) => selected.has(row.id))
+    if (onlySelected && selected.size > 0) result = result.filter((row) => selected.has(row.id))
     return result
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, query, onlySelected, selected])
@@ -171,6 +188,9 @@ export function DataTable<Row extends { id: string }>({
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount)
   const pageRows = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const gridAvailable = rows.length <= GRID_MAX_ROWS
+  const effectiveView = gridAvailable && view === 'grid' ? 'grid' : 'list'
 
   // Sidevindue: højst MAX_PAGE_BUTTONS knapper, centreret om aktuel side
   const pageButtons = useMemo(() => {
@@ -224,7 +244,7 @@ export function DataTable<Row extends { id: string }>({
       setDeleteOpen(false)
     } catch (error) {
       console.error('Sletning fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
     } finally {
       setDeleting(false)
     }
@@ -232,63 +252,269 @@ export function DataTable<Row extends { id: string }>({
 
   const deleteConfirmed = deleteAck && DELETE_WORDS.includes(deleteWord.trim().toLowerCase())
 
+  const renderCell = (col: ColumnDef<Row>, row: Row) =>
+    col.render
+      ? col.render(row)
+      : (((row as Record<string, unknown>)[col.key] as React.ReactNode) ?? '—')
+
+  // Bund-bjælkerne deles mellem liste- og gittervisning
+  const paginationBar = (
+    <div className="flex items-center justify-between px-4 py-2">
+      <span className="text-xs text-muted-foreground">
+        {t('dataTable.showing', {
+          from: sorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1,
+          to: Math.min(safePage * PAGE_SIZE, sorted.length),
+          total: sorted.length,
+          entity: entityLabel,
+        })}
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={safePage <= 1}
+          onClick={() => setPage(safePage - 1)}
+        >
+          <ChevronLeft className="size-3.5" /> {t('dataTable.previous')}
+        </Button>
+        {pageButtons.map((n) => (
+          <Button
+            key={n}
+            variant={n === safePage ? 'outline' : 'ghost'}
+            size="sm"
+            className="h-7 w-7 p-0 text-xs"
+            onClick={() => setPage(n)}
+          >
+            {n}
+          </Button>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs"
+          disabled={safePage >= pageCount}
+          onClick={() => setPage(safePage + 1)}
+        >
+          {t('dataTable.next')} <ChevronRight className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  )
+
+  const selectionBar = selected.size > 0 && (
+    <div className="flex items-center justify-between px-4 py-2">
+      <span className="text-xs text-muted-foreground">
+        {t('dataTable.selected', {
+          count: selected.size,
+          total: rows.length,
+          entity: entityLabel,
+        })}
+      </span>
+      <div className="flex items-center gap-1">
+        {selectionActions?.({ ids: [...selected], clear: () => setSelected(new Set()) })}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('h-7 w-7', onlySelected && 'bg-accent text-foreground')}
+          title={t('dataTable.showOnlySelected')}
+          aria-label={t('dataTable.showOnlySelected')}
+          onClick={() => {
+            setOnlySelected((v) => !v)
+            setPage(1)
+          }}
+        >
+          <Focus className="size-4" />
+        </Button>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            title={t('dataTable.deleteSelected')}
+            aria-label={t('dataTable.deleteSelected')}
+            onClick={() => {
+              setDeleteAck(false)
+              setDeleteWord('')
+              setDeleteOpen(true)
+            }}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <div className={cn('flex flex-col gap-3', maximized && activeRowId && 'hidden')}>
       <div className="flex items-center justify-between gap-3">
         <div>{toolbar}</div>
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setPage(1)
-            }}
-            placeholder={searchPlaceholder ?? t('dataTable.search')}
-            className="pl-8"
-          />
+        <div className="flex items-center gap-2">
+          {gridAvailable && (
+            <div className="flex items-center gap-0.5 rounded-md border p-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn('h-6 w-6', effectiveView === 'list' && 'bg-accent text-foreground')}
+                title={t('dataTable.viewList')}
+                aria-label={t('dataTable.viewList')}
+                onClick={() => setView('list')}
+              >
+                <List className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn('h-6 w-6', effectiveView === 'grid' && 'bg-accent text-foreground')}
+                title={t('dataTable.viewGrid')}
+                aria-label={t('dataTable.viewGrid')}
+                onClick={() => setView('grid')}
+              >
+                <LayoutGrid className="size-4" />
+              </Button>
+            </div>
+          )}
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setPage(1)
+              }}
+              placeholder={searchPlaceholder ?? t('dataTable.search')}
+              className="pl-8"
+            />
+          </div>
         </div>
       </div>
 
+      {effectiveView === 'grid' ? (
+        <>
+          {pageRows.length === 0 ? (
+            <div className="rounded-md border bg-panel py-6 text-center text-sm text-muted-foreground">
+              {t('dataTable.noRows')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+              {pageRows.map((row) => (
+                <div
+                  key={row.id}
+                  className={cn(
+                    'flex flex-col gap-3 rounded-md border bg-panel p-4',
+                    onRowClick && 'cursor-pointer hover:border-muted-foreground/50',
+                    activeRowId === row.id && 'border-muted-foreground/70',
+                    selected.has(row.id) && 'bg-accent',
+                  )}
+                  onClick={() => onRowClick?.(row)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    toggleStar(row.id)
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span onClick={(e) => e.stopPropagation()} className="flex items-center">
+                      <Checkbox
+                        checked={selected.has(row.id)}
+                        onCheckedChange={() => toggleRow(row.id)}
+                        aria-label=""
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {columns.length > 0 && renderCell(columns[0], row)}
+                    </span>
+                    <button
+                      type="button"
+                      className="cursor-pointer p-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleStar(row.id)
+                      }}
+                      aria-label="★"
+                    >
+                      <Star
+                        className={cn(
+                          'size-4',
+                          stars.has(row.id)
+                            ? 'fill-status-neutral text-status-neutral'
+                            : 'text-muted-foreground/50 hover:text-muted-foreground',
+                        )}
+                      />
+                    </button>
+                  </div>
+                  {columns.length > 1 && (
+                    <dl className="flex flex-col gap-1.5 text-xs">
+                      {columns.slice(1).map((col) => (
+                        <div key={col.key} className="flex items-baseline justify-between gap-3">
+                          <dt className="shrink-0 text-muted-foreground">{col.header}</dt>
+                          <dd className="min-w-0 truncate text-right">{renderCell(col, row)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="divide-y rounded-md border bg-panel">
+            {paginationBar}
+            {selectionBar}
+          </div>
+        </>
+      ) : (
       <div className="overflow-x-auto rounded-md border bg-panel">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
-                <div className="flex items-center">
-                  <Checkbox
-                    checked={allFilteredSelected}
-                    onCheckedChange={(checked) =>
-                      setSelected(checked ? new Set(filtered.map((r) => r.id)) : new Set())
-                    }
-                    aria-label={t('dataTable.selectAll')}
-                  />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button type="button" className="cursor-pointer p-0.5" aria-label="…">
+                {/* Både checkboksen og pilen åbner menuen — headerklik vælger
+                    aldrig direkte; alt/fravalg sker via menupunkterne. */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="flex w-fit cursor-pointer items-center"
+                      aria-label={t('dataTable.selectAll')}
+                    >
+                      <Checkbox
+                        checked={allFilteredSelected}
+                        className="pointer-events-none"
+                        tabIndex={-1}
+                        aria-hidden
+                      />
+                      <span className="p-0.5">
                         <ChevronDown className="size-3 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-44">
-                      <DropdownMenuItem
-                        className="cursor-pointer text-xs"
-                        onClick={() => setSelected(new Set(filtered.map((r) => r.id)))}
-                      >
-                        {t('dataTable.selectAll')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setSelected(
-                            new Set(filtered.filter((r) => stars.has(r.id)).map((r) => r.id)),
-                          )
-                        }
-                      >
-                        {t('dataTable.selectStarred')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                      </span>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-44">
+                    <DropdownMenuItem
+                      className="cursor-pointer text-xs"
+                      onClick={() => setSelected(new Set(filtered.map((r) => r.id)))}
+                    >
+                      {t('dataTable.selectAll')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-xs"
+                      onClick={() =>
+                        setSelected(
+                          new Set(filtered.filter((r) => stars.has(r.id)).map((r) => r.id)),
+                        )
+                      }
+                    >
+                      {t('dataTable.selectStarred')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer text-xs"
+                      disabled={selected.size === 0}
+                      onClick={() => setSelected(new Set())}
+                    >
+                      {t('dataTable.deselectAll')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
               {columns.map((col) => (
                 <TableHead key={col.key} className={col.className}>
@@ -354,7 +580,7 @@ export function DataTable<Row extends { id: string }>({
                   </TableCell>
                   {columns.map((col) => (
                     <TableCell key={col.key} className={col.className}>
-                      {col.render ? col.render(row) : ((row as Record<string, unknown>)[col.key] as React.ReactNode) ?? '—'}
+                      {renderCell(col, row)}
                     </TableCell>
                   ))}
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -380,92 +606,12 @@ export function DataTable<Row extends { id: string }>({
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between border-t px-4 py-2">
-          <span className="text-xs text-muted-foreground">
-            {t('dataTable.showing', {
-              from: sorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1,
-              to: Math.min(safePage * PAGE_SIZE, sorted.length),
-              total: sorted.length,
-              entity: entityLabel,
-            })}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              disabled={safePage <= 1}
-              onClick={() => setPage(safePage - 1)}
-            >
-              <ChevronLeft className="size-3.5" /> {t('dataTable.previous')}
-            </Button>
-            {pageButtons.map((n) => (
-              <Button
-                key={n}
-                variant={n === safePage ? 'outline' : 'ghost'}
-                size="sm"
-                className="h-7 w-7 p-0 text-xs"
-                onClick={() => setPage(n)}
-              >
-                {n}
-              </Button>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              disabled={safePage >= pageCount}
-              onClick={() => setPage(safePage + 1)}
-            >
-              {t('dataTable.next')} <ChevronRight className="size-3.5" />
-            </Button>
-          </div>
+        <div className="divide-y border-t">
+          {paginationBar}
+          {selectionBar}
         </div>
-
-        {selected.size > 0 && (
-          <div className="flex items-center justify-between border-t px-4 py-2">
-            <span className="text-xs text-muted-foreground">
-              {t('dataTable.selected', {
-                count: selected.size,
-                total: rows.length,
-                entity: entityLabel,
-              })}
-            </span>
-            <div className="flex items-center gap-1">
-              {selectionActions?.({ ids: [...selected], clear: () => setSelected(new Set()) })}
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn('h-7 w-7', onlySelected && 'bg-accent text-foreground')}
-                title={t('dataTable.showOnlySelected')}
-                aria-label={t('dataTable.showOnlySelected')}
-                onClick={() => {
-                  setOnlySelected((v) => !v)
-                  setPage(1)
-                }}
-              >
-                <Focus className="size-4" />
-              </Button>
-              {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  title={t('dataTable.deleteSelected')}
-                  aria-label={t('dataTable.deleteSelected')}
-                  onClick={() => {
-                    setDeleteAck(false)
-                    setDeleteWord('')
-                    setDeleteOpen(true)
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+      )}
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="max-w-md">

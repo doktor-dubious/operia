@@ -2,6 +2,151 @@
 <resources>
     <string name="app_name">Operia</string>
     <string name="app_tagline">Track &amp; trace for internal parcels</string>
+    <string name="terminal">Terminal</string>
+
+    <!-- login -->
     <string name="sign_in">Sign in</string>
     <string name="sign_out">Sign out</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">you@company.com</string>
+    <string name="password">Password</string>
+    <string name="login_fill_both">Enter email and password.</string>
+    <string name="login_wrong">Wrong email or password.</string>
+    <string name="err_no_company">Your user is not linked to a company.\nThe handheld terminal is for company parcel staff — contact your administrator.</string>
+
+    <!-- home -->
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_day">Hello</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="tile_receive">Receive parcel</string>
+    <string name="tile_receive_sub">Scan &amp; register</string>
+    <string name="tile_handout">Hand over parcel</string>
+    <string name="tile_handout_sub">Find &amp; sign off</string>
+    <string name="tile_search">Search</string>
+    <string name="tile_search_sub">Find a parcel</string>
+    <string name="tile_route">Route plan</string>
+    <string name="tile_route_sub">Drive the route</string>
+    <string name="tile_stock">Inventory</string>
+    <string name="tile_stock_sub">Stock &amp; movements</string>
+    <string name="pending_banner">%1$d parcel(s) awaiting sync</string>
+    <string name="pending_banner_sub">Saved locally. Tap to sync now.</string>
+    <string name="sync_done">%1$d synced, %2$d remaining</string>
+
+    <!-- shared -->
+    <string name="scan_placeholder">Scan…</string>
+    <string name="scan_hint">Scans submit automatically. Tap ⌨ to type manually.</string>
+    <string name="search_placeholder">Search…</string>
+    <string name="n_in_company">%1$d in the company</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="department">Department</string>
+    <string name="employee">Employee</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="note_optional">Note (optional)</string>
+    <string name="note_placeholder">remark</string>
+    <string name="receiver_prefix">Receiver: %1$s</string>
+    <string name="registered_prefix">Registered: %1$s</string>
+    <string name="delivered_to_prefix">Handed over to: %1$s</string>
+
+    <!-- status -->
+    <string name="status_unassigned">Unassigned</string>
+    <string name="status_registered">Registered</string>
+    <string name="status_in_storage">In storage</string>
+    <string name="status_in_transit">In transit</string>
+    <string name="status_in_locker">In locker</string>
+    <string name="status_delivered">Delivered</string>
+    <string name="status_rejected">Rejected</string>
+    <string name="status_returned">Returned</string>
+    <string name="status_unknown">Unknown</string>
+
+    <!-- receive -->
+    <string name="receive_title">Receive parcels</string>
+    <string name="receive_scan_label">Scan parcels</string>
+    <string name="storage_location_optional">Storage location (optional)</string>
+    <string name="receive_already_scanned">Already scanned</string>
+    <string name="receive_pick_recipient_first">Pick a receiver first</string>
+    <string name="receive_added">Added</string>
+    <string name="receive_scanned_count">Scanned: %1$d</string>
+    <string name="receive_clear_all">Clear all</string>
+    <string name="receive_empty">Pick a receiver and scan parcels</string>
+    <string name="receive_note_label">Note (optional — applies to all)</string>
+    <string name="receive_note_placeholder">e.g. condition / remark</string>
+    <string name="receive_save_button">Save %1$d parcel(s)</string>
+    <string name="receive_scan_at_least_one">Scan at least one parcel</string>
+    <string name="receive_saved">%1$d parcel(s) saved</string>
+    <string name="receive_queued">%1$d parcel(s) saved locally — will sync when you are online</string>
+    <string name="receive_save_failed">Could not save</string>
+    <string name="receive_saved_confirm">✓ %1$d parcel(s) saved</string>
+
+    <!-- handout -->
+    <string name="handout_title">Hand over parcel</string>
+    <string name="handout_scan_label">Scan parcel</string>
+    <string name="handout_empty">Scan a parcel to hand it over</string>
+    <string name="handout_not_found">No parcel with code</string>
+    <string name="handout_lookup_failed">Lookup failed</string>
+    <string name="handout_terminal_status">This parcel is already closed — see status</string>
+    <string name="handout_unassigned_hint">The parcel has no receiver. Pick an employee to enable handover.</string>
+    <string name="handout_assign_receiver">Assign receiver</string>
+    <string name="handout_who_label">Name of receiver</string>
+    <string name="handout_who_placeholder">Name of receiver</string>
+    <string name="handout_who_required">Enter who is receiving</string>
+    <string name="handout_assign_required">Pick an employee as receiver first</string>
+    <string name="handout_deliver_button">Hand over</string>
+    <string name="handout_done">Handed over to %1$s</string>
+    <string name="handout_failed">Could not hand over</string>
+
+    <!-- signature -->
+    <string name="signature_title">Signature</string>
+    <string name="signature_hint">Sign with your finger, then tap Save.</string>
+    <string name="signature_clear">Clear</string>
+    <string name="signature_add">✍️ Add signature</string>
+    <string name="signature_added">✓ Signature added — tap to change</string>
+
+    <!-- search -->
+    <string name="search_title">Search</string>
+    <string name="search_scan_label">Scan or type</string>
+    <string name="search_empty">Scan a barcode</string>
+    <string name="search_no_results">No parcels found</string>
+    <string name="search_failed">Search failed</string>
+
+    <!-- route plan -->
+    <string name="route_title">Route plan</string>
+    <string name="route_pick">Pick a route</string>
+    <string name="route_empty">No saved routes yet.\nCreate a route in admin under Route planning.</string>
+    <string name="route_meta">%1$d stops · %2$s</string>
+    <string name="route_round_trip_suffix">" · round trip"</string>
+    <string name="route_navigate_all">🧭  Navigate the whole route</string>
+    <string name="route_depot">DEPOT (START)</string>
+    <string name="route_destination">END ADDRESS</string>
+    <string name="route_stops_header">Stops (%1$d) — tap to navigate</string>
+    <string name="route_return_note">↩︎ Return to depot at the end (round trip)</string>
+    <string name="route_no_start">The route has no start address</string>
+    <string name="route_no_stops">The route has no stops or end address</string>
+    <string name="route_maps_failed">Could not open Google Maps</string>
+    <string name="transport_car">Car</string>
+    <string name="transport_bike">Bike</string>
+    <string name="transport_walk">Walk</string>
+
+    <!-- inventory -->
+    <string name="stock_title">Inventory</string>
+    <string name="stock_scan_label">Scan item (SKU)</string>
+    <string name="stock_empty">Scan an item to see stock</string>
+    <string name="stock_not_found">No item with code</string>
+    <string name="stock_lookup_failed">Lookup failed</string>
+    <string name="stock_location_prefix">Location: %1$s</string>
+    <string name="stock_on_hand_suffix">%1$s in stock</string>
+    <string name="stock_reorder_warning">⚠︎ At or below reorder point (%1$s)</string>
+    <string name="stock_qty_label">Quantity</string>
+    <string name="stock_qty_placeholder">e.g. 10</string>
+    <string name="stock_unit_default">pcs</string>
+    <string name="stock_in">+ In</string>
+    <string name="stock_out">− Out</string>
+    <string name="stock_adjust">= Count (set stock)</string>
+    <string name="stock_enter_qty">Enter a quantity</string>
+    <string name="stock_enter_count">Enter the counted quantity</string>
+    <string name="stock_negative">Stock cannot go negative</string>
+    <string name="stock_update_failed">Could not update stock</string>
+    <string name="stock_moved_in">+ Added to stock</string>
+    <string name="stock_moved_out">− Taken from stock</string>
+    <string name="stock_adjusted">= Counted</string>
 </resources>

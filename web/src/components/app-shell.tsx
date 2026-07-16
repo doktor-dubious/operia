@@ -24,14 +24,17 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { CompanySwitcher } from '@/components/company-switcher'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useRefreshInterval } from '@/hooks/use-platform-settings'
+import { useActiveAppearance } from '@/hooks/use-active-appearance'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
-import { allNavItems, configureNav, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
+import { allNavItems, configureNav, homeNav, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
@@ -144,6 +147,27 @@ function ClassicSidebar() {
       </SidebarHeader>
       <CompanySwitcher />
       <SidebarContent>
+        {/* Home — øverste, selvstændige punkt med en separator under. */}
+        <SidebarGroup className="pb-0">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === homeNav.href}
+                  tooltip={t('nav.home')}
+                  className={menuItemClass}
+                >
+                  <Link to={homeNav.href}>
+                    <homeNav.icon />
+                    <span>{t('nav.home')}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarSeparator className="mx-3 w-auto" />
         {groups.map((group) => {
           const collapsed = collapsedGroups.has(group.labelKey)
           return (
@@ -292,29 +316,56 @@ function ClassicSidebar() {
   )
 }
 
+// Moderne tilstand: samme bredde (240px) og styling som den klassiske
+// sidemenu, men viser kun Pakker-gruppen direkte. Resten af navigationen
+// (samt Konfiguration/Operia) ligger i bruger-dropdownen nederst til venstre.
 function ModernRail() {
   const { t } = useTranslation()
-  const { initial } = useUserProfile()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const { name, initial } = useUserProfile()
+  const { data: access } = useAccess()
+  const parcels = visibleNavGroups(access).find((g) => g.labelKey === 'groupParcels')
   return (
-    <aside className="flex w-12 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar pb-2">
-      <Link to="/" aria-label={t('app.name')} className="flex justify-center p-2 pt-3">
-        <BrandLogo className="h-5 w-5" />
-      </Link>
-      <CompanySwitcher compact />
-      <div className="mt-auto flex justify-center pt-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 cursor-pointer rounded-none"
-              aria-label="Menu"
+    <aside className="flex w-60 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex h-10 items-center gap-2 px-4 pt-1">
+        <BrandLogo className="h-5 w-5 shrink-0" />
+        <span className="text-[13px] font-semibold">{t('app.name')}</span>
+      </div>
+      <CompanySwitcher />
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
+        <div className="flex flex-col gap-0.5">
+          {/* Home — øverst, med en separator under. */}
+          <Link
+            to={homeNav.href}
+            className={cn(
+              menuItemClass,
+              'flex items-center hover:bg-sidebar-accent',
+              pathname === homeNav.href && 'bg-sidebar-accent text-foreground',
+            )}
+          >
+            <homeNav.icon />
+            <span>{t('nav.home')}</span>
+          </Link>
+          <div className="my-1 border-b border-sidebar-border" />
+          {parcels?.items.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={cn(
+                menuItemClass,
+                'flex items-center hover:bg-sidebar-accent',
+                pathname === item.href && 'bg-sidebar-accent text-foreground',
+              )}
             >
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-muted-foreground/20">{initial}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
+              <item.icon />
+              <span>{t(`nav.${item.labelKey}`)}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+      <div className="border-t border-sidebar-border">
+        <DropdownMenu>
+          <UserTrigger name={name} initial={initial} />
           <UserNavDropdownContent includeNav />
         </DropdownMenu>
       </div>
@@ -328,10 +379,12 @@ function HeaderActions() {
   const { t } = useTranslation()
   const { initial } = useUserProfile()
   const queryClient = useQueryClient()
+  // Auto-refresh-interval (sekunder, 0 = slået fra) fra Operia → Generelt.
+  const { data: intervalSeconds } = useRefreshInterval()
   // Antal aktive forespørgsler der henter lige nu — driver spin-animationen.
   const fetching = useIsFetching() > 0
-  // Lille kvitteringsbadge under ikonet et øjeblik efter klik, så brugeren
-  // ser at der sker noget.
+  // Lille kvitteringsbadge + ikon-highlight et øjeblik efter en refresh, så
+  // brugeren ser at der sker noget (både ved klik og ved auto-refresh).
   const [pinged, setPinged] = useState(false)
   const pingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => {
@@ -345,14 +398,30 @@ function HeaderActions() {
     if (pingTimer.current) clearTimeout(pingTimer.current)
     pingTimer.current = setTimeout(() => setPinged(false), 1600)
   }
+
+  // Auto-refresh: hvert `intervalSeconds` sekund genhentes data fra databasen,
+  // så fx nye pakker dukker op af sig selv. Ref'en peger altid på den seneste
+  // refresh, så timeren ikke nulstilles ved hver render — kun når intervallet
+  // ændres (eller slås fra med 0).
+  const refreshRef = useRef(refresh)
+  refreshRef.current = refresh
+  useEffect(() => {
+    if (!intervalSeconds || intervalSeconds <= 0) return
+    const id = setInterval(() => refreshRef.current(), intervalSeconds * 1000)
+    return () => clearInterval(id)
+  }, [intervalSeconds])
   return (
     <div className="ml-auto flex items-center gap-1">
       <div className="relative flex items-center">
-        <AnimateIcon animate={fetching} loop={fetching} animateOnHover asChild>
+        <AnimateIcon animate={fetching || pinged} loop={fetching} animateOnHover asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+            className={cn(
+              'h-7 w-7 cursor-pointer text-muted-foreground transition-colors hover:text-foreground',
+              // Fremhæv ikonet et øjeblik når en (auto-)refresh sker.
+              pinged && 'bg-accent text-foreground',
+            )}
             aria-label={t('common.refresh')}
             title={t('common.refresh')}
             onClick={refresh}
@@ -408,16 +477,25 @@ function HeaderActions() {
 function PageHeader() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const appearance = useActiveAppearance()
   const active =
     allNavItems.find((item) => item.href === pathname) ??
     [...allNavItems]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) => item.href !== '/' && pathname.startsWith(item.href))
+  // Kundens white-labeling for det aktive produkt farver header-baggrunden og
+  // viser logo + brand-navn; ellers falder vi tilbage til sidens nav-titel.
+  const brandBg = appearance?.headerColor
+  const title = appearance?.headerName || (active ? t(`nav.${active.labelKey}`) : t('app.name'))
   return (
-    <header className="flex h-10 shrink-0 items-center border-b border-border px-6">
-      <h1 className="text-[13px] font-semibold">
-        {active ? t(`nav.${active.labelKey}`) : t('app.name')}
-      </h1>
+    <header
+      className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-6"
+      style={brandBg ? { background: brandBg, color: '#fff' } : undefined}
+    >
+      {appearance?.logoUrl && (
+        <img src={appearance.logoUrl} alt="" className="h-5 w-auto shrink-0 object-contain" />
+      )}
+      <h1 className="text-[13px] font-semibold">{title}</h1>
       <HeaderActions />
     </header>
   )

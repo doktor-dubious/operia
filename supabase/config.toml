@@ -179,7 +179,9 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+# 8 matcher klient-reglen i welcome.tsx (NIS2: ingen svage kodeord). Skal også
+# sættes i det hostede projekt: Dashboard → Auth → Passwords (config.toml styrer kun lokal stack).
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""

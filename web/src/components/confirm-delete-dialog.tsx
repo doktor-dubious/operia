@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -63,7 +64,7 @@ export function ConfirmDeleteDialog({
       handleOpenChange(false)
     } catch (error) {
       console.error('Handlingen fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
     } finally {
       setBusy(false)
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { KeyRound, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -115,7 +116,7 @@ function AgreementDetailPane({
       .select('id')
     setSaving(false)
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -139,7 +140,7 @@ function AgreementDetailPane({
       .select('id')
     setReplacingKey(false)
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     setNewKey('')
@@ -154,7 +155,7 @@ function AgreementDetailPane({
       .eq('id', row.id)
       .select('id')
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -361,7 +362,7 @@ function NewAgreementDialog({
     setBusy(false)
     if (error || !data?.length) {
       console.error('Kunne ikke oprette aftale:', error)
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('carrierAgreements.createdToast'))

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -75,11 +76,13 @@ function CheckboxRow({
 
 function HandlingClassDetailPane({
   row,
+  existingNames,
   onClose,
   onDirtyChange,
   onDeleted,
 }: {
   row: Row
+  existingNames: string[]
   onClose: () => void
   onDirtyChange: (dirty: boolean) => void
   onDeleted: () => void
@@ -102,6 +105,12 @@ function HandlingClassDetailPane({
     allowProxy !== row.allow_proxy_collection ||
     allowLeave !== row.allow_leave_at_location
 
+  // Samme unikke-navn-tjek som "+ Ny", men mod de øvrige rækker (egen udeladt).
+  const trimmedName = name.trim()
+  const duplicate =
+    trimmedName !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmedName.toLowerCase())
+
   useEffect(() => {
     onDirtyChange(dirty)
     return () => onDirtyChange(false)
@@ -109,6 +118,7 @@ function HandlingClassDetailPane({
   }, [dirty])
 
   const saveAll = async () => {
+    if (duplicate) return
     setSaving(true)
     const { data, error } = await supabase
       .from('handling_classes')
@@ -123,7 +133,8 @@ function HandlingClassDetailPane({
     setSaving(false)
     if (error) {
       console.error('Kunne ikke gemme håndteringsklasse:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation på (company_id, name) — vis et præcist navn-svar
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return
     }
     if (!data?.length) {
@@ -181,7 +192,14 @@ function HandlingClassDetailPane({
               </div>
             </Field>
             <Field label={t('handlingClasses.name')}>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                value={name}
+                aria-invalid={duplicate}
+                onChange={(e) => setName(e.target.value)}
+              />
+              {duplicate && (
+                <p className="mt-1.5 text-xs text-destructive">{t('common.nameTaken')}</p>
+              )}
             </Field>
             <Field label={t('handlingClasses.description')}>
               <Textarea
@@ -232,7 +250,7 @@ function HandlingClassDetailPane({
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim()}>
+          <Button size="sm" onClick={saveAll} disabled={saving || !name.trim() || duplicate}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>
@@ -255,17 +273,26 @@ function NewHandlingClassDialog({
   open,
   onOpenChange,
   companyId,
+  existingNames,
   onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   companyId: string | null
+  existingNames: string[]
   onCreated: () => void
 }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Navnet skal være unikt pr. virksomhed (DB: unique (company_id, name)) —
+  // tjek det mens der skrives, uafhængigt af store/små bogstaver og mellemrum.
+  const trimmed = name.trim()
+  const duplicate =
+    trimmed !== '' &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmed.toLowerCase())
 
   // Én lukkevej: nulstiller altid felterne
   const handleOpenChange = (next: boolean) => {
@@ -277,20 +304,21 @@ function NewHandlingClassDialog({
   }
 
   const create = async () => {
-    if (!companyId || !name.trim()) return
+    if (!companyId || !trimmed || duplicate) return
     setBusy(true)
     const { error } = await supabase.from('handling_classes').insert({
       company_id: companyId,
-      name: name.trim(),
+      name: trimmed,
       description: description.trim() || null,
     })
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette håndteringsklasse:', error)
-      toast.error(t('common.error'))
+      // 23505 = unique_violation (fx et race med en anden manager)
+      toast.error(error.code === '23505' ? t('common.nameTaken') : describeError(error, t))
       return
     }
-    toast.success(t('handlingClassDetail.createdToast', { name: name.trim() }))
+    toast.success(t('handlingClassDetail.createdToast', { name: trimmed }))
     onCreated()
     handleOpenChange(false)
   }
@@ -305,7 +333,14 @@ function NewHandlingClassDialog({
           <Label htmlFor="new-hc-name" className="text-label">
             {t('handlingClasses.name')}
           </Label>
-          <Input id="new-hc-name" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
+          <Input
+            id="new-hc-name"
+            value={name}
+            autoFocus
+            aria-invalid={duplicate}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {duplicate && <p className="text-xs text-destructive">{t('common.nameTaken')}</p>}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="new-hc-desc" className="text-label">
@@ -322,7 +357,7 @@ function NewHandlingClassDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !name.trim() || !companyId} onClick={create}>
+          <Button disabled={busy || !name.trim() || duplicate || !companyId} onClick={create}>
             {busy ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>
@@ -397,12 +432,19 @@ function HandlingClassesPage() {
         <HandlingClassDetailPane
           key={activeRow.id}
           row={activeRow}
+          existingNames={(data ?? []).filter((r) => r.id !== activeRow.id).map((r) => r.name)}
           onClose={() => guarded(() => setActiveId(null))}
           onDirtyChange={setPaneDirty}
           onDeleted={() => setActiveId(null)}
         />
       )}
-      <NewHandlingClassDialog open={newOpen} onOpenChange={setNewOpen} companyId={companyId} onCreated={refresh} />
+      <NewHandlingClassDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        companyId={companyId}
+        existingNames={(data ?? []).map((row) => row.name)}
+        onCreated={refresh}
+      />
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

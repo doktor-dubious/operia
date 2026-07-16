@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import { ComingSoon } from '@/components/coming-soon'
 import {
   CompanyLocalizationFields,
   CompanyLogoFields,
@@ -31,6 +31,9 @@ import {
   type ShippingBillingValue,
 } from '@/components/shipping-billing-fields'
 import { CopyButton } from '@/components/copy-button'
+import { ProductAppearanceList } from '@/components/product-appearance-fields'
+import { CompanyDataTransferFields } from '@/components/company-data-transfer-fields'
+import { LogDrainsManager } from '@/components/log-drains/log-drains-manager'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
@@ -436,7 +439,7 @@ function CustomerDetailPane({
         .select('id')
       if (error || !data?.length) {
         setSaving(false)
-        toast.error(error ? t('common.error') : t('common.noPermission'))
+        toast.error(error ? describeError(error, t) : t('common.noPermission'))
         return
       }
       // Nu er det gemte logo sandheden — udskiftede uploads kan fjernes.
@@ -516,7 +519,7 @@ function CustomerDetailPane({
   const failSave = (error: unknown) => {
     setSaving(false)
     console.error('Kunne ikke gemme entitlements:', error)
-    toast.error(t('common.error'))
+    toast.error(describeError(error, t))
   }
 
   const cancel = () => {
@@ -543,7 +546,7 @@ function CustomerDetailPane({
       .eq('id', row.id)
       .select('id')
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -571,6 +574,8 @@ function CustomerDetailPane({
     { key: 'logo', label: t('customerDetail.tabLogo') },
     { key: 'localization', label: t('customerDetail.tabLocalization') },
     { key: 'appearance', label: t('customerDetail.tabAppearance') },
+    { key: 'datatransfer', label: t('customerDetail.tabDataTransfer') },
+    { key: 'logdrains', label: t('customerDetail.tabLogDrains') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -666,7 +671,9 @@ function CustomerDetailPane({
             }}
           />
         )}
-        {tab === 'appearance' && <ComingSoon titleKey="customerDetail.tabAppearance" />}
+        {tab === 'appearance' && <ProductAppearanceList companyId={row.id} />}
+        {tab === 'datatransfer' && <CompanyDataTransferFields companyId={row.id} admin />}
+        {tab === 'logdrains' && <LogDrainsManager scope="company" companyId={row.id} />}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
             <div className="flex items-center justify-between rounded-md border p-4">

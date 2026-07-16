@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -256,7 +257,7 @@ function SettingsPage() {
     setSavingPassword(false)
     if (error) {
       console.error('Kunne ikke skifte adgangskode:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     setCurrentPassword('')

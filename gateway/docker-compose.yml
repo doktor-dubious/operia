@@ -1,0 +1,58 @@
+# Operia SFTP-gateway (SFTPGo) til ftp.predictioninstitute.com.
+# Operia er kilde-til-sandhed for login: SFTPGo autentificerer via external auth
+# hook (sftp-auth) og streamer uploads direkte til Supabase Storage (S3) — intet
+# gemmes varigt på denne boks. Efter hver upload kaldes sftp-uploaded.
+#
+# Kopiér .env.example til .env og udfyld værdierne først. Kør: docker compose up -d
+services:
+  sftpgo:
+    image: drakkan/sftpgo:v2
+    restart: unless-stopped
+    ports:
+      # Port 2222, fordi OS'ets sshd allerede bruger 22 (både her og på AWS-boksen
+      # der kører SFTP for andre kunder). Kunder forbinder til værten:2222, og
+      # Operia → Dataoverførsel skal have adressen som fx
+      # ftp.predictioninstitute.com:2222.
+      - '2222:2022'
+      # Admin-UI kun på localhost (tunnel ind hvis nødvendigt).
+      - '127.0.0.1:8080:8080'
+    environment:
+      # --- Hook-hemmelighed som header (foretrukket frem for ?token= i URL'en,
+      # der kan lække via access-logs/proxyer). Tom URL = alle hook-kald.
+      # ?token= beholdes i URL'erne nedenfor som fallback, indtil headeren er
+      # verificeret i drift — fjern dem derefter.
+      SFTPGO_HTTPCLIENT__HEADERS__0__KEY: 'X-Operia-Hook-Secret'
+      SFTPGO_HTTPCLIENT__HEADERS__0__VALUE: '${SFTP_HOOK_SECRET}'
+      SFTPGO_HTTPCLIENT__HEADERS__0__URL: ''
+      # --- Login: Operia som kilde-til-sandhed -----------------------------
+      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_HOOK: '${FUNCTIONS_BASE}/sftp-auth?token=${SFTP_HOOK_SECRET}'
+      SFTPGO_DATA_PROVIDER__EXTERNAL_AUTH_SCOPE: '1' # 1 = kun password
+      # --- Hændelses-hook: upload udløser import; øvrige fs-hændelser logges --
+      # (async fra SFTPGo's side, da de ikke er i execute_sync — blokerer ikke SFTP)
+      SFTPGO_COMMON__ACTIONS__EXECUTE_ON: 'upload,download,delete,rename,mkdir,rmdir'
+      SFTPGO_COMMON__ACTIONS__HOOK: '${FUNCTIONS_BASE}/sftp-uploaded?token=${SFTP_HOOK_SECRET}'
+      # --- Brute force-værn: bloker IP'er efter gentagne fejlede logins -----
+      # (hvert forsøg rammer ellers sftp-auth + en bcrypt-verifikation uhindret)
+      SFTPGO_COMMON__DEFENDER__ENABLED: '1'
+      SFTPGO_COMMON__DEFENDER__THRESHOLD: '10'        # fejlede forsøg før ban
+      SFTPGO_COMMON__DEFENDER__OBSERVATION_TIME: '15' # minutter forsøgene tælles i
+      SFTPGO_COMMON__DEFENDER__BAN_TIME: '30'         # minutter ban varer
+      # --- Data provider (sqlite) i den skrivbare named volume ------------
+      SFTPGO_DATA_PROVIDER__DRIVER: 'sqlite'
+      SFTPGO_DATA_PROVIDER__NAME: '/var/lib/sftpgo/sftpgo.db'
+      SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: '1'
+      # --- SFTP-binding ----------------------------------------------------
+      SFTPGO_SFTPD__BINDINGS__0__PORT: '2022'
+      # --- Admin-UI (kun localhost via port-mappingen ovenfor) -------------
+      SFTPGO_HTTPD__BINDINGS__0__PORT: '8080'
+      SFTPGO_HTTPD__BINDINGS__0__ADDRESS: '0.0.0.0'
+      SFTPGO_DEFAULT_ADMIN_USERNAME: '${SFTPGO_ADMIN_USER}'
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: '${SFTPGO_ADMIN_PASSWORD}'
+    volumes:
+      # Named volume (ikke bind-mount): docker initialiserer den med image-stiens
+      # ejerskab (uid 1000), så SFTPGo kan skrive sin sqlite + vært-nøgler. En
+      # bind-mount ville være root-ejet og få SFTPGo til at crashe.
+      - sftpgo_data:/var/lib/sftpgo
+
+volumes:
+  sftpgo_data:

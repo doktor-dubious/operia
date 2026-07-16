@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.supabase.storage)
     implementation(libs.supabase.functions)
     implementation(libs.ktor.client.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     debugImplementation(libs.androidx.ui.tooling)
 }

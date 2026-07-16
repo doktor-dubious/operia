@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -63,7 +64,7 @@ function ShippingPage() {
       .select('id')
     setSaving(false)
     if (error || !saved?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))

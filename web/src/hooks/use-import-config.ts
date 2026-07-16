@@ -20,9 +20,12 @@ export const IMPORT_CONFIG_DEFAULTS = {
   ] as string[],
 }
 
+export type ImportType = 'employees' | 'assets' | 'inventory'
+
 // Virksomhedens importkonfiguration (Import → Konfiguration).
-// null = ingen gemt række endnu → IMPORT_CONFIG_DEFAULTS gælder.
-export function useImportConfig(companyId: string | null, importType: 'employees' = 'employees') {
+// null = ingen gemt række endnu → standarderne gælder (medarbejdere:
+// IMPORT_CONFIG_DEFAULTS; aktiver/lager: modulets defaultFields).
+export function useImportConfig(companyId: string | null, importType: ImportType = 'employees') {
   return useQuery({
     queryKey: ['import-config', companyId, importType],
     enabled: !!companyId,

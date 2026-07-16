@@ -1,0 +1,115 @@
+All three sweeps are done. Here is the full inventory of where NIS2 and/or GDPR are addressed in the code, grouped by theme. Your three examples all confirmed — RLS, logo cleanup, and log drains are each covered below.
+
+1. Tenant isolation / RLS (NIS2 access control + GDPR data segregation)
+
+- supabase/migrations/20260710031950_core_tenancy.sql — the security backbone: companies, app_users, user_roles, platform_admins, and the SECURITY DEFINER helpers current_company_id(), is_platform_admin(), has_role(). RLS enabled on all core tables, every policy gated on company_id = current_company_id().
+
+- The same per-company RLS pattern repeats in ~30 migrations (directory, parcels, carriers, lockers, assets, inventory, routes, templates…).
+
+- 20260710031953_parcels.sql — parcels_guard() trigger re-validates that FK'd receiver/department/location belong to the same company, because FK lookups bypass RLS (explicit cross-tenant-leak prevention).
+
+- 20260712044648_protect_company_identity.sql + part of 20260712145032_review_hardening.sql — triggers blocking managers from mutating DCA-owned columns (company name/CVR, billing model) that column grants alone can't protect.
+
+
+2. Immutable audit trail (NIS2 tamper-resistance)
+
+- 20260710031953_parcels.sql — parcel_events is append-only: UPDATE/DELETE revoked and blocked by a block_mutation() trigger; rows written only via a SECURITY DEFINER trigger; deliberately no FKs so cascades can never rewrite chain-of-custody history.
+
+- 20260711124521_audit_log.sql — the central log, header literally "NIS2-revisionslog". Same immutability treatment; record_audit() is execute-revoked from clients so logging can't be skipped or forged. GDPR touch: employee.anonymized events log only employee_no/id, never the personal data being erased.
+
+- 20260710134424_employee_import.sql — import_runs is append-only by policy (insert+select only), doubling as the manager alert surface for malformed imports.
+
+3. Audit coverage across config (NIS2 traceability)
+
+- 20260713120000_audit_log_category_level.sql — category/level taxonomy (warning on .deleted/.anonymized/.revoked/...); admin_user_emails() exposes actor emails to platform admins only.
+
+- Dedicated audit-trigger migrations for carrier agreements (incl. key_replaced), entitlements, templates, catalog, localization, platform assets, appearance/texts, billing/shipping (20260712145032_review_hardening.sql — "exactly what a disputed rate change must be traceable on"), and 20260714140000_masterdata_updated_ Jump to bottom (ctrl+End) ↓ ed-renames gap.
+
+- web/src/routes/_app/operia.logs.tsx — the platform-admin audit viewer (facets, histogram, CSV export).
+
+- web/src/components/import/module-import-log.tsx — manager-facing timeline merging import_runs with import-config audit events.
+
+4. Log drain / SIEM forwarding (NIS2 — your third example)
+
+- 20260714130000_log_drains.sql — per-company and platform-level drains (HTTP/Datadog/Loki); write-only secret column; watermark starts at current max so a new drain never dumps history; config changes audited without the secret.
+
+- 20260714130500_log_drains_secret_lockdown.sql — revokes Supabase's auto-granted SELECT that would have exposed the secret column.
+
+- 20260714131000_log_drains_cron.sql — pg_cron dispatcher every minute, service-role key pulled from Supabase Vault, never git.
+
+- supabase/functions/log-drain-dispatch/index.ts — dispatch requires service-role; test mode re-verifies the caller's JWT owns the drain before touching the secret; watermark advances only on delivery success.
+
+- web/src/components/log-drains/log-drains-manager.tsx (+ configure.log-drains.tsx, operia.log-drains.tsx, the customers tab) — the config UI; a comment explicitly ties it to "NIS2: centralt log-management og alarmering".
+
+5. GDPR anonymization / deactivate-instead-of-delete
+
+- web/src/routes/_app/employees.tsx — the core GDPR surface: deactivate keeps the row; Anonymize (GDPR) permanently blanks name/initials/email/phone/employee_no, stamps anonymized_at, requires checkbox + typed confirm word, supports bulk; hard delete is platform-admin-only (test cleanup). RLS denials detected via returned row counts.
+
+- supabase/functions/_shared/employee-import.ts — Flow 0 import deactivates employees missing from the CSV rather than deleting, and never touches manually created (is_manual) rows.
+
+- FKs like parcels.receiver_employee_id use on delete set null so removing a person never destroys operational history.
+
+
+6. Storage cleanup & data minimization (GDPR — your second example)
+
+- web/src/components/company-config-fields.tsx (cleanupLogos) — removes every file in a company's public company-logos folder except the current one; comment explicitly cites GDPR (replaced logos must not stay publicly reachable). Called from configure.logo.tsx on save and from operia.customers.tsx on customer delete.
+
+- 20260712013427_company_logos_select_policy.sql — grants the list() needed for that cleanup, with the same GDPR rationale in the comment.
+
+- supabase/functions/_shared/import-runner.ts:82 — deletes the source CSV (personal data) from Storage after a successful import; retained only on reject/failure for inspection.
+
+
+7. Secrets & credential handling (NIS2)
+
+
+- Universal write-only-secret pattern: carrier api_key (20260712075958 + the key_lockdown migration), SFTP password, log-drain secrets — all exposed to the browser only as has_key/*_set booleans.
+
+- 20260714100000_sftp_password_hash.sql — header cites NIS2; SFTP passwords bcrypt-hashed server-side via a SECURITY DEFINER RPC.
+
+- 20260714090000_data_transfer.sql — splits customer-editable transfer config from a platform-admin-only secrets table; credential changes audited without values.
+
+- supabase/functions/invite-user/ and create-customer/ — re-verify the caller's JWT and role server-side before using the service-role key ("the browser is untrusted").
+
+
+8. Data-transfer ingest security (NIS2 + GDPR — personal data in transit)
+
+
+- supabase/functions/email-inbound/index.ts — SPF/DKIM/DMARC anti-spoofing with two strictness levels, per-company sender allowlist enforced after the spoof check, platform+company enable toggles, domain pinning, filename sanitization against path traversal; spoof rejections logged as error-level data_transfer.spoof_rejected audit events.
+
+- 20260714170000/180000/190000/200000 migrations — allowlist + anti-spoof settings, secure-by-default (email_allowlist_required on), all audited.
+
+- supabase/functions/sftp-auth/ + sftp-uploaded/ + 20260714110000_sftp_gateway.sql — bcrypt credential check via a service-role-only RPC, each customer chrooted to imports/{company_id}/, every login/upload/delete logged as data_transfer.* audit events with IP/protocol.
+
+- gateway/ — stateless SFTPGo box: nothing durable stored locally, admin UI bound to localhost only, host key persisted for a stable fingerprint, secrets git-ignored.
+
+- UI: company-data-transfer-fields.tsx, operia.data-transfer.tsx, configure.data-transfer.tsx.
+
+
+9. Personal-data storage details (GDPR)
+
+- 20260710090929_carriers_and_photos.sql — private parcel-photos bucket with company-scoped storage RLS for condition photos (chain-of-custody evidence).
+
+- 20260711020755_employee_extended_fields.sql — nfc_card_id (a personal identifier for handover) with per-company uniqueness.
+
+- Android: allowBackup="false" in the manifest (app data can't be pulled via ADB backup); no local personal-data storage — client explicitly treats RLS as the real access control. Otherwise still scaffold.
+
+
+10. Authentication (NIS2)
+
+- web/src/routes/_app.tsx (session guard), login.tsx (generic error — no user enumeration), welcome.tsx (invite/set-password flow), web/src/lib/password.ts (CSPRNG password generation).
+
+- supabase/config.toml — refresh-token rotation on, rate limits set, MFA (TOTP) present but disabled (needs Supabase Pro).
+
+Gaps the sweep surfaced (worth a follow-up list)
+
+1. No MFA/SSO yet — TOTP disabled in config.toml, minimum_password_length = 6, no Entra ID. Known roadmap item, but it's the biggest NIS2 gap.
+
+2. No retention/purge policy — no cron job or config for expiring audit_log, parcel_events, import_runs, inbound_files, or parcel-photos. Append-only forever is defensible for audit, but GDPR expects a stated retention period,
+and photos of parcels have no lifecycle at all.
+
+3. gateway/.env is world-readable (644) on disk — the hook secret and SFTPGo admin password are readable by any local user on that box.
+
+4. Webhook auth is a static ?token= in the URL, not an HMAC-signed body — no replay protection, and URL tokens can leak via proxies/logs. Applies to both the SFTP and email hooks.
+
+5. Anonymization covers the employees row, but free-text fields elsewhere (parcel notes, sender names) could still contain names — no sweep exists for those.
+

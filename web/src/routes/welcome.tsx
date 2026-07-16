@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,7 +57,7 @@ function SetPasswordPage() {
     setError(null)
     const { error: updateError } = await supabase.auth.updateUser({ password })
     setBusy(false)
-    if (updateError) return setError(t('common.error'))
+    if (updateError) return setError(describeError(updateError, t))
     toast.success(t('setPassword.done'))
     navigate({ to: '/' })
   }

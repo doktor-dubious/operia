@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -116,7 +117,7 @@ function CategoryDetailPane({
       .select('id')
     setSaving(false)
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -135,7 +136,7 @@ function CategoryDetailPane({
       .eq('id', row.id)
       .select('id')
     if (error || !data?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('settings.saved'))
@@ -279,7 +280,7 @@ function NewCategoryDialog({
     setBusy(false)
     if (error) {
       console.error('Kunne ikke oprette kategori:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     toast.success(t('assetCategoriesPage.createdToast', { name: name.trim() }))

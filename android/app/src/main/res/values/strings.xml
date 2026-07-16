@@ -1,10 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Default = dansk (spec: dansk først). Engelsk ligger i values-en/.
-     Per-tenant tekst-overrides (app_labels) skal slås op som et lag OVENPÅ
-     disse ressourcer i runtime — aldrig ved at ændre filerne her. -->
+     Per-tenant tekst-overrides (product_text_override) skal slås op som et lag
+     OVENPÅ disse ressourcer i runtime — aldrig ved at ændre filerne her. -->
 <resources>
     <string name="app_name">Operia</string>
     <string name="app_tagline">Track &amp; trace for interne pakker</string>
+    <string name="terminal">Terminal</string>
+
+    <!-- login -->
     <string name="sign_in">Log ind</string>
     <string name="sign_out">Log ud</string>
+    <string name="email">E-mail</string>
+    <string name="email_placeholder">dig@firma.dk</string>
+    <string name="password">Adgangskode</string>
+    <string name="login_fill_both">Udfyld e-mail og adgangskode.</string>
+    <string name="login_wrong">Forkert e-mail eller adgangskode.</string>
+    <string name="err_no_company">Din bruger er ikke knyttet til en virksomhed.\nHåndterminalen er til virksomhedens pakkepersonale — kontakt din administrator.</string>
+
+    <!-- hjem -->
+    <string name="greeting_morning">Godmorgen</string>
+    <string name="greeting_day">Goddag</string>
+    <string name="greeting_evening">Godaften</string>
+    <string name="tile_receive">Modtag pakke</string>
+    <string name="tile_receive_sub">Scan &amp; registrér</string>
+    <string name="tile_handout">Udlever pakke</string>
+    <string name="tile_handout_sub">Find &amp; kvittér</string>
+    <string name="tile_search">Søg</string>
+    <string name="tile_search_sub">Find en pakke</string>
+    <string name="tile_route">Ruteplan</string>
+    <string name="tile_route_sub">Kør ruten</string>
+    <string name="tile_stock">Lager</string>
+    <string name="tile_stock_sub">Beholdning &amp; bevægelser</string>
+    <string name="pending_banner">%1$d pakke(r) afventer synkronisering</string>
+    <string name="pending_banner_sub">Gemt lokalt. Tryk for at synkronisere nu.</string>
+    <string name="sync_done">%1$d synkroniseret, %2$d tilbage</string>
+
+    <!-- fælles -->
+    <string name="scan_placeholder">Scan…</string>
+    <string name="scan_hint">Scan sendes automatisk. Tryk ⌨ for at taste manuelt.</string>
+    <string name="search_placeholder">Søg…</string>
+    <string name="n_in_company">%1$d i virksomheden</string>
+    <string name="clear_selection">Ryd valg</string>
+    <string name="department">Afdeling</string>
+    <string name="employee">Medarbejder</string>
+    <string name="cancel">Annullér</string>
+    <string name="save">Gem</string>
+    <string name="note_optional">Note (valgfri)</string>
+    <string name="note_placeholder">bemærkning</string>
+    <string name="receiver_prefix">Modtager: %1$s</string>
+    <string name="registered_prefix">Registreret: %1$s</string>
+    <string name="delivered_to_prefix">Udleveret til: %1$s</string>
+
+    <!-- status -->
+    <string name="status_unassigned">Ikke tildelt</string>
+    <string name="status_registered">Registreret</string>
+    <string name="status_in_storage">På lager</string>
+    <string name="status_in_transit">Undervejs</string>
+    <string name="status_in_locker">I skab</string>
+    <string name="status_delivered">Udleveret</string>
+    <string name="status_rejected">Afvist</string>
+    <string name="status_returned">Returneret</string>
+    <string name="status_unknown">Ukendt</string>
+
+    <!-- modtag -->
+    <string name="receive_title">Modtag pakker</string>
+    <string name="receive_scan_label">Scan pakker</string>
+    <string name="storage_location_optional">Placering (valgfri)</string>
+    <string name="receive_already_scanned">Allerede scannet</string>
+    <string name="receive_pick_recipient_first">Vælg en modtager først</string>
+    <string name="receive_added">Tilføjet</string>
+    <string name="receive_scanned_count">Scannede: %1$d</string>
+    <string name="receive_clear_all">Ryd alle</string>
+    <string name="receive_empty">Vælg modtager og scan pakker</string>
+    <string name="receive_note_label">Note (valgfri — gælder alle)</string>
+    <string name="receive_note_placeholder">fx tilstand / bemærkning</string>
+    <string name="receive_save_button">Gem %1$d pakke(r)</string>
+    <string name="receive_scan_at_least_one">Scan mindst én pakke</string>
+    <string name="receive_saved">%1$d pakke(r) gemt</string>
+    <string name="receive_queued">%1$d pakke(r) gemt lokalt — synkroniseres når du er online</string>
+    <string name="receive_save_failed">Kunne ikke gemme</string>
+    <string name="receive_saved_confirm">✓ %1$d pakke(r) gemt</string>
+
+    <!-- udlever -->
+    <string name="handout_title">Udlever pakke</string>
+    <string name="handout_scan_label">Scan pakke</string>
+    <string name="handout_empty">Scan en pakke for at udlevere</string>
+    <string name="handout_not_found">Ingen pakke med kode</string>
+    <string name="handout_lookup_failed">Fejl ved opslag</string>
+    <string name="handout_terminal_status">Pakken er allerede afsluttet — se status</string>
+    <string name="handout_unassigned_hint">Pakken har ingen modtager. Vælg medarbejder for at kunne udlevere.</string>
+    <string name="handout_assign_receiver">Tildel modtager</string>
+    <string name="handout_who_label">Navn på modtager</string>
+    <string name="handout_who_placeholder">Navn på modtager</string>
+    <string name="handout_who_required">Skriv hvem der modtager</string>
+    <string name="handout_assign_required">Vælg en medarbejder som modtager først</string>
+    <string name="handout_deliver_button">Udlever</string>
+    <string name="handout_done">Udleveret til %1$s</string>
+    <string name="handout_failed">Kunne ikke udlevere</string>
+
+    <!-- underskrift -->
+    <string name="signature_title">Underskrift</string>
+    <string name="signature_hint">Skriv under med fingeren, og tryk Gem.</string>
+    <string name="signature_clear">Ryd</string>
+    <string name="signature_add">✍️ Tilføj underskrift</string>
+    <string name="signature_added">✓ Underskrift tilføjet — tryk for at ændre</string>
+
+    <!-- søg -->
+    <string name="search_title">Søg</string>
+    <string name="search_scan_label">Scan eller skriv</string>
+    <string name="search_empty">Scan en stregkode</string>
+    <string name="search_no_results">Ingen pakker fundet</string>
+    <string name="search_failed">Fejl ved søgning</string>
+
+    <!-- ruteplan -->
+    <string name="route_title">Ruteplan</string>
+    <string name="route_pick">Vælg en rute</string>
+    <string name="route_empty">Ingen gemte ruter endnu.\nOpret en rute i admin under Ruteplanlægning.</string>
+    <string name="route_meta">%1$d stop · %2$s</string>
+    <string name="route_round_trip_suffix">" · rundtur"</string>
+    <string name="route_navigate_all">🧭  Naviger hele ruten</string>
+    <string name="route_depot">DEPOT (START)</string>
+    <string name="route_destination">SLUTADRESSE</string>
+    <string name="route_stops_header">Stop (%1$d) — tryk for at navigere</string>
+    <string name="route_return_note">↩︎ Retur til depot til sidst (rundtur)</string>
+    <string name="route_no_start">Ruten mangler startadresse</string>
+    <string name="route_no_stops">Ruten har ingen stop eller slutadresse</string>
+    <string name="route_maps_failed">Kunne ikke åbne Google Maps</string>
+    <string name="transport_car">Bil</string>
+    <string name="transport_bike">Cykel</string>
+    <string name="transport_walk">Gå</string>
+
+    <!-- lager -->
+    <string name="stock_title">Lager</string>
+    <string name="stock_scan_label">Scan vare (SKU)</string>
+    <string name="stock_empty">Scan en vare for at se beholdning</string>
+    <string name="stock_not_found">Ingen vare med kode</string>
+    <string name="stock_lookup_failed">Fejl ved opslag</string>
+    <string name="stock_location_prefix">Lokation: %1$s</string>
+    <string name="stock_on_hand_suffix">%1$s på lager</string>
+    <string name="stock_reorder_warning">⚠︎ På eller under genbestillingspunkt (%1$s)</string>
+    <string name="stock_qty_label">Antal</string>
+    <string name="stock_qty_placeholder">fx 10</string>
+    <string name="stock_unit_default">stk</string>
+    <string name="stock_in">+ Ind</string>
+    <string name="stock_out">− Ud</string>
+    <string name="stock_adjust">= Optæl (sæt beholdning)</string>
+    <string name="stock_enter_qty">Skriv et antal</string>
+    <string name="stock_enter_count">Skriv optalt antal</string>
+    <string name="stock_negative">Beholdning kan ikke blive negativ</string>
+    <string name="stock_update_failed">Kunne ikke opdatere lager</string>
+    <string name="stock_moved_in">+ Lagt på lager</string>
+    <string name="stock_moved_out">− Taget fra lager</string>
+    <string name="stock_adjusted">= Optalt</string>
 </resources>

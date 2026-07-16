@@ -1,24 +1,20 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
-  Banknote,
   Boxes,
-  Building2,
   CalendarRange,
   Cog,
-  Download,
   FileText,
   Handshake,
   LayoutDashboard,
+  LayoutGrid,
   Layers,
   Lock,
-  Mail,
   MapPin,
   Network,
   Package,
   PackageCheck,
   PackagePlus,
-  Palette,
   Radio,
   Route,
   Settings,
@@ -27,7 +23,6 @@ import {
   Tag,
   Truck,
   Upload,
-  UserCog,
   Users,
 } from 'lucide-react'
 
@@ -61,7 +56,7 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'groupParcels',
     items: [
-      { labelKey: 'dashboard', href: '/', icon: LayoutDashboard },
+      { labelKey: 'dashboard', href: '/parcels/dashboard', icon: LayoutDashboard },
       { labelKey: 'parcels', href: '/parcels', icon: Package },
       { labelKey: 'receive', href: '/parcels/receive', icon: PackagePlus },
       { labelKey: 'handout', href: '/parcels/handout', icon: PackageCheck },
@@ -83,7 +78,7 @@ export const navGroups: NavGroup[] = [
         children: [
           { labelKey: 'importConfig', href: '/import/config' },
           { labelKey: 'importLocal', href: '/import/local' },
-          { labelKey: 'importRemote', href: '/import/remote' },
+          { labelKey: 'exportData', href: '/import/export' },
           { labelKey: 'importLog', href: '/import/log' },
         ],
       },
@@ -110,20 +105,14 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'assetLocations', href: '/assets/locations', icon: MapPin, productKey: 'assets' },
       {
         labelKey: 'assetImport',
-        href: '/assets/import/assets',
+        href: '/assets/import/local',
         icon: Upload,
         productKey: 'assets',
         children: [
-          { labelKey: 'assetImportAssets', href: '/assets/import/assets' },
-        ],
-      },
-      {
-        labelKey: 'assetExport',
-        href: '/assets/export/assets',
-        icon: Download,
-        productKey: 'assets',
-        children: [
-          { labelKey: 'assetExportAssets', href: '/assets/export/assets' },
+          { labelKey: 'importConfig', href: '/assets/import/config' },
+          { labelKey: 'importLocal', href: '/assets/import/local' },
+          { labelKey: 'exportData', href: '/assets/import/export' },
+          { labelKey: 'importLog', href: '/assets/import/log' },
         ],
       },
     ],
@@ -135,28 +124,16 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'inventoryItems', href: '/inventory', icon: Boxes, productKey: 'lager' },
       {
         labelKey: 'inventoryImport',
-        href: '/inventory/import/items',
+        href: '/inventory/import/local',
         icon: Upload,
         productKey: 'lager',
-        children: [{ labelKey: 'inventoryImportItems', href: '/inventory/import/items' }],
+        children: [
+          { labelKey: 'importConfig', href: '/inventory/import/config' },
+          { labelKey: 'importLocal', href: '/inventory/import/local' },
+          { labelKey: 'exportData', href: '/inventory/import/export' },
+          { labelKey: 'importLog', href: '/inventory/import/log' },
+        ],
       },
-      {
-        labelKey: 'inventoryExport',
-        href: '/inventory/export/items',
-        icon: Download,
-        productKey: 'lager',
-        children: [{ labelKey: 'inventoryExportItems', href: '/inventory/export/items' }],
-      },
-    ],
-  },
-  {
-    labelKey: 'groupSystem',
-    requires: 'manager',
-    items: [
-      { labelKey: 'users', href: '/system/users', icon: UserCog },
-      { labelKey: 'emailTemplates', href: '/system/email-templates', icon: Mail },
-      { labelKey: 'labelTemplates', href: '/system/label-templates', icon: Tag },
-      { labelKey: 'companySettings', href: '/system/company', icon: Building2 },
     ],
   },
   {
@@ -169,16 +146,16 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'booking', href: '/products/booking', icon: CalendarRange, productKey: 'booking' },
     ],
   },
-  {
-    labelKey: 'groupPlatform',
-    requires: 'platform',
-    items: [
-      { labelKey: 'branding', href: '/platform/branding', icon: Palette },
-      { labelKey: 'billing', href: '/platform/billing', icon: Banknote },
-      { labelKey: 'integrations', href: '/platform/integrations', icon: Network },
-    ],
-  },
 ]
+
+// Home — startsiden med produktfliserne. Står som øverste, selvstændige
+// menupunkt (over grupperne) i sidemenuen og i bruger-dropdownen, med en
+// separator under sig.
+export const homeNav: NavItem = {
+  labelKey: 'home',
+  href: '/',
+  icon: LayoutGrid,
+}
 
 export const settingsNav: NavItem = {
   labelKey: 'settings',
@@ -196,6 +173,7 @@ export const configureNav: NavItem = {
 }
 
 export const configureConfigNav: { labelKey: string; href: string }[] = [
+  { labelKey: 'configureUsers', href: '/configure/users' },
   { labelKey: 'configureProducts', href: '/configure/products' },
   { labelKey: 'configureTemplates', href: '/configure/templates' },
   { labelKey: 'configureLocalization', href: '/configure/localization' },
@@ -204,6 +182,9 @@ export const configureConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'configureShipping', href: '/configure/shipping' },
   { labelKey: 'configureLogo', href: '/configure/logo' },
   { labelKey: 'configureAppearance', href: '/configure/appearance' },
+  { labelKey: 'configureHomeDesign', href: '/configure/home-design' },
+  { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
+  { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
 ]
 
 // Operia-konfiguration (kun platform-admins) — nederst i sidemenuen. Åbner en
@@ -216,16 +197,23 @@ export const operiaNav: NavItem = {
 
 export const operiaConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'operiaCustomers', href: '/operia/customers' },
+  { labelKey: 'operiaUsers', href: '/operia/users' },
+  { labelKey: 'operiaGeneral', href: '/operia/general' },
   { labelKey: 'operiaProducts', href: '/operia/products' },
+  { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
   { labelKey: 'operiaCarriers', href: '/operia/carriers' },
   { labelKey: 'operiaShipping', href: '/operia/shipping' },
   { labelKey: 'operiaAssets', href: '/operia/assets' },
+  { labelKey: 'operiaMaps', href: '/operia/maps' },
+  { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
   { labelKey: 'operiaBilling', href: '/operia/billing' },
   { labelKey: 'operiaApiKeys', href: '/operia/apikeys' },
+  { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
   { labelKey: 'operiaTemplates', href: '/operia/templates' },
   { labelKey: 'operiaLocalization', href: '/operia/localization' },
   { labelKey: 'operiaNotifications', href: '/operia/notifications' },
   { labelKey: 'operiaLogs', href: '/operia/logs' },
+  { labelKey: 'operiaLogDrains', href: '/operia/log-drains' },
 ]
 
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
@@ -249,6 +237,7 @@ export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {
 }
 
 export const allNavItems = [
+  homeNav,
   ...navGroups.flatMap((g) => g.items),
   ...navGroups.flatMap((g) =>
     g.items.flatMap((item) =>

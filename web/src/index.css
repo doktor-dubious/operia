@@ -58,6 +58,8 @@
     --color-status-neutral: var(--status-neutral);
     --color-status-neutral-to-bad: var(--status-neutral-to-bad);
     --color-status-bad: var(--status-bad);
+    /* Switch/toggle tændt-farve — Supabase-brandgrøn (#3ecf8e) */
+    --color-switch-on: var(--switch-on);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
@@ -92,11 +94,13 @@
     --border: oklch(0.16 0.0012 159 / 7.5%);
     --input: oklch(0.16 0.0012 159 / 13.5%);
     --ring: oklch(0.5864 0.0022 159 / 55%);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    /* Diagrampalet (statistik): navy fra #13315C-accenten + status-grøn-familien,
+       CVD-valideret mod hvid kortflade (fast slot-rækkefølge — cykl aldrig). */
+    --chart-1: #2f5f9e;
+    --chart-2: #1d7a40;
+    --chart-3: #6b4fa7;
+    --chart-4: #a8741a;
+    --chart-5: #008570;
     --sidebar: var(--background);
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--primary);
@@ -111,6 +115,7 @@
     --status-neutral: #d9bb70;
     --status-neutral-to-bad: #D26E25;
     --status-bad: #ad423f;
+    --switch-on: #3ecf8e; /* Supabase-brandgrøn (toggle tændt) */
 }
 
 .dark {
@@ -136,11 +141,12 @@
     --border: oklch(0.95 0.0015 159 / 7.5%);
     --input: oklch(0.95 0.0014 159 / 13.5%);
     --ring: oklch(0.684 0.00275 159 / 55%);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
+    /* Mørke diagram-steps af samme farver, CVD-valideret mod panelfladen #181a19. */
+    --chart-1: #5488cd;
+    --chart-2: #4f9d68;
+    --chart-3: #977ad0;
+    --chart-4: #bb8a2c;
+    --chart-5: #2ba99b;
     --sidebar: var(--background);
     --sidebar-foreground: var(--foreground);
     --sidebar-primary: var(--primary);
@@ -155,6 +161,7 @@
     --status-neutral: #d9bb70;
     --status-neutral-to-bad: #D26E25;
     --status-bad: #ad423f;
+    --switch-on: #3ecf8e; /* Supabase-brandgrøn (toggle tændt) */
 }
 
 @layer base {
@@ -192,5 +199,14 @@
   button[data-variant="default"]:hover,
   [role="button"][data-variant="default"]:hover {
     border-radius: 8px !important;
+  }
+
+  /*  ── Leaflet-kort ──
+      Leaflet giver sine paneler/kontroller faste z-index op til 1000. Uden en
+      egen stacking-context lækker de ud i rod-konteksten og tegner oven på
+      dialoger (z-50). `isolation: isolate` indkapsler dem, så kortet stacker
+      som ét element på sin flow-plads — under portalede dialoger. */
+  .leaflet-container {
+    isolation: isolate;
   }
 }

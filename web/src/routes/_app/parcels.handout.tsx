@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,7 @@ function HandoutPage() {
       .maybeSingle()
     if (error) {
       console.error('Opslag fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     if (!data) {
@@ -160,7 +161,7 @@ function HandoutPage() {
       reset()
     } catch (error) {
       console.error('Udlevering fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
     } finally {
       setBusy(false)
     }

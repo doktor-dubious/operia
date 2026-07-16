@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { summarizeReasons } from '@/lib/import-reasons'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +33,8 @@ function ImportLogPage() {
         .from('import_runs')
         .select('*')
         .eq('company_id', companyId!)
+        // kun medarbejderkørsler — aktiv-/lagerimport har egne logs
+        .eq('kind', 'employees_csv')
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error
@@ -47,13 +50,20 @@ function ImportLogPage() {
   type Run = NonNullable<typeof data>[number]
   const statusLabel = (run: Run) =>
     t(`importPage.status${run.status.charAt(0).toUpperCase()}${run.status.slice(1)}`)
-  const resultLabel = (run: Run) =>
-    t('importPage.resultSummary', {
+  const resultLabel = (run: Run) => {
+    if (run.status === 'exported') return t('exportPage.exportedResult', { count: run.rows_total })
+    // Fil-niveau-afvisning/-fejl (fx SFTP/e-mail): vis den oversatte årsag.
+    if (run.status === 'rejected' || run.status === 'failed') {
+      const reason = summarizeReasons(run.errors, t)
+      if (reason) return reason
+    }
+    return t('importPage.resultSummary', {
       created: run.created_count,
       updated: run.updated_count,
       deactivated: run.deactivated_count,
       rejected: run.rejected_count,
     })
+  }
 
   const columns: ColumnDef<Run>[] = [
     {
@@ -86,6 +96,7 @@ function ImportLogPage() {
         <span
           className={cn(
             r.status === 'applied' && 'text-status-good-to-neutral',
+            r.status === 'exported' && 'text-status-good-to-neutral',
             r.status === 'rejected' && 'text-status-neutral-to-bad',
             r.status === 'failed' && 'text-destructive',
           )}

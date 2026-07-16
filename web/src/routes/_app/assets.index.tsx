@@ -2,10 +2,26 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { ArchiveX } from 'lucide-react'
+import { ArchiveX, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
@@ -16,17 +32,21 @@ import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
-// Aktivregisteret — ejes af importen (som medarbejdere ejes af Flow 0):
-// ingen oprettelse/redigering herfra, kun deaktivering (rækken består,
-// lånehistorik bevares) og hård sletning for platform-admins (testdata-
-// oprydning). Ingen anonymisering — aktiver bærer ingen persondata.
+// Aktivregisteret — ejes primært af importen (som medarbejdere ejes af Flow 0),
+// men managers kan oprette et aktiv manuelt med "+ Ny". Detaljepanelet er
+// skrivebeskyttet; ellers kun deaktivering (rækken består, lånehistorik bevares)
+// og hård sletning for platform-admins (testdata-oprydning). Ingen anonymisering
+// — aktiver bærer ingen persondata.
 export const Route = createFileRoute('/_app/assets/')({
   component: AssetsPage,
 })
 
 const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
 
+const NONE = '__none__'
+
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
+type Picker = { id: string; name: string }
 
 function useRows(companyId: string | null) {
   return useQuery({
@@ -42,6 +62,33 @@ function useRows(companyId: string | null) {
         .order('name')
       if (error) throw error
       return data
+    },
+  })
+}
+
+// Aktive kategorier + placeringer til "+ Ny"-dialogens vælgere.
+function usePickers(companyId: string | null) {
+  return useQuery({
+    queryKey: ['asset-pickers', companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const [categories, locations] = await Promise.all([
+        supabase
+          .from('asset_categories')
+          .select('id, name')
+          .eq('company_id', companyId!)
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('asset_locations')
+          .select('id, name')
+          .eq('company_id', companyId!)
+          .eq('is_active', true)
+          .order('name'),
+      ])
+      const err = categories.error ?? locations.error
+      if (err) throw err
+      return { categories: categories.data as Picker[], locations: locations.data as Picker[] }
     },
   })
 }
@@ -163,14 +210,166 @@ function AssetDetailPane({
   )
 }
 
+// Optional-vælger (kategori/placering) med et "—"-punkt for "ingen".
+function PickerSelect({
+  value,
+  onChange,
+  items,
+}: {
+  value: string
+  onChange: (v: string) => void
+  items: Picker[]
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE}>—</SelectItem>
+        {items.map((it) => (
+          <SelectItem key={it.id} value={it.id}>
+            {it.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+function NewAssetDialog({
+  open,
+  onOpenChange,
+  companyId,
+  categories,
+  locations,
+  onCreated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  companyId: string | null
+  categories: Picker[]
+  locations: Picker[]
+  onCreated: () => void
+}) {
+  const { t } = useTranslation()
+  const [name, setName] = useState('')
+  const [assetTag, setAssetTag] = useState('')
+  const [serialNo, setSerialNo] = useState('')
+  const [categoryId, setCategoryId] = useState(NONE)
+  const [locationId, setLocationId] = useState(NONE)
+  const [busy, setBusy] = useState(false)
+
+  const trimmed = name.trim()
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setName('')
+      setAssetTag('')
+      setSerialNo('')
+      setCategoryId(NONE)
+      setLocationId(NONE)
+    }
+    onOpenChange(next)
+  }
+
+  const create = async () => {
+    if (!companyId || !trimmed) return
+    setBusy(true)
+    const { error } = await supabase.from('assets').insert({
+      company_id: companyId,
+      name: trimmed,
+      asset_tag: assetTag.trim() || null,
+      serial_no: serialNo.trim() || null,
+      category_id: categoryId === NONE ? null : categoryId,
+      location_id: locationId === NONE ? null : locationId,
+    })
+    setBusy(false)
+    if (error) {
+      console.error('Kunne ikke oprette aktiv:', error)
+      // 23505 = unik-constraint på (company_id, asset_tag)
+      toast.error(error.code === '23505' ? t('assetsPage.tagTaken') : describeError(error, t))
+      return
+    }
+    toast.success(t('assetsPage.createdToast', { name: trimmed }))
+    onCreated()
+    handleOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('assetsPage.newTitle')}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="new-asset-name" className="text-label">
+            {t('assetsPage.name')}
+          </Label>
+          <Input
+            id="new-asset-name"
+            value={name}
+            autoFocus
+            placeholder={t('assetsPage.namePlaceholder')}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="new-asset-tag" className="text-label">
+              {t('assetsPage.tag')}
+            </Label>
+            <Input
+              id="new-asset-tag"
+              value={assetTag}
+              className="font-mono"
+              placeholder={t('assetsPage.tagPlaceholder')}
+              onChange={(e) => setAssetTag(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="new-asset-serial" className="text-label">
+              {t('assetsPage.serialNo')}
+            </Label>
+            <Input
+              id="new-asset-serial"
+              value={serialNo}
+              className="font-mono"
+              onChange={(e) => setSerialNo(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label className="text-label">{t('assetsPage.category')}</Label>
+          <PickerSelect value={categoryId} onChange={setCategoryId} items={categories} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label className="text-label">{t('assetsPage.location')}</Label>
+          <PickerSelect value={locationId} onChange={setLocationId} items={locations} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button disabled={busy || !trimmed || !companyId} onClick={create}>
+            {busy ? t('common.loading') : t('common.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function AssetsPage() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
+  const { data: pickers } = usePickers(companyId)
   const { data: access } = useAccess()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['assets'] })
 
@@ -182,7 +381,7 @@ function AssetsPage() {
       .select('id')
     if (error) {
       console.error('Deaktivering fejlede:', error)
-      toast.error(t('common.error'))
+      toast.error(describeError(error, t))
       return
     }
     if ((updated?.length ?? 0) !== ids.length) {
@@ -257,6 +456,11 @@ function AssetsPage() {
             .join(' ')
         }
         storageKey="assets"
+        toolbar={
+          <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+            <Plus className="size-4" /> {t('common.new')}
+          </Button>
+        }
         onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
         activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
@@ -297,6 +501,14 @@ function AssetsPage() {
           }}
         />
       )}
+      <NewAssetDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        companyId={companyId}
+        categories={pickers?.categories ?? []}
+        locations={pickers?.locations ?? []}
+        onCreated={refresh}
+      />
     </div>
   )
 }

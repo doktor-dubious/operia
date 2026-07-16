@@ -18,12 +18,16 @@ export function DetailTabs({
   active,
   onChange,
   onClose,
+  showMaximize = true,
   children,
 }: {
   tabs: DetailTab[]
   active: string
   onChange: (key: string) => void
   onClose?: () => void
+  // Maksimér-knappen styrer en global "skjul tabellen"-tilstand, som kun giver
+  // mening når fanerne sidder over en tabel. Sider uden tabel slår den fra.
+  showMaximize?: boolean
   children: React.ReactNode
 }) {
   const { t } = useTranslation()
@@ -58,18 +62,20 @@ export function DetailTabs({
           </button>
         ))}
         {/* Maksimér/gendan: skjuler tabellen over panelet så det fylder højden */}
-        <AnimateIcon animateOnHover asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={toggleMaximized}
-            aria-label={maximized ? t('detail.restore') : t('detail.maximize')}
-            title={maximized ? t('detail.restore') : t('detail.maximize')}
-          >
-            {maximized ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
-          </Button>
-        </AnimateIcon>
+        {showMaximize && (
+          <AnimateIcon animateOnHover asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={toggleMaximized}
+              aria-label={maximized ? t('detail.restore') : t('detail.maximize')}
+              title={maximized ? t('detail.restore') : t('detail.maximize')}
+            >
+              {maximized ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+            </Button>
+          </AnimateIcon>
+        )}
         {onClose && (
           <Button
             variant="ghost"

@@ -1,8 +1,11 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-// /operia → /operia/templates (den skærm der er bygget indtil videre)
+// /operia → sidst valgte menupunkt (husket i localStorage), ellers Kunder.
 export const Route = createFileRoute('/_app/operia/')({
   beforeLoad: () => {
-    throw redirect({ to: '/operia/templates' })
+    const last =
+      typeof localStorage !== 'undefined' ? localStorage.getItem('operia-last-path') : null
+    const dest = last && last.startsWith('/operia/') ? last : '/operia/customers'
+    throw redirect({ to: dest as '/operia/customers' })
   },
 })

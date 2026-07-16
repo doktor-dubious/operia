@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { KeyRound, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -176,7 +177,7 @@ export function CompanyAgreementsSection({
       .eq('id', id)
       .select('id')
     if (error || !saved?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     setReplacingId(null)
@@ -192,7 +193,7 @@ export function CompanyAgreementsSection({
       .eq('id', id)
       .select('id')
     if (error || !deleted?.length) {
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     setRemoveId(null)
@@ -366,7 +367,7 @@ function AddCompanyAgreementDialog({
     setBusy(false)
     if (error || !data?.length) {
       console.error('Kunne ikke oprette aftale:', error)
-      toast.error(error ? t('common.error') : t('common.noPermission'))
+      toast.error(error ? describeError(error, t) : t('common.noPermission'))
       return
     }
     toast.success(t('carrierAgreements.createdToast'))
