@@ -7,13 +7,16 @@
 export type ImportModule = 'assets' | 'inventory'
 
 // text/number/date skrives direkte i modulets tabel; category/location er
-// navne der slås op (eller oprettes) i asset_categories/asset_locations.
-export type ModuleFieldKind = 'text' | 'number' | 'date' | 'category' | 'location'
+// navne der slås op (eller oprettes) i asset_categories/asset_locations; enum
+// er fri tekst der oversættes til en kanonisk nøgle (se `synonyms`).
+export type ModuleFieldKind = 'text' | 'number' | 'date' | 'category' | 'location' | 'enum'
 
 export type ModuleField = {
   key: string // konfigurationsnøgle; for text/number/date også kolonnenavnet
   kind: ModuleFieldKind
   aliases: string[] // normaliserede headeraliasser (da + en)
+  synonyms?: Record<string, string> // kun 'enum': celletekst (lowercase) → kanonisk nøgle
+  emptyValue?: string // NOT NULL-kolonne: tom celle → denne værdi (jf. zeroDefaultFields)
 }
 
 export type ModuleSpec = {
@@ -29,6 +32,36 @@ export type ModuleSpec = {
   defaultFields: string[] // standard-aktive felter, i rækkefølge
   selectColumns: string // kolonner der hentes til tørkørslen
   zeroDefaultFields: string[] // NOT NULL-talkolonner: tom celle → 0
+  // Felter med en unik-constraint pr. virksomhed UD OVER keyField. Anvend
+  // sker i bidder uden transaktion, så en dublet ville vælte importen
+  // halvvejs igennem og efterlade den delvist anvendt — derfor fanges de i
+  // tørkørslen, hvor filen stadig kan rettes.
+  uniqueFields: string[]
+}
+
+// Celletekst → kanonisk asset_status. Spejler asset_status_from_text i
+// 20260717090000_asset_loans.sql — hold de to i sync. Status er en enum i
+// databasen, så en ukendt værdi afvises i tørkørslen frem for at vælte
+// anvendelsen midtvejs. on_loan-aliasserne ('udlånt' m.fl.) er MED VILJE
+// udeladt: udlån ejes af lend_asset()/return_asset() (åbent lån + status
+// følges ad), så en CSV kan hverken sætte eller rydde on_loan — databasens
+// assets_status_guard (20260717200000) afviser det alligevel.
+const ASSET_STATUS_SYNONYMS: Record<string, string> = {
+  in_stock: 'in_stock',
+  'in stock': 'in_stock',
+  'på lager': 'in_stock',
+  'pa lager': 'in_stock',
+  assigned: 'assigned',
+  'in use': 'assigned',
+  'i brug': 'assigned',
+  service: 'service',
+  repair: 'service',
+  'til service': 'service',
+  'til reparation': 'service',
+  retired: 'retired',
+  udfaset: 'retired',
+  udgået: 'retired',
+  udgaaet: 'retired',
 }
 
 const NAME_ALIASES = ['navn', 'name', 'betegnelse', 'beskrivelse']
@@ -41,7 +74,10 @@ const ASSET_FIELDS: ModuleField[] = [
   { key: 'category', kind: 'category', aliases: CATEGORY_ALIASES },
   { key: 'location', kind: 'location', aliases: LOCATION_ALIASES },
   { key: 'serial_no', kind: 'text', aliases: ['serienr', 'serie_nr', 'serienummer', 'serial', 'serial_no', 'serial_number'] },
-  { key: 'status', kind: 'text', aliases: ['status'] },
+  { key: 'barcode', kind: 'text', aliases: ['stregkode', 'stregkode_nr', 'barcode', 'ean', 'gtin'] },
+  // assets.status er NOT NULL default 'in_stock' — en tom celle betyder
+  // derfor "på lager", ikke "ingen status".
+  { key: 'status', kind: 'enum', aliases: ['status'], synonyms: ASSET_STATUS_SYNONYMS, emptyValue: 'in_stock' },
   { key: 'condition', kind: 'text', aliases: ['stand', 'tilstand', 'condition'] },
   { key: 'purchased_at', kind: 'date', aliases: ['koebsdato', 'købsdato', 'koebt', 'purchased_at', 'purchase_date', 'bought'] },
   { key: 'purchase_price', kind: 'number', aliases: ['koebspris', 'købspris', 'pris', 'purchase_price', 'price', 'cost'] },
@@ -73,8 +109,9 @@ export const MODULE_SPECS: Record<ImportModule, ModuleSpec> = {
     requiredKeys: ['asset_tag', 'name'],
     defaultFields: ASSET_FIELDS.map((f) => f.key),
     selectColumns:
-      'id, asset_tag, name, category_id, location_id, serial_no, status, condition, purchased_at, purchase_price, warranty_until, is_active',
+      'id, asset_tag, name, category_id, location_id, serial_no, barcode, status, condition, purchased_at, purchase_price, warranty_until, is_active',
     zeroDefaultFields: [],
+    uniqueFields: ['barcode'], // assets_company_id_barcode_key
   },
   inventory: {
     module: 'inventory',
@@ -90,6 +127,7 @@ export const MODULE_SPECS: Record<ImportModule, ModuleSpec> = {
     selectColumns:
       'id, sku, name, category_id, location_id, quantity, reorder_point, unit, unit_cost, on_order, is_active',
     zeroDefaultFields: ['quantity', 'on_order'],
+    uniqueFields: [], // sku er keyField og tjekkes allerede som nøgle
   },
 }
 
@@ -111,10 +149,17 @@ export type CoercedValue =
   | { ok: false }
 
 // Rå strengværdi → typet celleværdi. Tomme værdier bliver null; number
-// accepterer komma-decimaler (da), date accepterer ISO og dd-mm-yyyy.
-export function coerceValue(kind: ModuleFieldKind, raw: unknown): CoercedValue {
+// accepterer komma-decimaler (da), date accepterer ISO og dd-mm-yyyy, enum
+// accepterer den kanoniske nøgle og feltets da/en-etiketter.
+export function coerceValue(field: ModuleField, raw: unknown): CoercedValue {
+  const kind = field.kind
   const text = String(raw ?? '').trim()
   if (!text) return { ok: true, value: null }
+
+  if (kind === 'enum') {
+    const key = field.synonyms?.[text.toLowerCase()]
+    return key ? { ok: true, value: key } : { ok: false }
+  }
 
   if (kind === 'number') {
     // Med komma ('1.234,56') er punktum tusindtalsseparator og komma decimal.

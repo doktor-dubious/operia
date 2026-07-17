@@ -16,6 +16,7 @@ object LocalStore {
     private const val PREFS = "operia_local"
     private const val KEY_PENDING = "pending_receives"
     private const val KEY_BRAND = "brand"
+    private const val KEY_HANDHELD = "handheld_design"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -79,5 +80,20 @@ object LocalStore {
 
     fun cacheBrand(ctx: Context, brand: Brand) {
         prefs(ctx).edit().putString(KEY_BRAND, json.encodeToString(Brand.serializer(), brand)).apply()
+    }
+
+    /** Cachet handheld-design, så startskærmen ser rigtig ud offline / før
+     *  bootstrap er færdig (samme mønster som branding). */
+    fun handheld(ctx: Context): HandheldConfig {
+        val raw = prefs(ctx).getString(KEY_HANDHELD, null) ?: return HandheldConfig()
+        return runCatching {
+            json.decodeFromString(HandheldConfig.serializer(), raw)
+        }.getOrDefault(HandheldConfig())
+    }
+
+    fun cacheHandheld(ctx: Context, cfg: HandheldConfig) {
+        prefs(ctx).edit()
+            .putString(KEY_HANDHELD, json.encodeToString(HandheldConfig.serializer(), cfg))
+            .apply()
     }
 }

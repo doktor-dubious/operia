@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ParcelStatusBadge, type ParcelStatus } from '@/components/parcel-status-badge'
 import { SignaturePad, signatureBlob } from '@/components/signature-pad'
+import { ScannerIndicator } from '@/components/scanner-indicator'
+import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
@@ -52,11 +54,15 @@ function HandoutPage() {
   const [hasInk, setHasInk] = useState(false)
   const [busy, setBusy] = useState(false)
   const [sessionList, setSessionList] = useState<SessionEntry[]>([])
+  // Tælles op ved hver hardware-scanning, så ScannerIndicator kan blinke.
+  const [scanSignal, setScanSignal] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const lookupRef = useRef<HTMLInputElement>(null)
 
-  const search = async () => {
-    if (!lookup.trim() || !companyId) return
+  // term kan gives af scanneren, da lookup-state opdateres asynkront.
+  const search = async (term?: string) => {
+    const q = (term ?? lookup).trim()
+    if (!q || !companyId) return
     setNotFound(false)
     setParcel(null)
     const { data, error } = await supabase
@@ -69,7 +75,7 @@ function HandoutPage() {
          handling:handling_classes (name, allow_proxy_collection)`,
       )
       .eq('company_id', companyId)
-      .eq('barcode', lookup.trim())
+      .eq('barcode', q)
       .in('status', [...OPEN_STATUSES])
       .order('registered_at', { ascending: false })
       .limit(1)
@@ -108,6 +114,17 @@ function HandoutPage() {
     setHasInk(false)
     lookupRef.current?.focus()
   }
+
+  // Hardware-scanner (keyboard-wedge): en scanning slår pakken op med det samme,
+  // også uden at opslagsfeltet er i fokus.
+  useBarcodeScanner({
+    targetRef: lookupRef,
+    onScan: (code) => {
+      setLookup(code)
+      setScanSignal((n) => n + 1)
+      search(code)
+    },
+  })
 
   const isProxy =
     !!parcel?.receiverName &&
@@ -175,7 +192,10 @@ function HandoutPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="lookup">{t('handout.lookup')}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lookup">{t('handout.lookup')}</Label>
+              <ScannerIndicator signal={scanSignal} />
+            </div>
             <div className="flex gap-2">
               <Input
                 id="lookup"
@@ -192,7 +212,7 @@ function HandoutPage() {
                   }
                 }}
               />
-              <Button type="button" variant="outline" onClick={search}>
+              <Button type="button" variant="outline" onClick={() => search()}>
                 <Search className="size-4" /> {t('common.search')}
               </Button>
             </div>

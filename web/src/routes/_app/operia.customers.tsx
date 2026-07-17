@@ -42,6 +42,7 @@ import { readEdgeError } from '@/lib/edge'
 import { CURRENCY_OPTIONS } from '@/lib/currencies'
 import { LANG_OPTIONS, catalogDescription, catalogName } from '@/lib/languages'
 import { supabase } from '@/lib/supabase'
+import { isValidEmail } from '@/lib/validation'
 
 // Operia → Kunder (DCA-ejet, kun platform-admins). Samme mønster som
 // stamdata-siderne (fx skabe): tabel + detaljepanel med gem/annullér-bjælke,
@@ -89,8 +90,6 @@ function useCatalog() {
     },
   })
 }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
@@ -383,7 +382,7 @@ function CustomerDetailPane({
 
   const saveAll = async () => {
     const trimmedEmail = purchEmail.trim()
-    if (trimmedEmail && !EMAIL_RE.test(trimmedEmail)) {
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       toast.error(t('customerDetail.purchasingEmailInvalid'))
       return
     }

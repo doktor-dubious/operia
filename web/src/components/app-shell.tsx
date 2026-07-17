@@ -31,6 +31,7 @@ import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useRefreshInterval } from '@/hooks/use-platform-settings'
+import { useParcelsRealtime } from '@/hooks/use-parcels-realtime'
 import { useActiveAppearance } from '@/hooks/use-active-appearance'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
@@ -503,6 +504,11 @@ function PageHeader() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { navMode } = useUiSettings()
+  // Realtime på pakker: håndterminalens handlinger slår igennem med det samme.
+  // Ligger her i skallen (ikke på den enkelte skærm), så ét abonnement dækker
+  // alle pakkeskærme — ved siden af auto-refresh'en i HeaderActions, der bliver
+  // stående som fallback.
+  useParcelsRealtime()
 
   if (navMode === 'modern') {
     return (

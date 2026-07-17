@@ -83,6 +83,58 @@ data class ProductAppearance(
 @Serializable
 data class Brand(val name: String = "Operia", val color: String = "#2D6FF0")
 
+// ---------- handheld-design (Operia → Handheld-design) ----------
+//
+// Platformens opsætning af DENNE skærm, redigeret i webbens Operia-konfiguration
+// og gemt på platform_settings.handheld_tiles/.handheld_design. Modellerne
+// spejler web/src/lib/handheld-tiles.ts — feltnavne SKAL matche JSON'en dér.
+// Alle felter har defaults: en tom/delvis konfiguration skal give appens
+// standardudseende, ikke et crash.
+
+/** Per-flise-overstyring. Udeladt felt = "brug standard". */
+@Serializable
+data class HandheldTileCfg(
+    val key: String = "",
+    /** Fjernet fra startskærmen. Fravær i listen betyder IKKE fjernet — det er
+     *  et flag, jf. normalizeHandheldTiles i webben. */
+    val enabled: Boolean? = null,
+    val title: String? = null,
+    val titleEnabled: Boolean? = null,
+    val subtitle: String? = null,
+    val subtitleEnabled: Boolean? = null,
+    val icon: String? = null,
+    val color: String? = null,
+    val background: String? = null,
+)
+
+/** Indholdselementer + ikon-tema. */
+@Serializable
+data class HandheldDesignCfg(
+    val iconTheme: String = "happy",
+    val welcomeTitle: String = "",
+    val welcomeTitleEnabled: Boolean = false,
+    val subtitle: String = "",
+    val subtitleEnabled: Boolean = true,
+    val logoUrl: String = "",
+    val logoEnabled: Boolean = false,
+    val heroUrl: String = "",
+    val heroEnabled: Boolean = false,
+)
+
+/** Samlet handheld-design, som det caches og læses af HomeScreen. */
+@Serializable
+data class HandheldConfig(
+    val tiles: List<HandheldTileCfg> = emptyList(),
+    val design: HandheldDesignCfg = HandheldDesignCfg(),
+)
+
+/** Rå række fra platform_settings (singleton). */
+@Serializable
+data class PlatformHandheldRow(
+    val handheld_tiles: List<HandheldTileCfg> = emptyList(),
+    val handheld_design: HandheldDesignCfg = HandheldDesignCfg(),
+)
+
 @Serializable
 data class InventoryItem(
     val id: String,

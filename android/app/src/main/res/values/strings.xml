@@ -23,7 +23,7 @@
     <string name="greeting_evening">Godaften</string>
     <string name="tile_receive">Modtag pakke</string>
     <string name="tile_receive_sub">Scan &amp; registrér</string>
-    <string name="tile_handout">Udlever pakke</string>
+    <string name="tile_handout">Udlever / afvis</string>
     <string name="tile_handout_sub">Find &amp; kvittér</string>
     <string name="tile_search">Søg</string>
     <string name="tile_search_sub">Find en pakke</string>
@@ -46,6 +46,8 @@
     <string name="cancel">Annullér</string>
     <string name="save">Gem</string>
     <string name="note_optional">Note (valgfri)</string>
+    <string name="reason_required">Årsag (påkrævet)</string>
+    <string name="reason_placeholder">hvorfor afvises/returneres pakken?</string>
     <string name="note_placeholder">bemærkning</string>
     <string name="receiver_prefix">Modtager: %1$s</string>
     <string name="registered_prefix">Registreret: %1$s</string>
@@ -82,7 +84,7 @@
     <string name="receive_saved_confirm">✓ %1$d pakke(r) gemt</string>
 
     <!-- udlever -->
-    <string name="handout_title">Udlever pakke</string>
+    <string name="handout_title">Udlever / afvis</string>
     <string name="handout_scan_label">Scan pakke</string>
     <string name="handout_empty">Scan en pakke for at udlevere</string>
     <string name="handout_not_found">Ingen pakke med kode</string>
@@ -97,6 +99,12 @@
     <string name="handout_deliver_button">Udlever</string>
     <string name="handout_done">Udleveret til %1$s</string>
     <string name="handout_failed">Kunne ikke udlevere</string>
+    <string name="handout_reject_button">Afvis pakke</string>
+    <string name="handout_return_button">Returnér til afsender</string>
+    <string name="handout_reject_confirm">Afvis</string>
+    <string name="handout_return_confirm">Returnér</string>
+    <string name="handout_rejected">Pakke afvist</string>
+    <string name="handout_returned">Pakke returneret til afsender</string>
 
     <!-- underskrift -->
     <string name="signature_title">Underskrift</string>

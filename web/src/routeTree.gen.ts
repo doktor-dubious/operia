@@ -45,6 +45,7 @@ import { Route as AppOperiaLogDrainsRouteImport } from './routes/_app/operia.log
 import { Route as AppOperiaLocalizationRouteImport } from './routes/_app/operia.localization'
 import { Route as AppOperiaIntegrationsRouteImport } from './routes/_app/operia.integrations'
 import { Route as AppOperiaHomeDesignRouteImport } from './routes/_app/operia.home-design'
+import { Route as AppOperiaHandheldDesignRouteImport } from './routes/_app/operia.handheld-design'
 import { Route as AppOperiaGeneralRouteImport } from './routes/_app/operia.general'
 import { Route as AppOperiaDataTransferRouteImport } from './routes/_app/operia.data-transfer'
 import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.customers'
@@ -258,6 +259,11 @@ const AppOperiaHomeDesignRoute = AppOperiaHomeDesignRouteImport.update({
   path: '/home-design',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaHandheldDesignRoute = AppOperiaHandheldDesignRouteImport.update({
+  id: '/handheld-design',
+  path: '/handheld-design',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaGeneralRoute = AppOperiaGeneralRouteImport.update({
   id: '/general',
   path: '/general',
@@ -469,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/operia/customers': typeof AppOperiaCustomersRoute
   '/operia/data-transfer': typeof AppOperiaDataTransferRoute
   '/operia/general': typeof AppOperiaGeneralRoute
+  '/operia/handheld-design': typeof AppOperiaHandheldDesignRoute
   '/operia/home-design': typeof AppOperiaHomeDesignRoute
   '/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/operia/localization': typeof AppOperiaLocalizationRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/operia/customers': typeof AppOperiaCustomersRoute
   '/operia/data-transfer': typeof AppOperiaDataTransferRoute
   '/operia/general': typeof AppOperiaGeneralRoute
+  '/operia/handheld-design': typeof AppOperiaHandheldDesignRoute
   '/operia/home-design': typeof AppOperiaHomeDesignRoute
   '/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/operia/localization': typeof AppOperiaLocalizationRoute
@@ -610,6 +618,7 @@ export interface FileRoutesById {
   '/_app/operia/customers': typeof AppOperiaCustomersRoute
   '/_app/operia/data-transfer': typeof AppOperiaDataTransferRoute
   '/_app/operia/general': typeof AppOperiaGeneralRoute
+  '/_app/operia/handheld-design': typeof AppOperiaHandheldDesignRoute
   '/_app/operia/home-design': typeof AppOperiaHomeDesignRoute
   '/_app/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/_app/operia/localization': typeof AppOperiaLocalizationRoute
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/operia/customers'
     | '/operia/data-transfer'
     | '/operia/general'
+    | '/operia/handheld-design'
     | '/operia/home-design'
     | '/operia/integrations'
     | '/operia/localization'
@@ -751,6 +761,7 @@ export interface FileRouteTypes {
     | '/operia/customers'
     | '/operia/data-transfer'
     | '/operia/general'
+    | '/operia/handheld-design'
     | '/operia/home-design'
     | '/operia/integrations'
     | '/operia/localization'
@@ -822,6 +833,7 @@ export interface FileRouteTypes {
     | '/_app/operia/customers'
     | '/_app/operia/data-transfer'
     | '/_app/operia/general'
+    | '/_app/operia/handheld-design'
     | '/_app/operia/home-design'
     | '/_app/operia/integrations'
     | '/_app/operia/localization'
@@ -1113,6 +1125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaHomeDesignRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/handheld-design': {
+      id: '/_app/operia/handheld-design'
+      path: '/handheld-design'
+      fullPath: '/operia/handheld-design'
+      preLoaderRoute: typeof AppOperiaHandheldDesignRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/general': {
       id: '/_app/operia/general'
       path: '/general'
@@ -1389,6 +1408,7 @@ interface AppOperiaRouteChildren {
   AppOperiaCustomersRoute: typeof AppOperiaCustomersRoute
   AppOperiaDataTransferRoute: typeof AppOperiaDataTransferRoute
   AppOperiaGeneralRoute: typeof AppOperiaGeneralRoute
+  AppOperiaHandheldDesignRoute: typeof AppOperiaHandheldDesignRoute
   AppOperiaHomeDesignRoute: typeof AppOperiaHomeDesignRoute
   AppOperiaIntegrationsRoute: typeof AppOperiaIntegrationsRoute
   AppOperiaLocalizationRoute: typeof AppOperiaLocalizationRoute
@@ -1411,6 +1431,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaCustomersRoute: AppOperiaCustomersRoute,
   AppOperiaDataTransferRoute: AppOperiaDataTransferRoute,
   AppOperiaGeneralRoute: AppOperiaGeneralRoute,
+  AppOperiaHandheldDesignRoute: AppOperiaHandheldDesignRoute,
   AppOperiaHomeDesignRoute: AppOperiaHomeDesignRoute,
   AppOperiaIntegrationsRoute: AppOperiaIntegrationsRoute,
   AppOperiaLocalizationRoute: AppOperiaLocalizationRoute,

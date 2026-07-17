@@ -201,6 +201,7 @@ export const operiaConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'operiaGeneral', href: '/operia/general' },
   { labelKey: 'operiaProducts', href: '/operia/products' },
   { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
+  { labelKey: 'operiaHandheldDesign', href: '/operia/handheld-design' },
   { labelKey: 'operiaCarriers', href: '/operia/carriers' },
   { labelKey: 'operiaShipping', href: '/operia/shipping' },
   { labelKey: 'operiaAssets', href: '/operia/assets' },

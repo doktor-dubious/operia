@@ -80,6 +80,18 @@ object Repository {
                 limit(1)
             }.decodeList<ProductAppearance>().firstOrNull()
 
+    /**
+     * Platformens handheld-design (Operia → Handheld-design). Singleton-række;
+     * platform_settings_select er `using (true)`, så enhver logget ind bruger
+     * må læse den — kun skrivning er platform-admin.
+     */
+    suspend fun handheldConfig(): HandheldConfig? =
+        supabase.from("platform_settings")
+            .select(Columns.list("handheld_tiles", "handheld_design")) { limit(1) }
+            .decodeList<PlatformHandheldRow>()
+            .firstOrNull()
+            ?.let { HandheldConfig(it.handheld_tiles, it.handheld_design) }
+
     // ---------- pakker ----------
 
     suspend fun insertParcels(rows: List<ParcelInsert>): List<Parcel> =
@@ -127,6 +139,49 @@ object Repository {
             set("delivered_to", deliveredTo)
             set("delivered_note", note)
             if (signaturePath != null) set("delivered_signature_path", signaturePath)
+        }) {
+            select(Columns.list("id"))
+            filter { eq("id", parcelId) }
+        }.decodeList<IdRow>()
+        requireUpdated(updated)
+    }
+
+    /**
+     * Afvis pakke (spec §handover: modtageren nægter at modtage). Årsagen er
+     * påkrævet — afvisninger er undtagelseshændelser, der havner i
+     * dashboardets undtagelsesliste og eskaleres i audit-loggen, så en
+     * afvisning uden begrundelse er ubrugelig for den, der skal følge op.
+     * Underskrift er valgfri (samme som udlevering): modtageren står typisk
+     * ved skranken og kan kvittere for selve afvisningen, men kan ikke tvinges.
+     *
+     * delivered_to nulstilles med vilje — ingen har modtaget pakken.
+     * Tilladt fra registered/in_storage/in_transit (jf. state-maskinen i
+     * parcel_transition_allowed — bemærk at in_locker IKKE må afvises).
+     */
+    suspend fun rejectParcel(parcelId: String, note: String, signaturePath: String?) {
+        val updated = supabase.from("parcels").update({
+            set("status", "rejected")
+            set("delivered_to", null as String?)
+            set("delivered_note", note)
+            if (signaturePath != null) set("delivered_signature_path", signaturePath)
+        }) {
+            select(Columns.list("id"))
+            filter { eq("id", parcelId) }
+        }.decodeList<IdRow>()
+        requireUpdated(updated)
+    }
+
+    /**
+     * Returnér pakke (retur til afsender). Årsagen er påkrævet — som ved
+     * afvisning. Ingen underskrift: der er ingen modtager til stede at kvittere.
+     * Tilladt fra unassigned/in_storage/in_transit/in_locker/rejected
+     * (jf. state-maskinen — bemærk at 'registered' IKKE må returneres).
+     */
+    suspend fun returnParcel(parcelId: String, note: String) {
+        val updated = supabase.from("parcels").update({
+            set("status", "returned")
+            set("delivered_to", null as String?)
+            set("delivered_note", note)
         }) {
             select(Columns.list("id"))
             filter { eq("id", parcelId) }

@@ -20,7 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { MessageSquare } from 'lucide-react'
 import { ParcelFlowFields, QuietHoursField } from '@/components/company-config-fields'
 import { Field } from '@/components/detail-field'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -71,6 +73,8 @@ function NotificationsPage() {
   const [notifType, setNotifType] = useState('parcel_flow')
   const [saving, setSaving] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  const [testPhone, setTestPhone] = useState('')
+  const [testSending, setTestSending] = useState(false)
 
   // Effektive værdier: virksomhedens egne, ellers platformens standard.
   const savedR1 = data?.parcel_reminder_1_days ?? platform?.parcel_reminder_1_days ?? 3
@@ -174,6 +178,27 @@ function NotificationsPage() {
     queryClient.invalidateQueries({ queryKey: ['company-notifications', companyId] })
   }
 
+  // Test-SMS: sender via edge-funktionen send-test-sms (som genverificerer
+  // rollen server-side og bruger GATEWAYAPI_TOKEN). Rører ingen indstillinger.
+  const sendTest = async () => {
+    const phone = testPhone.trim()
+    if (!phone) return
+    setTestSending(true)
+    const { data: res, error } = await supabase.functions.invoke('send-test-sms', {
+      body: { phone },
+    })
+    setTestSending(false)
+    if (error) {
+      toast.error(describeError(error, t))
+      return
+    }
+    if (res?.ok) {
+      toast.success(t('notificationsPage.testSmsOk'))
+    } else {
+      toast.error(t('notificationsPage.testSmsFail', { error: res?.error ?? 'unknown' }))
+    }
+  }
+
   if (isPending || !values || !companyId) return <Skeleton className="h-40 w-full" />
 
   return (
@@ -197,6 +222,36 @@ function NotificationsPage() {
               onStartChange={(v) => setValues({ ...values, quietStart: v })}
               onEndChange={(v) => setValues({ ...values, quietEnd: v })}
             />
+
+            <Field label={t('notificationsPage.testSms')}>
+              <p className="mb-2 text-xs text-muted-foreground">
+                {t('notificationsPage.testSmsHint')}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={testPhone}
+                  inputMode="tel"
+                  autoComplete="off"
+                  placeholder={t('notificationsPage.testSmsPlaceholder')}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      sendTest()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={testSending || !testPhone.trim()}
+                  onClick={sendTest}
+                >
+                  <MessageSquare className="size-4" />
+                  {testSending ? t('common.loading') : t('notificationsPage.testSmsButton')}
+                </Button>
+              </div>
+            </Field>
           </section>
 
           <section className="flex flex-col gap-5">

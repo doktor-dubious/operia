@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { describeError } from '@/lib/errors'
-import { toast } from 'sonner'
 import { motion } from 'motion/react'
-import { Image as ImageIcon, ImageUp, Plus, Settings2, Square } from 'lucide-react'
+import { Image as ImageIcon, Plus, Settings2, Square } from 'lucide-react'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { Expand } from '@/components/animate-ui/icons/expand'
 import { Shrink } from '@/components/animate-ui/icons/shrink'
@@ -26,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ColorPicker } from '@/components/color-picker'
+import { DesignImageField, ToggleSection } from '@/components/design-editor-fields'
 import { DetailTabs } from '@/components/detail-tabs'
 import {
   DEFAULT_HOME_DESIGN,
@@ -50,7 +49,6 @@ import {
   type TileSize,
 } from '@/lib/home-tiles'
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
 
 // Fælles Home-design-editor: rutenet (kolonner/rækker/gap + farvetema), fliser
 // (produkt-/billede-/tomme, træk for at flytte — first-fit-pakning) og
@@ -80,127 +78,6 @@ const sameOrder = (a: TileLayoutItem[], b: TileLayoutItem[]) =>
   a.length === b.length && a.every((t, i) => sameTile(t, b[i]))
 const sameDesign = (a: HomeDesign, b: HomeDesign) =>
   (Object.keys(DEFAULT_HOME_DESIGN) as (keyof HomeDesign)[]).every((k) => a[k] === b[k])
-
-// Billedfelt à la Konfigurér → Logo: valgfri URL (kun logo) + upload til den
-// offentlige company-logos-bucket (home-design-mappe) + forhåndsvisning.
-function HomeImageField({
-  url,
-  onChange,
-  kind,
-  allowUrl,
-}: {
-  url: string
-  onChange: (url: string) => void
-  kind: 'logo' | 'hero' | 'tile'
-  allowUrl?: boolean
-}) {
-  const { t } = useTranslation()
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  const upload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('customerDetail.logoNotImage'))
-      return
-    }
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
-    const path = `home-design/${kind}-${Date.now()}.${ext}`
-    setUploading(true)
-    const { error } = await supabase.storage.from('company-logos').upload(path, file, { upsert: true })
-    setUploading(false)
-    if (error) {
-      console.error('Kunne ikke uploade billede:', error)
-      toast.error(describeError(error, t))
-      return
-    }
-    onChange(supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl)
-  }
-
-  return (
-    <div className="flex max-w-xl flex-col gap-3">
-      {allowUrl && (
-        <Input
-          value={url}
-          placeholder="https://…/image.png"
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-      <button
-        type="button"
-        disabled={uploading}
-        className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-border p-6 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground-light disabled:cursor-default disabled:opacity-60"
-        onClick={() => fileRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault()
-          const file = e.dataTransfer.files?.[0]
-          if (file) upload(file)
-        }}
-      >
-        <ImageUp className="size-5" />
-        <span className="text-[13px]">
-          {uploading ? t('common.loading') : t('customerDetail.logoDropHint')}
-        </span>
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) upload(file)
-          e.target.value = ''
-        }}
-      />
-      {url && (
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'flex items-center justify-center overflow-hidden rounded-md border bg-muted/30 p-2',
-              kind === 'logo' ? 'h-16 w-32' : 'h-24 w-full',
-            )}
-          >
-            <img src={url} alt="" className="max-h-full max-w-full object-contain" />
-          </div>
-          <Button size="sm" variant="ghost" onClick={() => onChange('')}>
-            {t('customerDetail.removeLogo')}
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Fælles til/fra-boks omkring et indholdselement (titel/undertitel/logo/hero).
-function ToggleSection({
-  id,
-  label,
-  checked,
-  onCheckedChange,
-  children,
-}: {
-  id: string
-  label: string
-  checked: boolean
-  onCheckedChange: (v: boolean) => void
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        'flex flex-col gap-3 rounded-lg border p-3',
-        checked && 'border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/10',
-      )}
-    >
-      <label htmlFor={id} className="flex cursor-pointer items-center gap-2">
-        <Checkbox id={id} checked={checked} onCheckedChange={(v) => onCheckedChange(v === true)} />
-        <span className="text-[13px] font-[450]">{label}</span>
-      </label>
-      {checked && <div className="pl-6">{children}</div>}
-    </div>
-  )
-}
 
 // Per-flise-konfiguration (popup). Felterne afhænger af flise-arten:
 //  - produkt: titel, ikon, størrelse, farve, hjørner
@@ -250,10 +127,11 @@ function TileConfigDialog({
           {item.kind === 'image' && (
             <div className="flex flex-col gap-2">
               <Label className="text-label">{t('homeDesignPage.tileImage')}</Label>
-              <HomeImageField
+              <DesignImageField
                 url={item.imageUrl ?? ''}
                 onChange={(u) => onPatch({ imageUrl: u })}
                 kind="tile"
+                pathPrefix="home-design"
               />
             </div>
           )}
@@ -780,10 +658,11 @@ export function HomeDesignEditor({
                 checked={design.logoEnabled}
                 onCheckedChange={(v) => patchDesign({ logoEnabled: v })}
               >
-                <HomeImageField
+                <DesignImageField
                   url={design.logoUrl}
                   onChange={(u) => patchDesign({ logoUrl: u })}
                   kind="logo"
+                  pathPrefix="home-design"
                   allowUrl
                 />
               </ToggleSection>
@@ -794,10 +673,11 @@ export function HomeDesignEditor({
                 checked={design.heroEnabled}
                 onCheckedChange={(v) => patchDesign({ heroEnabled: v })}
               >
-                <HomeImageField
+                <DesignImageField
                   url={design.heroUrl}
                   onChange={(u) => patchDesign({ heroUrl: u })}
                   kind="hero"
+                  pathPrefix="home-design"
                 />
               </ToggleSection>
             </div>

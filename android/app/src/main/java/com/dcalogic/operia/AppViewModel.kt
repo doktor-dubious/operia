@@ -10,6 +10,7 @@ import com.dcalogic.operia.data.AssetLocation
 import com.dcalogic.operia.data.Brand
 import com.dcalogic.operia.data.Department
 import com.dcalogic.operia.data.Employee
+import com.dcalogic.operia.data.HandheldConfig
 import com.dcalogic.operia.data.LocalStore
 import com.dcalogic.operia.data.supabase
 import io.github.jan.supabase.auth.auth
@@ -35,6 +36,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var assetLocations by mutableStateOf<List<AssetLocation>>(emptyList())
     var storageLocations by mutableStateOf<List<com.dcalogic.operia.data.StorageLocation>>(emptyList())
     var brand by mutableStateOf(Brand()); private set
+    /** Platformens handheld-design (Operia → Handheld-design). Tom = appens
+     *  standardudseende, så skærmen virker før/uden konfiguration. */
+    var handheld by mutableStateOf(HandheldConfig()); private set
     var pendingCount by mutableStateOf(0); private set
     var bootstrapError by mutableStateOf<String?>(null); private set
 
@@ -47,6 +51,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         brand = LocalStore.brand(app)
+        handheld = LocalStore.handheld(app)
         viewModelScope.launch {
             supabase.auth.sessionStatus.collect { status ->
                 when (status) {
@@ -90,6 +95,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     .filter { it.valid_until == null || it.valid_until > now }
                     .map { it.feature_key }
                     .toSet()
+            }
+
+            // Handheld-designet er platform-globalt (ikke pr. virksomhed) —
+            // fejler hentningen, beholder vi det cachede/standarden.
+            runCatching {
+                Repository.handheldConfig()?.let { cfg ->
+                    handheld = cfg
+                    LocalStore.cacheHandheld(ctx, cfg)
+                }
             }
 
             runCatching {

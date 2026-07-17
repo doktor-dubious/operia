@@ -247,6 +247,7 @@ function categoryOf(action: string): string {
     case 'appearance':
     case 'product_text':
     case 'home':
+    case 'handheld':
       return 'branding'
     case 'maps':
     case 'route':

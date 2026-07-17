@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { EmployeePicker, type PickedEmployee } from '@/components/employee-picker'
+import { ScannerIndicator } from '@/components/scanner-indicator'
 import type { ParcelStatus } from '@/components/parcel-status-badge'
+import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { supabase } from '@/lib/supabase'
 
 // Modtag pakke (spec Flow 1): stregkode → modtager-autocomplete (afdeling
@@ -203,6 +205,8 @@ export function ParcelReceiveForm({
 
   const [barcode, setBarcode] = useState('')
   const [duplicate, setDuplicate] = useState(false)
+  // Tælles op ved hver hardware-scanning, så ScannerIndicator kan blinke.
+  const [scanSignal, setScanSignal] = useState(0)
   const [receiver, setReceiver] = useState<PickedEmployee | null>(null)
   const [departmentId, setDepartmentId] = useState<string>(NONE)
   const [carrierId, setCarrierId] = useState<string>(NONE)
@@ -238,6 +242,17 @@ export function ParcelReceiveForm({
       .limit(1)
     setDuplicate(!!data?.length)
   }
+
+  // Hardware-scanner (keyboard-wedge): en scanning hvor som helst på siden
+  // udfylder stregkoden og tjekker for dublet — også uden at feltet er i fokus.
+  useBarcodeScanner({
+    targetRef: barcodeRef,
+    onScan: (code) => {
+      setBarcode(code)
+      setScanSignal((n) => n + 1)
+      checkDuplicate(code)
+    },
+  })
 
   const reset = () => {
     setBarcode('')
@@ -307,7 +322,10 @@ export function ParcelReceiveForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="barcode">{t('receive.barcode')}</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="barcode">{t('receive.barcode')}</Label>
+          <ScannerIndicator signal={scanSignal} />
+        </div>
         <Input
           id="barcode"
           ref={barcodeRef}

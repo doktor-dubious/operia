@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Field } from '@/components/detail-field'
+import { LoanTtlSelect } from '@/components/loan-ttl-select'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { supabase } from '@/lib/supabase'
 
@@ -36,10 +37,6 @@ import { supabase } from '@/lib/supabase'
 export const Route = createFileRoute('/_app/operia/assets')({
   component: AssetsConfigPage,
 })
-
-// Prototypens muligheder for standardudløb (timer; null = intet udløb).
-const TTL_OPTIONS = [12, 24, 48, 72, 168, 336] as const
-const TTL_NONE = 'none'
 
 function useDefaultCategories() {
   return useQuery({
@@ -72,11 +69,6 @@ function AssetsConfigPage() {
   }, [settings])
 
   const dirty = !!settings && ttl !== settings.locker_loan_ttl_hours
-
-  const ttlLabel = (hours: number) =>
-    hours < 168
-      ? t('assetsConfig.ttlHours', { hours, days: hours / 24 })
-      : t('assetsConfig.ttlDays', { days: hours / 24 })
 
   const save = async () => {
     setSaving(true)
@@ -143,22 +135,7 @@ function AssetsConfigPage() {
 
         <div className="flex flex-col gap-8">
           <Field label={t('assetsConfig.ttlLabel')} info={t('assetsConfig.ttlHint')}>
-            <Select
-              value={ttl === null ? TTL_NONE : String(ttl)}
-              onValueChange={(v) => setTtl(v === TTL_NONE ? null : Number(v))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TTL_OPTIONS.map((hours) => (
-                  <SelectItem key={hours} value={String(hours)}>
-                    {ttlLabel(hours)}
-                  </SelectItem>
-                ))}
-                <SelectItem value={TTL_NONE}>{t('assetsConfig.ttlNone')}</SelectItem>
-              </SelectContent>
-            </Select>
+            <LoanTtlSelect value={ttl} onChange={setTtl} />
           </Field>
 
           <div className="flex max-w-2xl flex-col gap-3">

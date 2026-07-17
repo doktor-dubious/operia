@@ -20,7 +20,7 @@
     <string name="greeting_evening">Good evening</string>
     <string name="tile_receive">Receive parcel</string>
     <string name="tile_receive_sub">Scan &amp; register</string>
-    <string name="tile_handout">Hand over parcel</string>
+    <string name="tile_handout">Handover</string>
     <string name="tile_handout_sub">Find &amp; sign off</string>
     <string name="tile_search">Search</string>
     <string name="tile_search_sub">Find a parcel</string>
@@ -43,6 +43,8 @@
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
     <string name="note_optional">Note (optional)</string>
+    <string name="reason_required">Reason (required)</string>
+    <string name="reason_placeholder">why is the parcel rejected/returned?</string>
     <string name="note_placeholder">remark</string>
     <string name="receiver_prefix">Receiver: %1$s</string>
     <string name="registered_prefix">Registered: %1$s</string>
@@ -79,7 +81,7 @@
     <string name="receive_saved_confirm">✓ %1$d parcel(s) saved</string>
 
     <!-- handout -->
-    <string name="handout_title">Hand over parcel</string>
+    <string name="handout_title">Handover</string>
     <string name="handout_scan_label">Scan parcel</string>
     <string name="handout_empty">Scan a parcel to hand it over</string>
     <string name="handout_not_found">No parcel with code</string>
@@ -94,6 +96,12 @@
     <string name="handout_deliver_button">Hand over</string>
     <string name="handout_done">Handed over to %1$s</string>
     <string name="handout_failed">Could not hand over</string>
+    <string name="handout_reject_button">Reject parcel</string>
+    <string name="handout_return_button">Return to sender</string>
+    <string name="handout_reject_confirm">Reject</string>
+    <string name="handout_return_confirm">Return</string>
+    <string name="handout_rejected">Parcel rejected</string>
+    <string name="handout_returned">Parcel returned to sender</string>
 
     <!-- signature -->
     <string name="signature_title">Signature</string>

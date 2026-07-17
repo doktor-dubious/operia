@@ -141,6 +141,8 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         cols[LOC_COLUMN] = cell ? resolveRef('location', String(cell)) : null
       } else if (f.kind === 'number' && cell === null && zeroDefaults.has(key)) {
         cols[key] = 0
+      } else if (cell === null && f.emptyValue !== undefined) {
+        cols[key] = f.emptyValue
       } else {
         cols[key] = cell
       }
@@ -265,6 +267,10 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
       const rows: CsvRow[] = []
       const errors: RowError[] = []
       const seen = new Map<string, number>()
+      // Afviste rækker er stadig I filen — deres nøgle skal tælle med i
+      // fileKeys nedenfor, ellers ville én ugyldig celle (fx en ukendt status)
+      // deaktivere et eksisterende aktiv (samme ræsonnement som konfliktrækker).
+      const rejectedKeys = new Set<string>()
       records.forEach((rec, i) => {
         const rowNumber = i + firstDataRow
         const keyRaw = String(rec[spec.keyField] ?? '').trim()
@@ -275,6 +281,7 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         }
         if (!name) {
           errors.push({ row: rowNumber, reason: t('importPage.reasonMissingName') })
+          rejectedKeys.add(keyRaw)
           return
         }
         if (seen.has(keyRaw)) {
@@ -287,10 +294,14 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         for (const key of presentFields) {
           const f = fieldMap[key]
           if (!f) continue
-          const coerced = coerceValue(f.kind, rec[key])
+          const coerced = coerceValue(f, rec[key])
           if (!coerced.ok) {
             const reasonKey =
-              f.kind === 'date' ? 'moduleImport.common.reasonInvalidDate' : 'moduleImport.common.reasonInvalidNumber'
+              f.kind === 'date'
+                ? 'moduleImport.common.reasonInvalidDate'
+                : f.kind === 'enum'
+                  ? 'moduleImport.common.reasonInvalidStatus'
+                  : 'moduleImport.common.reasonInvalidNumber'
             cellError = t(reasonKey, { field: fieldLabel(key) })
             break
           }
@@ -298,6 +309,7 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         }
         if (cellError) {
           errors.push({ row: rowNumber, reason: cellError })
+          rejectedKeys.add(keyRaw)
           return
         }
         seen.set(keyRaw, rowNumber)
@@ -338,11 +350,50 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         return NEW
       }
 
+      // Unik-felter (fx stregkode): en dublet i filen — eller en værdi et
+      // ANDET aktiv allerede har — ville først vælte ved anvend, midt i en
+      // ikke-transaktionel bidde-kørsel. Fang den her. Sammenligningen er
+      // versalfølsom, præcis som Postgres' unikke indeks.
+      const conflicts = new Map<number, string>() // rowNumber → besked
+      for (const field of spec.uniqueFields) {
+        if (!presentFields.includes(field)) continue
+        const seenInFile = new Map<string, number>()
+        const owner = new Map<string, string>() // værdi → keyValue på rækken der har den
+        for (const e of existingRows) {
+          const v = e[field]
+          if (v != null && String(v) !== '') owner.set(String(v), String(e[spec.keyField] ?? ''))
+        }
+        for (const row of rows) {
+          const cell = row.cells[field]
+          if (cell === null || cell === undefined || String(cell) === '') continue
+          const v = String(cell)
+          if (seenInFile.has(v)) {
+            conflicts.set(row.rowNumber, t('moduleImport.common.reasonDuplicateValue', { field: fieldLabel(field) }))
+            continue
+          }
+          seenInFile.set(v, row.rowNumber)
+          // Samme række må gerne beholde sin egen værdi — kun et andet aktiv
+          // der allerede bruger koden er et sammenstød.
+          const holder = owner.get(v)
+          if (holder !== undefined && holder !== row.keyValue) {
+            conflicts.set(row.rowNumber, t('moduleImport.common.reasonValueTaken', { field: fieldLabel(field) }))
+          }
+        }
+      }
+      for (const row of rows) {
+        const message = conflicts.get(row.rowNumber)
+        if (message) errors.push({ row: row.rowNumber, reason: message })
+      }
+      // Konfliktrækker røres ikke, men de ER i filen — så deres nøgle skal
+      // stadig tælle med i fileKeys nedenfor, ellers deaktiverer en
+      // stregkode-tastefejl aktivet.
+      const validRows = rows.filter((r) => !conflicts.has(r.rowNumber))
+
       const creates: CsvRow[] = []
       const updates: { row: CsvRow; existingId: string }[] = []
       let unchanged = 0
 
-      for (const row of rows) {
+      for (const row of validRows) {
         const desired = buildColumns(row, resolveRef, presentFields)
         const current = byKey.get(row.keyValue)
         if (!current) {
@@ -356,7 +407,7 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         else unchanged++
       }
 
-      const fileKeys = new Set(rows.map((r) => r.keyValue))
+      const fileKeys = new Set([...rows.map((r) => r.keyValue), ...rejectedKeys])
       const deactivations = existingRows
         .filter((e) => e.is_active && e[spec.keyField] != null && !fileKeys.has(String(e[spec.keyField])))
         .map((e) => ({ id: e.id, name: e.name }))
@@ -364,7 +415,7 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
       setDiff({
         fileName: file.name,
         fields: presentFields,
-        rows,
+        rows: validRows,
         errors,
         creates,
         updates,
