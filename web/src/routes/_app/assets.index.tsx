@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { ArchiveX, Plus, Undo2 } from 'lucide-react'
+import { ArchiveX, BellRing, Plus, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -24,7 +25,8 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { AssetStatusBadge, statusLabelKey } from '@/components/asset-status-badge'
+import { AssetStatusBadge, statusLabelKey, type AssetStatus } from '@/components/asset-status-badge'
+import { Badge } from '@/components/ui/badge'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
@@ -47,7 +49,6 @@ export const Route = createFileRoute('/_app/assets/')({
   component: AssetsPage,
 })
 
-const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
 const dateTimeFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
 
 const NONE = '__none__'
@@ -63,7 +64,7 @@ function useRows(companyId: string | null) {
       const { data, error } = await supabase
         .from('assets')
         .select(
-          'id, asset_tag, name, serial_no, barcode, status, condition, purchased_at, purchase_price, warranty_until, is_active, category:asset_categories (name), location:asset_locations (name)',
+          'id, asset_tag, name, serial_no, barcode, status, condition, purchased_at, purchase_price, warranty_until, is_active, category_id, location_id, category:asset_categories (name), location:asset_locations (name)',
         )
         .eq('company_id', companyId!)
         .order('name')
@@ -83,10 +84,31 @@ function useOpenLoan(assetId: string | null, enabled: boolean) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('asset_loans')
-        .select('id, to_name, to_address, to_email, to_phone, note, expires_at, lent_at')
+        .select(
+          'id, to_name, to_address, to_email, to_phone, note, expires_at, lent_at, bounced_at, bounce_reason',
+        )
         .eq('asset_id', assetId!)
         .is('returned_at', null)
         .maybeSingle()
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// Åbne udlån (ikke returneret) for hele virksomheden — driver Overskredet-
+// kolonnen: et aktiv er overskredet, hvis dets åbne udlån har et udløb i
+// fortiden. Unik-indekset asset_loans_open_uniq giver højst ét pr. aktiv.
+function useOpenLoans(companyId: string | null) {
+  return useQuery({
+    queryKey: ['asset-open-loans', companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('asset_loans')
+        .select('asset_id, expires_at')
+        .eq('company_id', companyId!)
+        .is('returned_at', null)
       if (error) throw error
       return data
     },
@@ -297,39 +319,414 @@ function LendOutDialog({
   )
 }
 
+type Loan = NonNullable<ReturnType<typeof useOpenLoan>['data']>
+
+// ISO → 'YYYY-MM-DDTHH:mm' i lokal tid, som <input type="datetime-local"> vil have
+// det. Tom streng = intet udløb.
+function toLocalInput(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// «Låner»-fanen: lånerens kontaktoplysninger + udløb. Felterne er KONTROLLEREDE
+// (staten ligger i AssetDetailPane), så den delte «Gem ændringer»-bjælke nederst
+// gemmer dem sammen med aktivfelterne. Her bor kun handlingen «Send påmindelse nu».
+function LenderTab({
+  loan,
+  assetName,
+  name,
+  setName,
+  address,
+  setAddress,
+  email,
+  setEmail,
+  phone,
+  setPhone,
+  note,
+  setNote,
+  expires,
+  setExpires,
+  emailInvalid,
+  paneDirty,
+  onLoanChanged,
+}: {
+  loan: Loan
+  assetName: string
+  name: string
+  setName: (v: string) => void
+  address: string
+  setAddress: (v: string) => void
+  email: string
+  setEmail: (v: string) => void
+  phone: string
+  setPhone: (v: string) => void
+  note: string
+  setNote: (v: string) => void
+  expires: string
+  setExpires: (v: string) => void
+  emailInvalid: boolean
+  paneDirty: boolean
+  onLoanChanged: () => void
+}) {
+  const { t } = useTranslation()
+  const [reminderOpen, setReminderOpen] = useState(false)
+  const [reminderBusy, setReminderBusy] = useState(false)
+
+  // «Send påmindelse nu» bygger på det GEMTE lån (serveren læser fra DB): kræver
+  // en brugbar gemt kontaktvej, og er slået fra mens der er ugemte ændringer.
+  const canRemind = (!!loan.to_email && isValidEmail(loan.to_email)) || !!loan.to_phone
+  // Bounce-markering: sat af resend-webhook for lånets gemte to_email. Vises kun
+  // så længe adressen i feltet stadig ER den der bouncede.
+  const emailBounced = !!loan.bounced_at && !!loan.to_email && email.trim() === loan.to_email
+
+  const sendReminder = async () => {
+    if (reminderBusy) return
+    setReminderBusy(true)
+    const { data: res, error } = await supabase.functions.invoke('send-asset-reminder', {
+      body: { loan_id: loan.id },
+    })
+    setReminderBusy(false)
+    setReminderOpen(false)
+    if (error) {
+      toast.error(describeError(error, t))
+      return
+    }
+    if (res?.ok) {
+      toast.success(t('assetsPage.reminderSentToast', { name: loan.to_name }))
+      onLoanChanged()
+    } else if (res?.code === 'no_channel') {
+      toast.error(t('assetsPage.reminderNoChannel'))
+    } else {
+      toast.error(t('assetsPage.reminderFailedToast'))
+    }
+  }
+
+  return (
+    <div className="flex max-w-2xl flex-col gap-5">
+      <div className="grid grid-cols-2 gap-4">
+        <Field label={t('assetsPage.lendToName')}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label={t('assetsPage.loanExpires')} info={t('assetsPage.loanExpiryEditHint')}>
+          <Input
+            type="datetime-local"
+            value={expires}
+            onChange={(e) => setExpires(e.target.value)}
+          />
+        </Field>
+      </div>
+      <Field label={t('assetsPage.lendToAddress')}>
+        <Textarea value={address} rows={2} onChange={(e) => setAddress(e.target.value)} />
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label={t('assetsPage.lendToEmail')}>
+          <Input
+            type="email"
+            value={email}
+            aria-invalid={emailInvalid || emailBounced}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          {emailBounced && (
+            <p className="text-xs text-destructive" title={loan.bounce_reason ?? undefined}>
+              {t('assetsPage.emailBounced')}
+            </p>
+          )}
+        </Field>
+        <Field label={t('assetsPage.lendToSms')}>
+          <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </Field>
+      </div>
+      <p className={cn('text-xs', emailInvalid ? 'text-destructive' : 'text-muted-foreground')}>
+        {emailInvalid ? t('assetsPage.lendEmailInvalid') : t('assetsPage.lendContactHint')}
+      </p>
+      <Field label={t('assetsPage.lendNotes')}>
+        <Textarea value={note} rows={3} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <Field label={t('assetsPage.loanLentAt')}>
+        <Input value={dateTimeFormat.format(new Date(loan.lent_at))} disabled />
+      </Field>
+      <div className="flex items-center gap-3 border-t border-border pt-4">
+        {canRemind ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={paneDirty || reminderBusy}
+            title={paneDirty ? t('assetsPage.saveBeforeReminder') : undefined}
+            onClick={() => setReminderOpen(true)}
+          >
+            <BellRing className="size-4" /> {t('assetsPage.sendReminder')}
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">{t('assetsPage.reminderNeedsContact')}</p>
+        )}
+      </div>
+
+      <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('assetsPage.sendReminderTitle', { name: loan.to_name })}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t('assetsPage.sendReminderBody', { asset: assetName })}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReminderOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button disabled={reminderBusy} onClick={sendReminder}>
+              {reminderBusy ? t('common.loading') : t('assetsPage.sendReminderConfirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+// Status kan ændres manuelt — undtagen 'on_loan', som styres af udlåns-maskinen
+// (lend_asset/return_asset). Et udlånt aktiv vises skrivebeskyttet med et hint.
+const EDITABLE_STATUSES: AssetStatus[] = ['in_stock', 'assigned', 'service', 'retired']
+
 function AssetDetailPane({
   row,
+  categories,
+  locations,
   onClose,
   onDeactivate,
   onDelete,
   onLendOut,
   onReturn,
+  onLoanChanged,
+  onDirtyChange,
   returnBusy,
 }: {
   row: Row
+  categories: Picker[]
+  locations: Picker[]
   onClose: () => void
   onDeactivate: () => void
   onDelete?: () => void // kun platform-admins (testdata-oprydning)
   onLendOut: () => void
   onReturn: () => void
+  onLoanChanged: () => void
+  onDirtyChange: (dirty: boolean) => void
   returnBusy: boolean
 }) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('details')
-  const { data: loan } = useOpenLoan(row.id, row.status === 'on_loan')
+  const onLoan = row.status === 'on_loan'
+  const { data: loan } = useOpenLoan(row.id, onLoan)
+
+  // Redigerbare felter (alt undtagen ID), spejlet fra rækken. Panelet
+  // genmonteres ved aktivskift (key), så staten reseedes automatisk.
+  const [assetTag, setAssetTag] = useState(row.asset_tag ?? '')
+  const [serialNo, setSerialNo] = useState(row.serial_no ?? '')
+  const [name, setName] = useState(row.name)
+  const [barcode, setBarcode] = useState(row.barcode ?? '')
+  const [categoryId, setCategoryId] = useState(row.category_id ?? NONE)
+  const [locationId, setLocationId] = useState(row.location_id ?? NONE)
+  const [status, setStatus] = useState<AssetStatus>(row.status)
+  const [condition, setCondition] = useState(row.condition ?? '')
+  const [purchasedAt, setPurchasedAt] = useState(row.purchased_at ?? '')
+  const [purchasePrice, setPurchasePrice] = useState(
+    row.purchase_price == null ? '' : String(row.purchase_price),
+  )
+  const [warrantyUntil, setWarrantyUntil] = useState(row.warranty_until ?? '')
+  const [isActive, setIsActive] = useState(row.is_active)
+  // Låne-felterne (Låner-fanen) bor her, så den delte «Gem ændringer»-bjælke
+  // gemmer dem sammen med aktivfelterne. Lånet loades asynkront (useOpenLoan) og
+  // seedes derfor via en effekt når det ankommer — ikke via useState-startværdi.
+  const [loanName, setLoanName] = useState('')
+  const [loanAddress, setLoanAddress] = useState('')
+  const [loanEmail, setLoanEmail] = useState('')
+  const [loanPhone, setLoanPhone] = useState('')
+  const [loanNote, setLoanNote] = useState('')
+  const [loanExpires, setLoanExpires] = useState('')
+  const seededLoanId = useRef<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (loan && seededLoanId.current !== loan.id) {
+      seededLoanId.current = loan.id
+      setLoanName(loan.to_name)
+      setLoanAddress(loan.to_address ?? '')
+      setLoanEmail(loan.to_email ?? '')
+      setLoanPhone(loan.to_phone ?? '')
+      setLoanNote(loan.note ?? '')
+      setLoanExpires(toLocalInput(loan.expires_at))
+    }
+  }, [loan])
+
+  const trimmedName = name.trim()
+  const priceStr = row.purchase_price == null ? '' : String(row.purchase_price)
+
+  // Sammenlign de TRIMMEDE værdier — saveAll gemmer trimmet, så efter en gemning
+  // (og refetch) matcher det serverværdien. Ellers ville et efterstillet mellemrum
+  // efterlade «Gem ændringer»-bjælken hængende, selv efter en vellykket gemning.
+  const assetDirty =
+    assetTag.trim() !== (row.asset_tag ?? '') ||
+    serialNo.trim() !== (row.serial_no ?? '') ||
+    trimmedName !== row.name ||
+    barcode.trim() !== (row.barcode ?? '') ||
+    categoryId !== (row.category_id ?? NONE) ||
+    locationId !== (row.location_id ?? NONE) ||
+    status !== row.status ||
+    condition.trim() !== (row.condition ?? '') ||
+    purchasedAt !== (row.purchased_at ?? '') ||
+    purchasePrice !== priceStr ||
+    warrantyUntil !== (row.warranty_until ?? '') ||
+    isActive !== row.is_active
+
+  // Låne-felternes dirty/validering (Låner-fanen), så bjælken dækker begge dele.
+  const loanSeeded = !!loan && seededLoanId.current === loan.id
+  const loanTrimmedEmail = loanEmail.trim()
+  // Som aktivfelterne: sammenlign trimmet mod serverværdien (update_asset_loan
+  // trimmer), så bjælken ikke hænger efter en gemning med efterstillet mellemrum.
+  const loanDirty =
+    loanSeeded &&
+    !!loan &&
+    (loanName.trim() !== loan.to_name ||
+      loanAddress.trim() !== (loan.to_address ?? '') ||
+      loanTrimmedEmail !== (loan.to_email ?? '') ||
+      loanPhone.trim() !== (loan.to_phone ?? '') ||
+      loanNote.trim() !== (loan.note ?? '') ||
+      loanExpires !== toLocalInput(loan.expires_at))
+  const loanEmailInvalid = !!loanTrimmedEmail && !isValidEmail(loanTrimmedEmail)
+  const loanHasContact = (!!loanTrimmedEmail && !loanEmailInvalid) || !!loanPhone.trim()
+  const loanValid = !loanDirty || (!!loanName.trim() && !loanEmailInvalid && loanHasContact)
+
+  const dirty = assetDirty || loanDirty
+  const canSave = !saving && !!trimmedName && loanValid
+
+  // Meld dirty-tilstanden op, så et rækkeskift kan advare om ugemte ændringer.
+  useEffect(() => {
+    onDirtyChange(dirty)
+    return () => onDirtyChange(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty])
+
+  // Den nuværende kategori/placering kan være deaktiveret og dermed mangle i
+  // vælgerne (kun aktive) — flet den ind, så værdien altid kan vises/vælges.
+  const categoryOptions =
+    row.category_id && !categories.some((c) => c.id === row.category_id)
+      ? [{ id: row.category_id, name: row.category?.name ?? '—' }, ...categories]
+      : categories
+  const locationOptions =
+    row.location_id && !locations.some((l) => l.id === row.location_id)
+      ? [{ id: row.location_id, name: row.location?.name ?? '—' }, ...locations]
+      : locations
+
+  const cancel = () => {
+    setAssetTag(row.asset_tag ?? '')
+    setSerialNo(row.serial_no ?? '')
+    setName(row.name)
+    setBarcode(row.barcode ?? '')
+    setCategoryId(row.category_id ?? NONE)
+    setLocationId(row.location_id ?? NONE)
+    setStatus(row.status)
+    setCondition(row.condition ?? '')
+    setPurchasedAt(row.purchased_at ?? '')
+    setPurchasePrice(priceStr)
+    setWarrantyUntil(row.warranty_until ?? '')
+    setIsActive(row.is_active)
+    if (loan) {
+      setLoanName(loan.to_name)
+      setLoanAddress(loan.to_address ?? '')
+      setLoanEmail(loan.to_email ?? '')
+      setLoanPhone(loan.to_phone ?? '')
+      setLoanNote(loan.note ?? '')
+      setLoanExpires(toLocalInput(loan.expires_at))
+    }
+  }
+
+  const saveAll = async () => {
+    if (!canSave) return
+    const price = purchasePrice.trim() === '' ? null : Number(purchasePrice)
+    if (price != null && !Number.isFinite(price)) {
+      toast.error(t('assetsPage.priceInvalid'))
+      return
+    }
+    setSaving(true)
+    // 1) Aktivfelterne (assets-tabellen, manager-RLS).
+    if (assetDirty) {
+      const { data: updated, error } = await supabase
+        .from('assets')
+        .update({
+          asset_tag: assetTag.trim() || null,
+          serial_no: serialNo.trim() || null,
+          name: trimmedName,
+          barcode: barcode.trim() || null,
+          category_id: categoryId === NONE ? null : categoryId,
+          location_id: locationId === NONE ? null : locationId,
+          status,
+          condition: condition.trim() || null,
+          purchased_at: purchasedAt || null,
+          purchase_price: price,
+          warranty_until: warrantyUntil || null,
+          is_active: isActive,
+        })
+        .eq('id', row.id)
+        .select('id')
+      if (error) {
+        setSaving(false)
+        console.error('Kunne ikke gemme aktiv:', error)
+        // 23505 = unik-constraint (aktiv-nr. eller stregkode).
+        if (error.code === '23505') {
+          toast.error(
+            error.message.includes('barcode')
+              ? t('assetsPage.barcodeTaken')
+              : t('assetsPage.tagTaken'),
+          )
+          return
+        }
+        toast.error(describeError(error, t))
+        return
+      }
+      if (!updated?.length) {
+        setSaving(false)
+        toast.error(t('common.noPermission'))
+        return
+      }
+    }
+    // 2) Lånefelterne (Låner-fanen) via update_asset_loan (SECURITY DEFINER).
+    if (loanDirty && loan) {
+      const { error } = await supabase.rpc('update_asset_loan', {
+        p_loan_id: loan.id,
+        p_to_name: loanName.trim(),
+        p_to_address: loanAddress.trim() || undefined,
+        p_to_email: loanTrimmedEmail || undefined,
+        p_to_phone: loanPhone.trim() || undefined,
+        p_note: loanNote.trim() || undefined,
+        p_expires_at: loanExpires ? new Date(loanExpires).toISOString() : undefined,
+      })
+      if (error) {
+        setSaving(false)
+        console.error('Kunne ikke gemme udlån:', error)
+        toast.error(describeError(error, t))
+        return
+      }
+    }
+    setSaving(false)
+    toast.success(t('settings.saved'))
+    onLoanChanged()
+  }
 
   const tabs = [
     { key: 'details', label: t('detail.tabDetails') },
+    ...(onLoan ? [{ key: 'lender', label: t('assetsPage.tabLender') }] : []),
     { key: 'data', label: t('detail.tabData') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
   return (
-    <DetailTabs tabs={tabs} active={tab} onChange={setTab} onClose={onClose}>
+    <>
+      <DetailTabs tabs={tabs} active={tab} onChange={setTab} onClose={onClose}>
       {tab === 'details' && (
         <div className="flex flex-col gap-5">
           <Field label="ID">
-            <div className="relative">
+            <div className="relative max-w-2xl">
               <Input value={row.id} disabled className="pr-10 font-mono text-xs" />
               <div className="absolute right-1 top-1/2 -translate-y-1/2">
                 <CopyButton value={row.id} label={t('detail.copyId')} />
@@ -338,80 +735,133 @@ function AssetDetailPane({
           </Field>
           <div className="grid max-w-2xl grid-cols-2 gap-4">
             <Field label={t('assetsPage.tag')}>
-              <Input value={row.asset_tag ?? ''} disabled className="font-mono" />
+              <Input
+                value={assetTag}
+                className="font-mono"
+                onChange={(e) => setAssetTag(e.target.value)}
+              />
             </Field>
             <Field label={t('assetsPage.serialNo')}>
-              <Input value={row.serial_no ?? ''} disabled className="font-mono" />
+              <Input
+                value={serialNo}
+                className="font-mono"
+                onChange={(e) => setSerialNo(e.target.value)}
+              />
             </Field>
           </div>
           <Field label={t('assetsPage.name')}>
-            <Input value={row.name} disabled />
+            <Input
+              value={name}
+              className="max-w-2xl"
+              aria-invalid={!trimmedName}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
           <Field label={t('assetsPage.barcode')}>
-            <Input value={row.barcode ?? ''} disabled className="max-w-2xl font-mono" />
+            <Input
+              value={barcode}
+              className="max-w-2xl font-mono"
+              onChange={(e) => setBarcode(e.target.value)}
+            />
           </Field>
           <div className="grid max-w-2xl grid-cols-2 gap-4">
             <Field label={t('assetsPage.category')}>
-              <Input value={row.category?.name ?? ''} disabled />
+              <PickerSelect value={categoryId} onChange={setCategoryId} items={categoryOptions} />
             </Field>
             <Field label={t('assetsPage.location')}>
-              <Input value={row.location?.name ?? ''} disabled />
+              <PickerSelect value={locationId} onChange={setLocationId} items={locationOptions} />
             </Field>
           </div>
           <div className="grid max-w-2xl grid-cols-2 gap-4">
-            <Field label={t('assetsPage.status')}>
-              <Input value={t(statusLabelKey[row.status])} disabled />
+            <Field
+              label={t('assetsPage.status')}
+              info={onLoan ? t('assetsPage.statusLockedOnLoan') : undefined}
+            >
+              {onLoan ? (
+                <Input value={t(statusLabelKey[row.status])} disabled />
+              ) : (
+                <Select value={status} onValueChange={(v) => setStatus(v as AssetStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EDITABLE_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(statusLabelKey[s])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </Field>
             <Field label={t('assetsPage.condition')}>
-              <Input value={row.condition ?? ''} disabled />
+              <Input value={condition} onChange={(e) => setCondition(e.target.value)} />
             </Field>
           </div>
-          {loan && (
-            <div className="grid max-w-2xl grid-cols-2 gap-4">
-              <Field label={t('assetsPage.loanTo')}>
-                <Input
-                  value={[loan.to_name, loan.to_email ?? loan.to_phone].filter(Boolean).join(' · ')}
-                  disabled
-                />
-              </Field>
-              <Field label={t('assetsPage.loanExpires')}>
-                <Input
-                  value={
-                    loan.expires_at
-                      ? dateTimeFormat.format(new Date(loan.expires_at))
-                      : t('assetsPage.loanNoExpiry')
-                  }
-                  disabled
-                />
-              </Field>
-            </div>
-          )}
-          {loan?.note && (
-            <Field label={t('assetsPage.loanNote')}>
-              <Textarea value={loan.note} rows={3} disabled className="max-w-2xl" />
-            </Field>
-          )}
         </div>
       )}
+      {tab === 'lender' &&
+        onLoan &&
+        (loanSeeded && loan ? (
+          <LenderTab
+            loan={loan}
+            assetName={row.name}
+            name={loanName}
+            setName={setLoanName}
+            address={loanAddress}
+            setAddress={setLoanAddress}
+            email={loanEmail}
+            setEmail={setLoanEmail}
+            phone={loanPhone}
+            setPhone={setLoanPhone}
+            note={loanNote}
+            setNote={setLoanNote}
+            expires={loanExpires}
+            setExpires={setLoanExpires}
+            emailInvalid={loanEmailInvalid}
+            paneDirty={dirty}
+            onLoanChanged={onLoanChanged}
+          />
+        ) : (
+          <Skeleton className="h-64 w-full max-w-2xl" />
+        ))}
       {tab === 'data' && (
         <div className="flex flex-col gap-5">
           <Field label={t('assetsPage.purchasedAt')}>
             <Input
-              value={row.purchased_at ? dateFormat.format(new Date(row.purchased_at)) : ''}
-              disabled
+              type="date"
+              className="max-w-2xl"
+              value={purchasedAt}
+              onChange={(e) => setPurchasedAt(e.target.value)}
             />
           </Field>
           <Field label={t('assetsPage.purchasePrice')}>
-            <Input value={row.purchase_price ?? ''} disabled />
+            <Input
+              type="number"
+              step="0.01"
+              className="max-w-2xl"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+            />
           </Field>
           <Field label={t('assetsPage.warrantyUntil')}>
             <Input
-              value={row.warranty_until ? dateFormat.format(new Date(row.warranty_until)) : ''}
-              disabled
+              type="date"
+              className="max-w-2xl"
+              value={warrantyUntil}
+              onChange={(e) => setWarrantyUntil(e.target.value)}
             />
           </Field>
           <Field label={t('assetsPage.active')}>
-            <Input value={row.is_active ? t('common.yes') : t('common.no')} disabled />
+            <Select value={isActive ? 'yes' : 'no'} onValueChange={(v) => setIsActive(v === 'yes')}>
+              <SelectTrigger className="max-w-2xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">{t('common.yes')}</SelectItem>
+                <SelectItem value="no">{t('common.no')}</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
         </div>
       )}
@@ -474,7 +924,19 @@ function AssetDetailPane({
           )}
         </div>
       )}
-    </DetailTabs>
+      </DetailTabs>
+
+      {dirty && (
+        <div className="sticky bottom-0 z-10 -mx-6 mt-auto flex justify-end gap-3 border-t border-border bg-background px-6 py-3">
+          <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
+            {t('common.cancel')}
+          </Button>
+          <Button size="sm" onClick={saveAll} disabled={!canSave}>
+            {saving ? t('common.loading') : t('common.saveChanges')}
+          </Button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -654,6 +1116,7 @@ function AssetsPage() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
+  const { data: openLoans } = useOpenLoans(companyId)
   const { data: pickers } = usePickers(companyId)
   const { data: access } = useAccess()
   const { data: settings } = usePlatformSettings()
@@ -663,10 +1126,20 @@ function AssetsPage() {
   const [newOpen, setNewOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)
   const [returnBusy, setReturnBusy] = useState(false)
+  // Ugemte ændringer i panelet: et rækkeskift/luk gates, så redigering ikke
+  // tabes tavst (samme mønster som medarbejdersiden).
+  const [paneDirty, setPaneDirty] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+
+  const guarded = (action: () => void) => {
+    if (paneDirty) setPendingAction(() => action)
+    else action()
+  }
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['assets'] })
     queryClient.invalidateQueries({ queryKey: ['asset-open-loan'] })
+    queryClient.invalidateQueries({ queryKey: ['asset-open-loans'] })
   }
 
   const deactivate = async (ids: string[], clear: () => void) => {
@@ -732,6 +1205,15 @@ function AssetsPage() {
 
   if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
+  // Overskredet = åbent udlån med et udløb i fortiden. Beregnes ud fra
+  // openLoans-kortet, så kolonnen ikke kræver en join i aktiv-forespørgslen.
+  const nowMs = Date.now()
+  const overdueIds = new Set(
+    (openLoans ?? [])
+      .filter((l) => l.expires_at && new Date(l.expires_at).getTime() < nowMs)
+      .map((l) => l.asset_id),
+  )
+
   const columns: ColumnDef<Row>[] = [
     {
       key: 'asset_tag',
@@ -775,6 +1257,22 @@ function AssetsPage() {
       render: (r) => <AssetStatusBadge status={r.status} />,
     },
     {
+      // Overskredet udlån: rød fare-badge. Tom celle for aktiver der ikke er
+      // overskredet, så kun det der kræver handling springer i øjnene.
+      key: 'overdue',
+      header: t('assetsPage.overdue'),
+      sortable: true,
+      sortValue: (r) => (overdueIds.has(r.id) ? 1 : 0),
+      render: (r) =>
+        overdueIds.has(r.id) ? (
+          <Badge variant="destructive" className="rounded-[4px]">
+            {t('assetsPage.overdue')}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: 'is_active',
       header: t('assetsPage.active'),
       sortable: true,
@@ -811,7 +1309,7 @@ function AssetsPage() {
             <Plus className="size-4" /> {t('common.new')}
           </Button>
         }
-        onRowClick={(row) => setActiveId((prev) => (prev === row.id ? null : row.id))}
+        onRowClick={(row) => guarded(() => setActiveId((prev) => (prev === row.id ? null : row.id)))}
         activeRowId={activeId}
         onDelete={access?.isPlatformAdmin ? deleteRows : undefined}
         selectionActions={({ ids, clear }) => (
@@ -829,19 +1327,27 @@ function AssetsPage() {
       />
       {activeRow && (
         <AssetDetailPane
-          key={activeRow.id}
+          // Skift af aktiv skal genmontere panelet (nulstil fane m.m.). Nøglen
+          // præfikses så den ikke kolliderer med LendOutDialogs søskendenøgle
+          // nedenfor — to søskende med samme key forvirrer Reacts reconciler,
+          // så genmonteringen udeblev og panelet hang på det forrige aktivs data.
+          key={`detail-${activeRow.id}`}
           row={activeRow}
-          onClose={() => setActiveId(null)}
+          categories={pickers?.categories ?? []}
+          locations={pickers?.locations ?? []}
+          onClose={() => guarded(() => setActiveId(null))}
           onDeactivate={() => deactivate([activeRow.id], () => {})}
           onDelete={access?.isPlatformAdmin ? () => setDeleteOpen(true) : undefined}
           onLendOut={() => setLendOpen(true)}
           onReturn={() => returnAsset(activeRow)}
+          onLoanChanged={refresh}
+          onDirtyChange={setPaneDirty}
           returnBusy={returnBusy}
         />
       )}
       {activeRow && (
         <LendOutDialog
-          key={activeRow.id}
+          key={`lend-${activeRow.id}`}
           open={lendOpen}
           onOpenChange={setLendOpen}
           asset={activeRow}
@@ -872,6 +1378,29 @@ function AssetsPage() {
         locations={pickers?.locations ?? []}
         onCreated={refresh}
       />
+      {/* Advarsel ved rækkeskift/luk med ugemte ændringer. */}
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('unsaved.title')}</DialogTitle>
+            <DialogDescription>{t('unsaved.description')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingAction(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                pendingAction?.()
+                setPendingAction(null)
+              }}
+            >
+              {t('unsaved.discard')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

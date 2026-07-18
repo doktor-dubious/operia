@@ -98,12 +98,26 @@ export type ParcelFlowValue = {
   maxReminders: number
 }
 
-export function ParcelFlowFields({
+// Tekster der adskiller pakke- fra aktiv-varianten (kun hint/labels; selve
+// felterne og reglerne er ens).
+type ReminderTexts = {
+  sendAfter: string
+  hint: string
+  maxHint: string
+}
+
+// Generisk to-påmindelses-editor. idPrefix holder checkbox-id'erne unikke, når
+// begge varianter (pakke + aktiv) findes på samme side.
+function ReminderFlowFields({
   value,
   onChange,
+  texts,
+  idPrefix,
 }: {
   value: ParcelFlowValue
   onChange: (patch: Partial<ParcelFlowValue>) => void
+  texts: ReminderTexts
+  idPrefix: string
 }) {
   const { t } = useTranslation()
   const { r1Enabled, r2Enabled, reminder1, reminder2, maxReminders } = value
@@ -118,9 +132,9 @@ export function ParcelFlowFields({
   return (
     <div className="flex flex-col gap-4">
       <div className={box(r1Enabled)}>
-        <FieldLabel htmlFor="pf-reminder-1" className="font-normal">
+        <FieldLabel htmlFor={`${idPrefix}-reminder-1`} className="font-normal">
           <Checkbox
-            id="pf-reminder-1"
+            id={`${idPrefix}-reminder-1`}
             checked={r1Enabled}
             onCheckedChange={(v) =>
               // Påmindelse 2 kan ikke stå alene — følger med fra.
@@ -131,7 +145,7 @@ export function ParcelFlowFields({
         </FieldLabel>
         {r1Enabled && (
           <div className="flex flex-col gap-2 pl-6">
-            <Label className="text-label">{t('notificationsPage.sendAfterDays')}</Label>
+            <Label className="text-label">{texts.sendAfter}</Label>
             <Input
               type="number"
               min={1}
@@ -141,18 +155,18 @@ export function ParcelFlowFields({
                 onChange({ reminder1: r1, reminder2: Math.max(r1 + 1, reminder2) })
               }}
             />
-            <p className="text-xs text-muted-foreground">{t('notificationsPage.reminderHint')}</p>
+            <p className="text-xs text-muted-foreground">{texts.hint}</p>
           </div>
         )}
       </div>
 
       <div className={box(r2Enabled)}>
         <FieldLabel
-          htmlFor="pf-reminder-2"
+          htmlFor={`${idPrefix}-reminder-2`}
           className={cn('font-normal', !r1Enabled && 'opacity-50')}
         >
           <Checkbox
-            id="pf-reminder-2"
+            id={`${idPrefix}-reminder-2`}
             checked={r2Enabled}
             disabled={!r1Enabled}
             onCheckedChange={(v) => onChange({ r2Enabled: v === true })}
@@ -161,7 +175,7 @@ export function ParcelFlowFields({
         </FieldLabel>
         {r2Enabled && (
           <div className="flex flex-col gap-2 pl-6">
-            <Label className="text-label">{t('notificationsPage.sendAfterDays')}</Label>
+            <Label className="text-label">{texts.sendAfter}</Label>
             <Input
               type="number"
               min={reminder1 + 1}
@@ -172,7 +186,7 @@ export function ParcelFlowFields({
                 })
               }
             />
-            <p className="text-xs text-muted-foreground">{t('notificationsPage.reminderHint')}</p>
+            <p className="text-xs text-muted-foreground">{texts.hint}</p>
           </div>
         )}
       </div>
@@ -186,12 +200,82 @@ export function ParcelFlowFields({
             value={maxReminders}
             onChange={(e) => onChange({ maxReminders: Math.max(0, Number(e.target.value) || 0) })}
           />
-          <p className="text-xs text-muted-foreground">
-            {t('notificationsPage.maxRemindersHint')}
-          </p>
+          <p className="text-xs text-muted-foreground">{texts.maxHint}</p>
         </div>
       )}
     </div>
+  )
+}
+
+export function ParcelFlowFields(props: {
+  value: ParcelFlowValue
+  onChange: (patch: Partial<ParcelFlowValue>) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <ReminderFlowFields
+      {...props}
+      idPrefix="pf"
+      texts={{
+        sendAfter: t('notificationsPage.sendAfterDays'),
+        hint: t('notificationsPage.reminderHint'),
+        maxHint: t('notificationsPage.maxRemindersHint'),
+      }}
+    />
+  )
+}
+
+// Aktiv-påmindelser: samme felter, men forankret på udlånets udløb. Den første
+// besked sendes på udløbsdagen; disse to påmindelser følger et antal dage efter.
+export function AssetFlowFields(props: {
+  value: ParcelFlowValue
+  onChange: (patch: Partial<ParcelFlowValue>) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <ReminderFlowFields
+      {...props}
+      idPrefix="af"
+      texts={{
+        sendAfter: t('notificationsPage.assetSendAfterDays'),
+        hint: t('notificationsPage.assetReminderHint'),
+        maxHint: t('notificationsPage.assetMaxRemindersHint'),
+      }}
+    />
+  )
+}
+
+// Kanalvalg (Generelt-sektionen): e-mail og/eller SMS. Gælder alle
+// notifikationstyper. SMS kræver desuden sms_notifications-feature pr. kunde.
+export function ChannelToggles({
+  email,
+  sms,
+  onEmailChange,
+  onSmsChange,
+}: {
+  email: boolean
+  sms: boolean
+  onEmailChange: (v: boolean) => void
+  onSmsChange: (v: boolean) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <Field label={t('notificationsPage.channels')} info={t('notificationsPage.channelsHint')}>
+      <div className="flex flex-col gap-2">
+        <FieldLabel htmlFor="ch-email" className="px-2.5 py-1.5 font-normal">
+          <Checkbox
+            id="ch-email"
+            checked={email}
+            onCheckedChange={(v) => onEmailChange(v === true)}
+          />
+          {t('notificationsPage.channelEmail')}
+        </FieldLabel>
+        <FieldLabel htmlFor="ch-sms" className="px-2.5 py-1.5 font-normal">
+          <Checkbox id="ch-sms" checked={sms} onCheckedChange={(v) => onSmsChange(v === true)} />
+          {t('notificationsPage.channelSms')}
+        </FieldLabel>
+      </div>
+    </Field>
   )
 }
 

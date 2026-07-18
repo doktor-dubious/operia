@@ -70,6 +70,10 @@
 }
 
 :root {
+    /* Lad browseren tegne native kontroller (dato-vælgerens kalenderikon,
+       scrollbars m.m.) i det rette tema — ellers er fx kalenderikonet sort i
+       mørk tilstand. */
+    color-scheme: light;
     /* Supabase-radiusskala: sm 4px / md 6px (inputs, knapper) / lg 8px (paneler) */
     --radius: 0.5rem;
     --background: oklch(0.98 0.002 159);   /* #f7f9f8 */
@@ -119,6 +123,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     --background: oklch(0.19 0.0025 159);  /* #131413 */
     --foreground: oklch(0.95 0.00275 159); /* #edefee — fremhævet */
     --panel: oklch(0.215 0.0025 159);      /* #181a19 */

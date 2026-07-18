@@ -2,8 +2,9 @@ import { useMemo, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CopyButton } from '@/components/copy-button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -230,6 +231,7 @@ function categoryOf(action: string): string {
     case 'asset':
     case 'asset_category':
     case 'asset_location':
+    case 'asset_flow':
     case 'assets':
       return 'assets'
     case 'inventory_item':
@@ -266,10 +268,13 @@ function categoryOf(action: string): string {
 
 function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
   const a = r.action
-  if (a === 'import.failed' || a === 'data_transfer.spoof_rejected') return 'error'
+  // '*_failed'/'*_bounced' = teknisk fejl (import.failed, asset.reminder_bounced,
+  // …). Spejler public.audit_level.
+  if (/[._](failed|bounced)$/.test(a) || a === 'data_transfer.spoof_rejected') return 'error'
   const to = (r.detail as Record<string, unknown> | null)?.to_status
   if (
     a === 'import.rejected' ||
+    /[._]complained$/.test(a) ||
     /\.(deleted|deactivated|anonymized|removed|revoked|disabled)$/.test(a) ||
     (a === 'parcel.status_changed' && (to === 'rejected' || to === 'returned'))
   )
@@ -303,6 +308,22 @@ function message(r: LogRow, t: TFn) {
       import: days(d.import_retention_days),
     })
   }
+  // Notifikations-udfald (afsendelse/bounce): vis en LÆSBAR årsag i stedet for et
+  // råt Resend/GatewayAPI-svar. Afsenderfunktionerne lægger en kort maskinkode i
+  // detail.reason (classifySendError); et bounce lægger providerens tekst der.
+  if (/[._](reminder_failed|reminder_bounced|reminder_complained|notification_bounced|notification_complained)$/.test(r.action)) {
+    const reasonCodes: Record<string, string> = {
+      invalid_email: t('logsPage.msg.reasonInvalidEmail'),
+      invalid_phone: t('logsPage.msg.reasonInvalidPhone'),
+      email_not_configured: t('logsPage.msg.reasonEmailNotConfigured'),
+      sms_not_configured: t('logsPage.msg.reasonSmsNotConfigured'),
+      email_error: t('logsPage.msg.reasonEmailError'),
+      sms_error: t('logsPage.msg.reasonSmsError'),
+    }
+    const raw = typeof d.reason === 'string' ? d.reason : ''
+    const reasonText = reasonCodes[raw] ?? raw ?? (typeof d.error === 'string' ? d.error : '')
+    return [r.summary, reasonText].filter(Boolean).join('   ·   ')
+  }
   const parts: string[] = []
   if (r.summary) parts.push(r.summary)
   if (d.from_status || d.to_status) parts.push(`${d.from_status ?? '—'} → ${d.to_status ?? '—'}`)
@@ -334,6 +355,9 @@ function LogsPage() {
   const [categories, setCategories] = useState<Set<string>>(new Set())
   const [levels, setLevels] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
+  // Valgt logpost → detaljerude under tabellen (som Supabase Studio).
+  const [selectedId, setSelectedId] = useState<LogRow['id'] | null>(null)
+  const [detailView, setDetailView] = useState<'text' | 'json'>('text')
 
   // Justerbare kolonnebredder — trækkes i kolonnekanten i headeren.
   const [widths, setWidths] = useState<number[]>(DEFAULT_WIDTHS)
@@ -478,6 +502,60 @@ function LogsPage() {
       return false
     return true
   })
+
+  // Detaljerude: den valgte post (uanset filter, så udvalget overlever et
+  // filterskift), dens fulde indhold som pæn JSON, og naboer til ↑/↓-navigation.
+  const selectedRow =
+    selectedId == null ? null : (rows.find((r) => r.id === selectedId) ?? null)
+  const selectedJson = selectedRow
+    ? JSON.stringify(
+        {
+          id: selectedRow.id,
+          created_at: selectedRow.created_at,
+          level: levelOf(selectedRow),
+          category: categoryOf(selectedRow.action),
+          action: selectedRow.action,
+          company_id: selectedRow.company_id,
+          company: companyName(selectedRow.company_id),
+          actor_user_id: selectedRow.actor_user_id,
+          actor: actorName(selectedRow.actor_user_id),
+          entity_type: selectedRow.entity_type,
+          entity_id: selectedRow.entity_id,
+          summary: selectedRow.summary,
+          message: message(selectedRow, t) || null,
+          detail: selectedRow.detail,
+        },
+        null,
+        2,
+      )
+    : ''
+  // Læsbar «Tekst»-visning: navngivne felter + detail som nøgle/værdi.
+  const selectedTextRows: [string, string][] = selectedRow
+    ? [
+        [t('logsPage.colDate'), dateFmt.format(new Date(selectedRow.created_at))],
+        [t('logsPage.level'), t(LEVELS.find((l) => l.key === levelOf(selectedRow))?.labelKey ?? '')],
+        [t('logsPage.category'), t(`logsPage.categories.${categoryOf(selectedRow.action)}`)],
+        [t('logsPage.colAction'), selectedRow.action],
+        [t('logsPage.colCompany'), companyName(selectedRow.company_id)],
+        [t('logsPage.colActor'), actorName(selectedRow.actor_user_id)],
+        [t('logsPage.colMessage'), message(selectedRow, t) || selectedRow.summary || '—'],
+      ]
+    : []
+  const selectedDetailEntries: [string, string][] = selectedRow
+    ? Object.entries((selectedRow.detail ?? {}) as Record<string, unknown>).map(([k, v]) => [
+        k,
+        v == null ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v),
+      ])
+    : []
+  const selectedText = [...selectedTextRows, ...selectedDetailEntries]
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n')
+  const selIndex = selectedId == null ? -1 : filtered.findIndex((r) => r.id === selectedId)
+  const gotoRel = (delta: number) => {
+    if (selIndex < 0) return
+    const next = filtered[selIndex + delta]
+    if (next) setSelectedId(next.id)
+  }
 
   const times = filtered.map((r) => new Date(r.created_at).getTime())
   const hiMax = rangeMs ? now : times.length ? Math.max(...times) : now
@@ -783,7 +861,7 @@ function LogsPage() {
           )}
         </aside>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
           {isPending ? (
             <Skeleton className="h-64 w-full" />
           ) : (
@@ -813,7 +891,13 @@ function LogsPage() {
                   </span>
                 ))}
               </div>
-              <div className="max-h-[calc(100svh-22rem)] overflow-y-auto">
+              <div
+                className={cn(
+                  'overflow-y-auto',
+                  // Gør plads til detaljeruden (h-72) når en post er valgt.
+                  selectedRow ? 'max-h-[calc(100svh-41rem)]' : 'max-h-[calc(100svh-22rem)]',
+                )}
+              >
                 {filtered.map((r) => {
                   const ms = new Date(r.created_at).getTime()
                   const cellClass: Record<string, string> = {
@@ -827,9 +911,11 @@ function LogsPage() {
                   return (
                     <div
                       key={r.id}
+                      onClick={() => setSelectedId((prev) => (prev === r.id ? null : r.id))}
                       className={cn(
                         GRID_BASE,
-                        'border-b border-border/50 px-3 py-1.5 text-xs hover:bg-muted/40',
+                        'cursor-pointer border-b border-border/50 px-3 py-1.5 text-xs hover:bg-muted/40',
+                        selectedId === r.id && 'bg-accent',
                       )}
                       style={{ gridTemplateColumns }}
                     >
@@ -857,6 +943,102 @@ function LogsPage() {
               </div>
               <div className="border-t bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
                 {t('logsPage.count', { count: filtered.length })}
+              </div>
+            </div>
+          )}
+
+          {selectedRow && (
+            <div className="flex h-72 shrink-0 flex-col overflow-hidden rounded-md border bg-panel">
+              <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-1.5">
+                <div className="flex items-center gap-3">
+                  {(['text', 'json'] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setDetailView(v)}
+                      className={cn(
+                        'cursor-pointer text-[11px] font-medium uppercase tracking-wider transition-colors',
+                        detailView === v
+                          ? 'text-foreground'
+                          : 'text-muted-foreground/70 hover:text-foreground',
+                      )}
+                    >
+                      {v === 'text' ? t('logsPage.viewText') : t('logsPage.rawJson')}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    disabled={selIndex <= 0}
+                    onClick={() => gotoRel(-1)}
+                    aria-label={t('logsPage.detailPrev')}
+                  >
+                    <ChevronUp className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    disabled={selIndex < 0 || selIndex >= filtered.length - 1}
+                    onClick={() => gotoRel(1)}
+                    aria-label={t('logsPage.detailNext')}
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                  <CopyButton
+                    value={detailView === 'text' ? selectedText : selectedJson}
+                    label={t('logsPage.copyJson')}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedId(null)}
+                    aria-label={t('logsPage.closeDetail')}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto p-3">
+                {detailView === 'json' ? (
+                  <div className="font-mono text-xs leading-5">
+                    {selectedJson.split('\n').map((line, i) => (
+                      <div key={i} className="grid grid-cols-[3ch_1fr] gap-3">
+                        <span className="select-none text-right tabular-nums text-muted-foreground/40">
+                          {i + 1}
+                        </span>
+                        <span className="whitespace-pre-wrap break-all text-foreground">{line}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 text-xs">
+                    <div className="flex flex-col gap-1">
+                      {selectedTextRows.map(([k, v]) => (
+                        <div key={k} className="flex gap-3">
+                          <span className="w-28 shrink-0 text-muted-foreground">{k}</span>
+                          <span className="flex-1 break-words text-foreground">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedDetailEntries.length > 0 && (
+                      <div className="flex flex-col gap-1 border-t border-border/60 pt-3">
+                        {selectedDetailEntries.map(([k, v]) => (
+                          <div key={k} className="flex gap-3">
+                            <span className="w-28 shrink-0 font-mono text-muted-foreground">{k}</span>
+                            <span className="flex-1 whitespace-pre-wrap break-words text-foreground">
+                              {v}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

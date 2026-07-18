@@ -23,16 +23,23 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MessageSquare } from 'lucide-react'
-import { ParcelFlowFields, QuietHoursField } from '@/components/company-config-fields'
+import {
+  AssetFlowFields,
+  ChannelToggles,
+  ParcelFlowFields,
+  QuietHoursField,
+  type ParcelFlowValue,
+} from '@/components/company-config-fields'
 import { Field } from '@/components/detail-field'
+import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { supabase } from '@/lib/supabase'
 
-// Konfigurér → Notifikationer: virksomhedens indstillinger. Stilletiden er
-// virksomhedens egen (flyttet hertil fra Lokalisering); pakkeflowets
-// påmindelsesdage arver platformens standard, indtil virksomheden gemmer
-// sine egne (null i companies = arv). Nulstil fjerner virksomhedens egne.
+// Konfigurér → Notifikationer: virksomhedens indstillinger. Stilletiden og
+// kanalerne er virksomhedens egne; påmindelserne (pakke + aktiv) arver
+// platformens standard, indtil virksomheden gemmer sine egne (null i companies
+// = arv). Nulstil fjerner virksomhedens egne for den valgte type.
 export const Route = createFileRoute('/_app/configure/notifications')({
   component: NotificationsPage,
 })
@@ -44,7 +51,9 @@ function useCompanyNotifications(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('companies')
-        .select('quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled')
+        .select(
+          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
+        )
         .eq('id', companyId!)
         .single()
       if (error) throw error
@@ -56,16 +65,16 @@ function useCompanyNotifications(companyId: string | null) {
 type Values = {
   quietStart: string
   quietEnd: string
-  r1Enabled: boolean
-  r2Enabled: boolean
-  reminder1: number
-  reminder2: number
-  maxReminders: number
+  emailEnabled: boolean
+  smsEnabled: boolean
+  parcel: ParcelFlowValue
+  asset: ParcelFlowValue
 }
 
 function NotificationsPage() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
+  const { data: access } = useAccess()
   const { data, isPending } = useCompanyNotifications(companyId)
   const { data: platform } = usePlatformSettings()
   const queryClient = useQueryClient()
@@ -77,66 +86,100 @@ function NotificationsPage() {
   const [testSending, setTestSending] = useState(false)
 
   // Effektive værdier: virksomhedens egne, ellers platformens standard.
-  const savedR1 = data?.parcel_reminder_1_days ?? platform?.parcel_reminder_1_days ?? 3
-  const savedR2 = data?.parcel_reminder_2_days ?? platform?.parcel_reminder_2_days ?? 7
-  const savedMax = data?.parcel_reminder_max ?? platform?.parcel_reminder_max ?? 0
-  const savedR1On = data?.parcel_reminder_1_enabled ?? platform?.parcel_reminder_1_enabled ?? true
-  const savedR2On = data?.parcel_reminder_2_enabled ?? platform?.parcel_reminder_2_enabled ?? true
-  const overridden =
-    data?.parcel_reminder_1_days != null ||
-    data?.parcel_reminder_2_days != null ||
-    data?.parcel_reminder_max != null ||
-    data?.parcel_reminder_1_enabled != null ||
-    data?.parcel_reminder_2_enabled != null
-
-  const toValues = (row: NonNullable<typeof data>): Values => ({
+  const toValues = (row: NonNullable<typeof data>, p: NonNullable<typeof platform>): Values => ({
     quietStart: row.quiet_hours_start?.slice(0, 5) ?? '',
     quietEnd: row.quiet_hours_end?.slice(0, 5) ?? '',
-    r1Enabled: savedR1On,
-    r2Enabled: savedR2On,
-    reminder1: savedR1,
-    reminder2: savedR2,
-    maxReminders: savedMax,
+    emailEnabled: row.notify_email_enabled ?? p.notify_email_enabled,
+    smsEnabled: row.notify_sms_enabled ?? p.notify_sms_enabled,
+    parcel: {
+      r1Enabled: row.parcel_reminder_1_enabled ?? p.parcel_reminder_1_enabled,
+      r2Enabled: row.parcel_reminder_2_enabled ?? p.parcel_reminder_2_enabled,
+      reminder1: row.parcel_reminder_1_days ?? p.parcel_reminder_1_days,
+      reminder2: row.parcel_reminder_2_days ?? p.parcel_reminder_2_days,
+      maxReminders: row.parcel_reminder_max ?? p.parcel_reminder_max,
+    },
+    asset: {
+      r1Enabled: row.asset_reminder_1_enabled ?? p.asset_reminder_1_enabled,
+      r2Enabled: row.asset_reminder_2_enabled ?? p.asset_reminder_2_enabled,
+      reminder1: row.asset_reminder_1_days ?? p.asset_reminder_1_days,
+      reminder2: row.asset_reminder_2_days ?? p.asset_reminder_2_days,
+      maxReminders: row.asset_reminder_max ?? p.asset_reminder_max,
+    },
   })
 
   useEffect(() => {
-    if (data && platform) setValues(toValues(data))
+    if (data && platform) setValues(toValues(data, platform))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, platform])
 
-  const initial = data && platform ? toValues(data) : null
-  const remindersDirty =
-    !!values && !!initial && (values.r1Enabled !== initial.r1Enabled ||
-      values.r2Enabled !== initial.r2Enabled ||
-      values.reminder1 !== initial.reminder1 ||
-      values.reminder2 !== initial.reminder2 ||
-      values.maxReminders !== initial.maxReminders)
-  const dirty =
+  // Har virksomheden allerede en override for gruppen? (styrer "tilpasset"-note
+  // + nulstil, og at gemning bevarer en eksisterende override.)
+  const parcelOverridden =
+    !!data &&
+    (data.parcel_reminder_1_days != null ||
+      data.parcel_reminder_2_days != null ||
+      data.parcel_reminder_max != null ||
+      data.parcel_reminder_1_enabled != null ||
+      data.parcel_reminder_2_enabled != null)
+  const assetOverridden =
+    !!data &&
+    (data.asset_reminder_1_days != null ||
+      data.asset_reminder_2_days != null ||
+      data.asset_reminder_max != null ||
+      data.asset_reminder_1_enabled != null ||
+      data.asset_reminder_2_enabled != null)
+  const channelsOverridden =
+    !!data && (data.notify_email_enabled != null || data.notify_sms_enabled != null)
+
+  const initial = data && platform ? toValues(data, platform) : null
+  const j = (o: unknown) => JSON.stringify(o)
+  const parcelDirty = !!values && !!initial && j(values.parcel) !== j(initial.parcel)
+  const assetDirty = !!values && !!initial && j(values.asset) !== j(initial.asset)
+  const channelsDirty =
     !!values &&
     !!initial &&
-    (values.quietStart !== initial.quietStart ||
-      values.quietEnd !== initial.quietEnd ||
-      remindersDirty)
+    (values.emailEnabled !== initial.emailEnabled || values.smsEnabled !== initial.smsEnabled)
+  const quietDirty =
+    !!values &&
+    !!initial &&
+    (values.quietStart !== initial.quietStart || values.quietEnd !== initial.quietEnd)
+  const dirty = parcelDirty || assetDirty || channelsDirty || quietDirty
 
   const save = async () => {
     if (!values || !companyId) return
-    const r1 = Math.max(1, Math.round(values.reminder1))
-    const r2 = Math.max(r1 + 1, Math.round(values.reminder2))
+    const p = values.parcel
+    const a = values.asset
+    const pr1 = Math.max(1, Math.round(p.reminder1))
+    const pr2 = Math.max(pr1 + 1, Math.round(p.reminder2))
+    const ar1 = Math.max(1, Math.round(a.reminder1))
+    const ar2 = Math.max(ar1 + 1, Math.round(a.reminder2))
     setSaving(true)
     const { data: saved, error } = await supabase
       .from('companies')
       .update({
         quiet_hours_start: values.quietStart || null,
         quiet_hours_end: values.quietEnd || null,
-        // Påmindelserne bliver kun virksomhedens egne hvis de er ændret
-        // (eller allerede var det) — ellers fortsætter arven fra platformen.
-        ...(remindersDirty || overridden
+        ...(channelsDirty || channelsOverridden
+          ? { notify_email_enabled: values.emailEnabled, notify_sms_enabled: values.smsEnabled }
+          : {}),
+        // Påmindelserne bliver kun virksomhedens egne hvis de er ændret (eller
+        // allerede var det) — ellers fortsætter arven fra platformen.
+        ...(parcelDirty || parcelOverridden
           ? {
-              parcel_reminder_1_days: r1,
-              parcel_reminder_2_days: r2,
-              parcel_reminder_max: Math.max(0, Math.round(values.maxReminders)),
-              parcel_reminder_1_enabled: values.r1Enabled,
-              parcel_reminder_2_enabled: values.r1Enabled && values.r2Enabled,
+              parcel_reminder_1_days: pr1,
+              parcel_reminder_2_days: pr2,
+              parcel_reminder_max: Math.max(0, Math.round(p.maxReminders)),
+              parcel_reminder_1_enabled: p.r1Enabled,
+              parcel_reminder_2_enabled: p.r1Enabled && p.r2Enabled,
+            }
+          : {}),
+        ...(assetDirty || assetOverridden
+          ? {
+              asset_reminder_1_days: ar1,
+              asset_reminder_2_days: ar2,
+              asset_reminder_max: Math.max(0, Math.round(a.maxReminders)),
+              asset_reminder_1_enabled: a.r1Enabled,
+              asset_reminder_2_enabled: a.r1Enabled && a.r2Enabled,
             }
           : {}),
       })
@@ -152,21 +195,31 @@ function NotificationsPage() {
   }
 
   const cancel = () => {
-    if (data && platform) setValues(toValues(data))
+    if (data && platform) setValues(toValues(data, platform))
   }
 
-  // Nulstil: fjern virksomhedens egne påmindelsesdage → platformens gælder.
+  // Nulstil den valgte types påmindelser → platformens standard gælder igen.
   const reset = async () => {
     if (!companyId) return
+    const patch =
+      notifType === 'asset_reminder'
+        ? {
+            asset_reminder_1_days: null,
+            asset_reminder_2_days: null,
+            asset_reminder_max: null,
+            asset_reminder_1_enabled: null,
+            asset_reminder_2_enabled: null,
+          }
+        : {
+            parcel_reminder_1_days: null,
+            parcel_reminder_2_days: null,
+            parcel_reminder_max: null,
+            parcel_reminder_1_enabled: null,
+            parcel_reminder_2_enabled: null,
+          }
     const { data: saved, error } = await supabase
       .from('companies')
-      .update({
-        parcel_reminder_1_days: null,
-        parcel_reminder_2_days: null,
-        parcel_reminder_max: null,
-        parcel_reminder_1_enabled: null,
-        parcel_reminder_2_enabled: null,
-      })
+      .update(patch)
       .eq('id', companyId)
       .select('id')
     if (error || !saved?.length) {
@@ -201,6 +254,8 @@ function NotificationsPage() {
 
   if (isPending || !values || !companyId) return <Skeleton className="h-40 w-full" />
 
+  const activeOverridden = notifType === 'asset_reminder' ? assetOverridden : parcelOverridden
+
   return (
     <div className="flex min-h-full flex-col">
       <div className="mx-auto w-full max-w-3xl py-6">
@@ -216,6 +271,14 @@ function NotificationsPage() {
         <div className="flex flex-col gap-8">
           <section className="flex flex-col gap-4 border-b border-border pb-8">
             <h2 className="text-[13px] font-semibold">{t('notificationsPage.general')}</h2>
+
+            <ChannelToggles
+              email={values.emailEnabled}
+              sms={values.smsEnabled}
+              onEmailChange={(v) => setValues({ ...values, emailEnabled: v })}
+              onSmsChange={(v) => setValues({ ...values, smsEnabled: v })}
+            />
+
             <QuietHoursField
               start={values.quietStart}
               end={values.quietEnd}
@@ -223,35 +286,37 @@ function NotificationsPage() {
               onEndChange={(v) => setValues({ ...values, quietEnd: v })}
             />
 
-            <Field label={t('notificationsPage.testSms')}>
-              <p className="mb-2 text-xs text-muted-foreground">
-                {t('notificationsPage.testSmsHint')}
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  value={testPhone}
-                  inputMode="tel"
-                  autoComplete="off"
-                  placeholder={t('notificationsPage.testSmsPlaceholder')}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      sendTest()
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={testSending || !testPhone.trim()}
-                  onClick={sendTest}
-                >
-                  <MessageSquare className="size-4" />
-                  {testSending ? t('common.loading') : t('notificationsPage.testSmsButton')}
-                </Button>
-              </div>
-            </Field>
+            {access?.isPlatformAdmin && (
+              <Field label={t('notificationsPage.testSms')}>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {t('notificationsPage.testSmsHint')}
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={testPhone}
+                    inputMode="tel"
+                    autoComplete="off"
+                    placeholder={t('notificationsPage.testSmsPlaceholder')}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        sendTest()
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={testSending || !testPhone.trim()}
+                    onClick={sendTest}
+                  >
+                    <MessageSquare className="size-4" />
+                    {testSending ? t('common.loading') : t('notificationsPage.testSmsButton')}
+                  </Button>
+                </div>
+              </Field>
+            )}
           </section>
 
           <section className="flex flex-col gap-5">
@@ -264,32 +329,49 @@ function NotificationsPage() {
                   <SelectItem value="parcel_flow">
                     {t('notificationsPage.typeParcelFlow')}
                   </SelectItem>
+                  <SelectItem value="asset_reminder">
+                    {t('notificationsPage.typeAssetReminder')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
 
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {activeOverridden
+                  ? t('configureConfig.templateCustomized')
+                  : t('configureConfig.templateUsesDefault')}
+              </p>
+              {activeOverridden && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setResetOpen(true)}
+                >
+                  {t('configureConfig.resetToDefault')}
+                </Button>
+              )}
+            </div>
+
             {notifType === 'parcel_flow' && (
+              <ParcelFlowFields
+                value={values.parcel}
+                onChange={(patch) =>
+                  setValues({ ...values, parcel: { ...values.parcel, ...patch } })
+                }
+              />
+            )}
+            {notifType === 'asset_reminder' && (
               <>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    {overridden
-                      ? t('configureConfig.templateCustomized')
-                      : t('configureConfig.templateUsesDefault')}
-                  </p>
-                  {overridden && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setResetOpen(true)}
-                    >
-                      {t('configureConfig.resetToDefault')}
-                    </Button>
-                  )}
-                </div>
-                <ParcelFlowFields
-                  value={values}
-                  onChange={(patch) => setValues({ ...values, ...patch })}
+                <p className="text-xs text-muted-foreground">
+                  {t('notificationsPage.assetFirstNotice')}
+                </p>
+                <AssetFlowFields
+                  value={values.asset}
+                  onChange={(patch) =>
+                    setValues({ ...values, asset: { ...values.asset, ...patch } })
+                  }
                 />
               </>
             )}

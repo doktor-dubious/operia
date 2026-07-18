@@ -109,9 +109,78 @@ export type Database = {
           },
         ]
       }
+      asset_loan_notifications: {
+        Row: {
+          asset_id: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at: string
+          error: string | null
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          lang: string
+          loan_id: string
+          provider_id: string | null
+          recipient: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Insert: {
+          asset_id?: string | null
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          lang?: string
+          loan_id: string
+          provider_id?: string | null
+          recipient?: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Update: {
+          asset_id?: string | null
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          company_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          lang?: string
+          loan_id?: string
+          provider_id?: string | null
+          recipient?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_loan_notifications_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_loan_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_loan_notifications_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "asset_loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_loans: {
         Row: {
           asset_id: string
+          bounce_reason: string | null
+          bounced_at: string | null
           company_id: string
           expires_at: string | null
           id: string
@@ -127,6 +196,8 @@ export type Database = {
         }
         Insert: {
           asset_id: string
+          bounce_reason?: string | null
+          bounced_at?: string | null
           company_id: string
           expires_at?: string | null
           id?: string
@@ -142,6 +213,8 @@ export type Database = {
         }
         Update: {
           asset_id?: string
+          bounce_reason?: string | null
+          bounced_at?: string | null
           company_id?: string
           expires_at?: string | null
           id?: string
@@ -415,6 +488,11 @@ export type Database = {
       }
       companies: {
         Row: {
+          asset_reminder_1_days: number | null
+          asset_reminder_1_enabled: boolean | null
+          asset_reminder_2_days: number | null
+          asset_reminder_2_enabled: boolean | null
+          asset_reminder_max: number | null
           created_at: string
           default_currency: string
           default_language: string
@@ -422,6 +500,8 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          notify_email_enabled: boolean | null
+          notify_sms_enabled: boolean | null
           parcel_reminder_1_days: number | null
           parcel_reminder_1_enabled: boolean | null
           parcel_reminder_2_days: number | null
@@ -442,6 +522,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asset_reminder_1_days?: number | null
+          asset_reminder_1_enabled?: boolean | null
+          asset_reminder_2_days?: number | null
+          asset_reminder_2_enabled?: boolean | null
+          asset_reminder_max?: number | null
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -449,6 +534,8 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          notify_email_enabled?: boolean | null
+          notify_sms_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
           parcel_reminder_2_days?: number | null
@@ -469,6 +556,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asset_reminder_1_days?: number | null
+          asset_reminder_1_enabled?: boolean | null
+          asset_reminder_2_days?: number | null
+          asset_reminder_2_enabled?: boolean | null
+          asset_reminder_max?: number | null
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -476,6 +568,8 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          notify_email_enabled?: boolean | null
+          notify_sms_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
           parcel_reminder_2_days?: number | null
@@ -1339,6 +1433,73 @@ export type Database = {
           },
         ]
       }
+      parcel_notifications: {
+        Row: {
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          error: string | null
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          lang: string
+          parcel_id: string
+          provider_id: string | null
+          recipient: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at?: string
+          employee_id?: string | null
+          error?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          lang?: string
+          parcel_id: string
+          provider_id?: string | null
+          recipient?: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          company_id?: string
+          created_at?: string
+          employee_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          lang?: string
+          parcel_id?: string
+          provider_id?: string | null
+          recipient?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcel_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcel_notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcel_notifications_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcels: {
         Row: {
           barcode: string | null
@@ -1501,6 +1662,12 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          asset_notifications_enabled: boolean
+          asset_reminder_1_days: number
+          asset_reminder_1_enabled: boolean
+          asset_reminder_2_days: number
+          asset_reminder_2_enabled: boolean
+          asset_reminder_max: number
           audit_retention_days: number | null
           default_currency: string
           default_language: string
@@ -1519,6 +1686,9 @@ export type Database = {
           import_schedule_time: string | null
           locker_loan_ttl_hours: number | null
           maps_provider: string
+          notify_email_enabled: boolean
+          notify_sms_enabled: boolean
+          parcel_notifications_enabled: boolean
           parcel_reminder_1_days: number
           parcel_reminder_1_enabled: boolean
           parcel_reminder_2_days: number
@@ -1539,6 +1709,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asset_notifications_enabled?: boolean
+          asset_reminder_1_days?: number
+          asset_reminder_1_enabled?: boolean
+          asset_reminder_2_days?: number
+          asset_reminder_2_enabled?: boolean
+          asset_reminder_max?: number
           audit_retention_days?: number | null
           default_currency?: string
           default_language?: string
@@ -1557,6 +1733,9 @@ export type Database = {
           import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
           maps_provider?: string
+          notify_email_enabled?: boolean
+          notify_sms_enabled?: boolean
+          parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
           parcel_reminder_2_days?: number
@@ -1577,6 +1756,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asset_notifications_enabled?: boolean
+          asset_reminder_1_days?: number
+          asset_reminder_1_enabled?: boolean
+          asset_reminder_2_days?: number
+          asset_reminder_2_enabled?: boolean
+          asset_reminder_max?: number
           audit_retention_days?: number | null
           default_currency?: string
           default_language?: string
@@ -1595,6 +1780,9 @@ export type Database = {
           import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
           maps_provider?: string
+          notify_email_enabled?: boolean
+          notify_sms_enabled?: boolean
+          parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
           parcel_reminder_2_days?: number
@@ -1988,6 +2176,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_notification_event: {
+        Args: {
+          p_action: string
+          p_actor?: string
+          p_company_id: string
+          p_detail?: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_summary: string
+        }
+        Returns: undefined
+      }
       parcel_transition_allowed: {
         Args: {
           from_s: Database["public"]["Enums"]["parcel_status"]
@@ -2033,10 +2233,25 @@ export type Database = {
       }
       try_import_lock: { Args: { p_company_id: string }; Returns: boolean }
       try_import_lock_self: { Args: { p_company_id: string }; Returns: boolean }
+      update_asset_loan: {
+        Args: {
+          p_expires_at?: string
+          p_loan_id: string
+          p_note?: string
+          p_to_address?: string
+          p_to_email?: string
+          p_to_name: string
+          p_to_phone?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "manager" | "parcel_handler" | "final_receiver"
       asset_status: "in_stock" | "assigned" | "on_loan" | "service" | "retired"
+      notification_channel: "email" | "sms"
+      notification_kind: "arrival" | "reminder_1" | "reminder_2" | "manual"
+      notification_status: "sent" | "failed" | "skipped"
       parcel_status:
         | "unassigned"
         | "registered"
@@ -2179,6 +2394,9 @@ export const Constants = {
     Enums: {
       app_role: ["manager", "parcel_handler", "final_receiver"],
       asset_status: ["in_stock", "assigned", "on_loan", "service", "retired"],
+      notification_channel: ["email", "sms"],
+      notification_kind: ["arrival", "reminder_1", "reminder_2", "manual"],
+      notification_status: ["sent", "failed", "skipped"],
       parcel_status: [
         "unassigned",
         "registered",

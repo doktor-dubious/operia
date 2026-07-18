@@ -14,14 +14,23 @@ const DEFAULT_SENDER = 'Operia'
 
 // Normalisér et telefonnummer til et MSISDN (landekode + nummer, kun cifre).
 // GatewayAPI vil have modtageren som et tal, fx 4512345678 — uden '+' eller '00'.
-// Returnerer null hvis nummeret er for kort til at være gyldigt. Nummeret SKAL
-// indeholde landekode (fx 45…); rene 8-cifrede numre gættes bevidst ikke til DK,
-// da medarbejdere kan være i udlandet — normalisering til E.164 hører til ved
-// import/indtastning.
-export function toMsisdn(phone: string | number): number | null {
+//
+// Uden en landekode kan et nummer ikke sendes korrekt: GatewayAPI læser de
+// forreste cifre som landekode, så "12345678" ryger et forkert sted hen (eller i
+// tomrummet) mens API'et svarer "sendt". Derfor:
+//   • et rent 8-cifret nummer antages at være dansk og får 45 foran (DK-first);
+//   • ellers KRÆVES landekode — resultatet skal være 9–15 cifre (E.164), ellers
+//     returneres null, så en fejlkonfiguration fanges frem for at "lykkes" tomt.
+//     Nedre grænse er 9 (ikke 10), så gyldige 9-cifrede numre som Grønland
+//     (+299 XXXXXX) og Færøerne (+298 XXXXXX) — relevante for en dansk lejer —
+//     ikke afvises.
+// Udenlandske medarbejdere skal derfor gemmes MED landekode (>8 cifre); det er
+// import-/indtastningssidens ansvar.
+export function toMsisdn(phone: string | number, defaultCc = '45'): number | null {
   let digits = String(phone).replace(/\D/g, '')
   if (digits.startsWith('00')) digits = digits.slice(2) // internationalt 00-præfiks
-  if (digits.length < 8) return null
+  if (digits.length === 8) digits = defaultCc + digits // bart dansk nummer
+  if (digits.length < 9 || digits.length > 15) return null
   const n = Number(digits)
   return Number.isSafeInteger(n) ? n : null
 }
