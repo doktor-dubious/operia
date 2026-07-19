@@ -28,15 +28,13 @@ import {
 
 // Navigationsstruktur efter prototypens fulde scope (intra-app + admin-portal
 // + assets-app foldet ind i én app). Grupper og punkter filtreres på adgang:
-//  - requires 'manager': stamdata/system (managers + platform-admins)
-//  - requires 'platform': DCA Logic-gruppen (kun platform-admins)
+//  - rolle: canAccessPath (lib/roles.ts) afgør pr. punkt om brugerens roller
+//    åbner siden (manager/platform-admin ser alt)
 //  - productKey: kræver aktivt produkt for virksomheden (has_product)
 
-export type AccessInfo = {
-  isPlatformAdmin: boolean
-  isManager: boolean
-  products: Set<string>
-}
+import { canAccessPath, type AccessInfo } from '@/lib/roles'
+
+export type { AccessInfo }
 
 export type NavItem = {
   labelKey: string // i18n-nøgle under nav.*
@@ -48,7 +46,6 @@ export type NavItem = {
 
 export type NavGroup = {
   labelKey: string // i18n-nøgle under nav.*
-  requires?: 'manager' | 'platform'
   items: NavItem[]
 }
 
@@ -66,7 +63,6 @@ export const navGroups: NavGroup[] = [
   },
   {
     labelKey: 'groupMasterData',
-    requires: 'manager',
     items: [
       { labelKey: 'employees', href: '/employees', icon: Users },
       { labelKey: 'departments', href: '/departments', icon: Network },
@@ -88,7 +84,6 @@ export const navGroups: NavGroup[] = [
     // Pakkernes egen stamdata — flyttet fra Stamdata, som nu kun er de
     // fælles registre (medarbejdere/afdelinger/skabe/import).
     labelKey: 'groupParcelManagement',
-    requires: 'manager',
     items: [
       { labelKey: 'locations', href: '/locations', icon: MapPin },
       { labelKey: 'handlingClasses', href: '/handling-classes', icon: Handshake },
@@ -218,20 +213,17 @@ export const operiaConfigNav: { labelKey: string; href: string }[] = [
 ]
 
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
-// ikke hentet) vises kun pakkegruppen — så admin-punkter ikke blinker frem.
+// ikke hentet) vises ingen grupper — så punkter ikke blinker frem og
+// forsvinder igen. Home/Indstillinger står uden for grupperne og er åbne.
 export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {
-  if (!access) return navGroups.filter((g) => !g.requires).slice(0, 1)
+  if (!access) return []
   return navGroups
-    .filter((group) => {
-      if (group.requires === 'platform') return access.isPlatformAdmin
-      if (group.requires === 'manager') return access.isManager || access.isPlatformAdmin
-      return true
-    })
     .map((group) => ({
       ...group,
       items: group.items.filter(
         (item) =>
-          !item.productKey || access.isPlatformAdmin || access.products.has(item.productKey),
+          (!item.productKey || access.isPlatformAdmin || access.products.has(item.productKey)) &&
+          canAccessPath(item.href, access),
       ),
     }))
     .filter((group) => group.items.length > 0)

@@ -21,10 +21,18 @@
     <string name="greeting_morning">Godmorgen</string>
     <string name="greeting_day">Goddag</string>
     <string name="greeting_evening">Godaften</string>
+    <string name="greeting_night">Godnat</string>
     <string name="tile_receive">Modtag pakke</string>
     <string name="tile_receive_sub">Scan &amp; registrér</string>
     <string name="tile_handout">Udlever / afvis</string>
     <string name="tile_handout_sub">Find &amp; kvittér</string>
+    <string name="tile_move">Flyt</string>
+    <string name="tile_move_sub">Scan &amp; flyt</string>
+    <string name="tile_condition">Tilstand</string>
+    <string name="tile_condition_sub">Foto &amp; note</string>
+    <string name="tile_parcel_group">Pakker</string>
+    <string name="tile_parcel_group_sub">Alle pakkefunktioner</string>
+    <string name="parcel_group_empty">Ingen pakkefunktioner tilgængelige</string>
     <string name="tile_search">Søg</string>
     <string name="tile_search_sub">Find en pakke</string>
     <string name="tile_route">Ruteplan</string>
@@ -68,6 +76,12 @@
     <string name="receive_title">Modtag pakker</string>
     <string name="receive_scan_label">Scan pakker</string>
     <string name="storage_location_optional">Placering (valgfri)</string>
+    <string name="carrier_optional">Fragtfirma (valgfri)</string>
+    <string name="handling_optional">Håndtering (valgfri)</string>
+    <string name="receiver">Modtager</string>
+    <string name="carrier">Fragtfirma</string>
+    <string name="handling">Håndtering</string>
+    <string name="storage_location">Placering</string>
     <string name="receive_already_scanned">Allerede scannet</string>
     <string name="receive_pick_recipient_first">Vælg en modtager først</string>
     <string name="receive_added">Tilføjet</string>
@@ -78,6 +92,9 @@
     <string name="receive_note_placeholder">fx tilstand / bemærkning</string>
     <string name="receive_save_button">Gem %1$d pakke(r)</string>
     <string name="receive_scan_at_least_one">Scan mindst én pakke</string>
+    <string name="receive_unassigned_title">Registrér som ikke-tildelt?</string>
+    <string name="receive_unassigned_body">Der er ikke valgt en modtager. Pakkerne registreres som ikke-tildelt og vises under Dashboard → Undtagelser, indtil en manager tildeler en modtager.</string>
+    <string name="receive_unassigned_confirm">Registrér</string>
     <string name="receive_saved">%1$d pakke(r) gemt</string>
     <string name="receive_queued">%1$d pakke(r) gemt lokalt — synkroniseres når du er online</string>
     <string name="receive_save_failed">Kunne ikke gemme</string>
@@ -105,6 +122,37 @@
     <string name="handout_return_confirm">Returnér</string>
     <string name="handout_rejected">Pakke afvist</string>
     <string name="handout_returned">Pakke returneret til afsender</string>
+
+    <!-- flyt (relokering) -->
+    <string name="move_title">Flyt pakke</string>
+    <string name="move_scan_label">Scan pakke</string>
+    <string name="move_empty">Scan en pakke for at flytte den</string>
+    <string name="move_not_movable">Pakken kan ikke flyttes i sin nuværende status</string>
+    <string name="move_current_location">Nuværende placering: %1$s</string>
+    <string name="move_status_label">Ny status</string>
+    <string name="move_location_label">Placering</string>
+    <string name="move_location_label_optional">Placering (valgfri)</string>
+    <string name="move_pick_status">Vælg en status først</string>
+    <string name="move_pick_location">Vælg en placering</string>
+    <string name="move_confirm_button">Flyt pakke</string>
+    <string name="move_done">Pakke flyttet</string>
+
+    <!-- tilstand (dokumentation) -->
+    <string name="condition_title">Tilstand</string>
+    <string name="condition_scan_label">Scan pakke</string>
+    <string name="condition_empty">Scan en pakke for at dokumentere den</string>
+    <string name="condition_existing">Dokumentation (%1$d)</string>
+    <string name="condition_none">Ingen dokumentation endnu</string>
+    <string name="condition_photo_label">Foto</string>
+    <string name="condition_take_photo">Tag foto</string>
+    <string name="condition_pick_gallery">Vælg fra galleri</string>
+    <string name="condition_remove_photo">Fjern foto</string>
+    <string name="condition_photo_required">Tilføj et foto først</string>
+    <string name="condition_photo_failed">Kunne ikke læse billedet</string>
+    <string name="condition_camera_denied">Kameraadgang blev nægtet</string>
+    <string name="condition_save">Gem dokumentation</string>
+    <string name="condition_saved">Dokumentation gemt</string>
+    <string name="condition_save_failed">Kunne ikke gemme</string>
 
     <!-- underskrift -->
     <string name="signature_title">Underskrift</string>

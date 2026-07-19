@@ -1,5 +1,9 @@
 package com.dcalogic.operia.ui.screens
 
+import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +21,7 @@ import com.dcalogic.operia.AppViewModel
 import com.dcalogic.operia.R
 import com.dcalogic.operia.data.Parcel
 import com.dcalogic.operia.data.Repository
+import com.dcalogic.operia.ui.BigButton
 import com.dcalogic.operia.ui.C
 import com.dcalogic.operia.ui.Card
 import com.dcalogic.operia.ui.EmptyBox
@@ -27,18 +32,14 @@ import com.dcalogic.operia.ui.statusColor
 import com.dcalogic.operia.ui.statusLabel
 import kotlinx.coroutines.launch
 
-/** Søg: chain-of-custody-opslag på stregkode. */
+/** Søg: chain-of-custody-opslag på stregkode, med hurtig-handlinger (Udlever/
+ *  Flyt) der åbner den rette skærm med pakken forudvalgt. */
 @Composable
-fun SearchScreen(vm: AppViewModel, onBack: () -> Unit) {
+fun SearchScreen(vm: AppViewModel, onBack: () -> Unit, onNavigate: (String) -> Unit) {
     val toast = rememberToast()
     val scope = rememberCoroutineScope()
     var results by remember { mutableStateOf<List<Parcel>?>(null) }
     val msgFailed = stringResource(R.string.search_failed)
-
-    fun receiverLabel(p: Parcel): String = listOfNotNull(
-        vm.departments.firstOrNull { it.id == p.department_id }?.name,
-        vm.employees.firstOrNull { it.id == p.receiver_employee_id }?.full_name,
-    ).joinToString(" · ").ifBlank { "—" }
 
     fun find(code: String) {
         scope.launch {
@@ -65,13 +66,13 @@ fun SearchScreen(vm: AppViewModel, onBack: () -> Unit) {
                         fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
-                        stringResource(R.string.receiver_prefix, receiverLabel(p)),
+                        stringResource(R.string.receiver_prefix, receiverLabel(vm, p)),
                         color = C.muted,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                     p.registered_at?.let {
                         Text(
-                            stringResource(R.string.registered_prefix, it.take(16).replace("T", " ")),
+                            stringResource(R.string.registered_prefix, formatLocalTimestamp(it)),
                             color = C.muted,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(top = 2.dp),
@@ -90,6 +91,50 @@ fun SearchScreen(vm: AppViewModel, onBack: () -> Unit) {
                             fontSize = 13.sp,
                             modifier = Modifier.padding(top = 2.dp),
                         )
+                    }
+
+                    // Hurtig-handlinger: kun dem pakkens status (og brugerens
+                    // entitlements) tillader. Åbner Udlever/Flyt med pakken
+                    // forudvalgt, så den fulde logik bor ét sted.
+                    val code = p.barcode
+                    // Genbrug HandoutScreens autoritative regel: Udlever-skærmen
+                    // har kun noget at tilbyde for statusser i ACTIONABLE (kun
+                    // 'delivered'/'returned' er terminale). Ellers lander
+                    // handleren på en skærm, hvis eneste udfald er en server-
+                    // afvisning.
+                    val canHandout = vm.has("hh_handout") && p.status in ACTIONABLE
+                    val canMove = vm.has("hh_move") && moveTargets(p.status).isNotEmpty()
+                    if (canHandout || canMove) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            if (canHandout) {
+                                BigButton(
+                                    stringResource(R.string.tile_handout),
+                                    color = C.green,
+                                    contentColor = C.greenInk,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    onNavigate(
+                                        if (code.isNullOrBlank()) "handout"
+                                        else "handout?code=${Uri.encode(code)}",
+                                    )
+                                }
+                            }
+                            if (canMove) {
+                                BigButton(
+                                    stringResource(R.string.tile_move),
+                                    color = C.blue,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    onNavigate(
+                                        if (code.isNullOrBlank()) "move"
+                                        else "move?code=${Uri.encode(code)}",
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

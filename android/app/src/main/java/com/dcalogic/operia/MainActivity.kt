@@ -19,15 +19,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.dcalogic.operia.ui.C
 import com.dcalogic.operia.ui.GhostButton
 import com.dcalogic.operia.ui.OperiaTheme
 import com.dcalogic.operia.ui.screens.HandoutScreen
 import com.dcalogic.operia.ui.screens.HomeScreen
 import com.dcalogic.operia.ui.screens.LoginScreen
+import com.dcalogic.operia.ui.screens.ConditionScreen
+import com.dcalogic.operia.ui.screens.MoveScreen
+import com.dcalogic.operia.ui.screens.ParcelGroupScreen
 import com.dcalogic.operia.ui.screens.ReceiveScreen
 import com.dcalogic.operia.ui.screens.RouteScreen
 import com.dcalogic.operia.ui.screens.SearchScreen
@@ -67,8 +72,19 @@ private fun AppNav(vm: AppViewModel) {
     NavHost(navController = nav, startDestination = "home") {
         composable("home") { HomeScreen(vm) { route -> nav.navigate(route) } }
         composable("receive") { ReceiveScreen(vm, back) }
-        composable("handout") { HandoutScreen(vm, back) }
-        composable("search") { SearchScreen(vm, back) }
+        // handout/move kan åbnes med en pakke forudvalgt (fra Søg) via ?code=…;
+        // en almindelig navigate("handout") matcher stadig (code = null).
+        composable(
+            "handout?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> HandoutScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable(
+            "move?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> MoveScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable("condition") { ConditionScreen(vm, back) }
+        composable("parcel_group") { ParcelGroupScreen(vm, back) { route -> nav.navigate(route) } }
+        composable("search") { SearchScreen(vm, back) { route -> nav.navigate(route) } }
         composable("route") { RouteScreen(vm, back) }
         composable("stock") { StockScreen(vm, back) }
     }

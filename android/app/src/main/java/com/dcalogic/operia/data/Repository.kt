@@ -18,6 +18,9 @@ object Repository {
     @Serializable
     private data class IdRow(val id: String)
 
+    @Serializable
+    private data class UserRoleRow(val role: String)
+
     // ---------- bootstrap ----------
 
     suspend fun currentAppUser(): AppUser? {
@@ -26,6 +29,17 @@ object Repository {
             .select { filter { eq("user_id", uid) }; limit(1) }
             .decodeList<AppUser>()
             .firstOrNull()
+    }
+
+    /** Brugerens roller (user_roles) — afgør hvilke fliser terminalen viser.
+     *  RLS er den reelle håndhævelse; dette er kun UI-gating. */
+    suspend fun currentRoles(): Set<String> {
+        val uid = supabase.auth.currentUserOrNull()?.id ?: return emptySet()
+        return supabase.from("user_roles")
+            .select(Columns.list("role")) { filter { eq("user_id", uid) } }
+            .decodeList<UserRoleRow>()
+            .map { it.role }
+            .toSet()
     }
 
     suspend fun departments(companyId: String): List<Department> =
@@ -52,6 +66,25 @@ object Repository {
                     eq("company_id", companyId)
                     eq("is_active", true)
                 }
+                order("name", Order.ASCENDING)
+            }.decodeList()
+
+    /** Fragtfirmaer (app-ejede stamdata) — valgfrit ved modtagelse, som på webben. */
+    suspend fun carriers(companyId: String): List<Carrier> =
+        supabase.from("carriers")
+            .select(Columns.list("id", "name")) {
+                filter {
+                    eq("company_id", companyId)
+                    eq("is_active", true)
+                }
+                order("name", Order.ASCENDING)
+            }.decodeList()
+
+    /** Håndteringsklasser (app-ejede stamdata) — valgfrit ved modtagelse. */
+    suspend fun handlingClasses(companyId: String): List<HandlingClass> =
+        supabase.from("handling_classes")
+            .select(Columns.list("id", "name")) {
+                filter { eq("company_id", companyId) }
                 order("name", Order.ASCENDING)
             }.decodeList()
 
@@ -189,15 +222,42 @@ object Repository {
         requireUpdated(updated)
     }
 
-    suspend fun moveParcel(parcelId: String, toLocationId: String, toStatus: String = "in_storage") {
+    /**
+     * Flyt en pakke (Flow 2, relokering): sæt flytte-status (in_storage /
+     * in_transit / in_locker) og placering. Placeringen er nullable — 'in_transit'
+     * kan være uden fast plads. State-maskinen (parcel_transition_allowed) afviser
+     * ugyldige overgange, og triggeren logger både 'status_changed' og 'moved' i
+     * parcel_events, så sporbarheden skrives af sig selv.
+     */
+    suspend fun moveParcel(parcelId: String, toStatus: String, toLocationId: String?) {
         val updated = supabase.from("parcels").update({
-            set("storage_location_id", toLocationId)
             set("status", toStatus)
+            set("storage_location_id", toLocationId)
         }) {
             select(Columns.list("id"))
             filter { eq("id", parcelId) }
         }.decodeList<IdRow>()
         requireUpdated(updated)
+    }
+
+    /** Dokumentation (fotos + noter) for en pakke, nyeste først. */
+    suspend fun parcelDocuments(parcelId: String): List<ParcelDocument> =
+        supabase.from("parcel_documents")
+            .select(Columns.list("id", "storage_path", "note", "created_at")) {
+                filter { eq("parcel_id", parcelId) }
+                order("created_at", Order.DESCENDING)
+            }.decodeList()
+
+    /** Upload et tilstandsfoto til parcel-photos-bucket'en. Sti-konvention:
+     *  <company_id>/<parcel_id>/<tid>.jpg (RLS binder første mappe til tenant'en). */
+    suspend fun uploadParcelPhoto(companyId: String, parcelId: String, jpeg: ByteArray): String {
+        val path = "$companyId/$parcelId/${System.currentTimeMillis()}.jpg"
+        supabase.storage.from("parcel-photos").upload(path, jpeg) { upsert = false }
+        return path
+    }
+
+    suspend fun insertParcelDocument(row: ParcelDocumentInsert) {
+        supabase.from("parcel_documents").insert(row)
     }
 
     suspend fun parcelEvents(parcelId: String): List<ParcelEvent> =

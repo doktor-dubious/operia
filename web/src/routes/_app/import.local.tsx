@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/data-table'
-import { useAccess } from '@/hooks/use-access'
 import { IMPORT_CONFIG_DEFAULTS, useImportConfig } from '@/hooks/use-import-config'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
@@ -123,7 +122,6 @@ function clean(value: unknown): string | null {
 function ImportPage() {
   const { t } = useTranslation()
   const { session } = useSession()
-  const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
   const { data: importCfg, isPending: cfgPending } = useImportConfig(companyId)
   const queryClient = useQueryClient()
@@ -593,9 +591,6 @@ function ImportPage() {
     setFileError(null)
   }
 
-  if (access && !access.isManager && !access.isPlatformAdmin) {
-    return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
-  }
   if (!companyId) return <Skeleton className="h-40 w-full" />
 
   return (

@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable } from '@/components/data-table'
-import { useAccess } from '@/hooks/use-access'
 import { useImportConfig } from '@/hooks/use-import-config'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
@@ -73,7 +72,6 @@ const NEW = 'NEW' // sentinel: kategori/placering der først oprettes ved "anven
 export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
   const { t } = useTranslation()
   const { session } = useSession()
-  const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
   const { data: savedCfg, isPending: cfgPending } = useImportConfig(companyId, spec.importType)
   const queryClient = useQueryClient()
@@ -574,9 +572,6 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
     setFileError(null)
   }
 
-  if (access && !access.isManager && !access.isPlatformAdmin) {
-    return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
-  }
   if (!companyId) return <Skeleton className="h-40 w-full" />
 
   return (

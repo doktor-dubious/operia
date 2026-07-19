@@ -7,7 +7,6 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useImportConfig, type ImportType } from '@/hooks/use-import-config'
 import { useSession } from '@/hooks/use-session'
@@ -48,7 +47,6 @@ export function CsvExportPanel({
 }: Props) {
   const { t } = useTranslation()
   const { session } = useSession()
-  const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
   const { data: cfg, isPending: cfgPending } = useImportConfig(companyId, importType)
   const queryClient = useQueryClient()
@@ -71,9 +69,6 @@ export function CsvExportPanel({
     queryFn: () => load(companyId!, format.fields),
   })
 
-  if (access && !access.isManager && !access.isPlatformAdmin) {
-    return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
-  }
   if (!companyId || cfgPending) return <Skeleton className="h-40 w-full" />
 
   const rowCount = loaded?.records.length ?? 0

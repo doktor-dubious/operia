@@ -8,14 +8,13 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendInviteEmail } from '../_shared/invite-email.ts'
+import { callerCanManageCompany } from '../_shared/user-admin.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
-
-const VALID_ROLES = new Set(['manager', 'parcel_handler', 'final_receiver'])
 
 type Body = {
   companyId?: string
@@ -55,9 +54,11 @@ Deno.serve(async (req) => {
   const companyId = body.companyId?.trim()
   const email = body.email?.trim()
   const fullName = body.fullName?.trim() ?? ''
-  const roles = Array.isArray(body.roles)
-    ? [...new Set(body.roles)].filter((r) => VALID_ROLES.has(r))
-    : []
+  // Rollerne kommer fra web-checklisten (lib/roles.ts). Ingen klientside-
+  // allowliste her: app_role-enum'et er den ene sandhed — en ukendt rolle
+  // afvises af role-insert'et nedenfor (og ruller brugeren tilbage), i stedet
+  // for at blive filtreret bort i tavshed så brugeren mangler adgang uden fejl.
+  const roles = Array.isArray(body.roles) ? [...new Set(body.roles)] : []
   if (!companyId) return json({ error: 'company_required' }, 400)
   if (!email) return json({ error: 'email_required' }, 400)
 
@@ -65,30 +66,9 @@ Deno.serve(async (req) => {
 
   // 3) Autorisation: platform-admin (enhver virksomhed) eller manager for
   //    netop denne virksomhed.
-  const { data: isPlatformAdmin } = await admin
-    .from('platform_admins')
-    .select('user_id')
-    .eq('user_id', callerId)
-    .maybeSingle()
-
-  let allowed = !!isPlatformAdmin
-  if (!allowed) {
-    const { data: callerAppUser } = await admin
-      .from('app_users')
-      .select('company_id')
-      .eq('user_id', callerId)
-      .maybeSingle()
-    if (callerAppUser?.company_id === companyId) {
-      const { data: managerRole } = await admin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', callerId)
-        .eq('role', 'manager')
-        .maybeSingle()
-      allowed = !!managerRole
-    }
+  if (!(await callerCanManageCompany(admin, callerId, companyId))) {
+    return json({ error: 'forbidden' }, 403)
   }
-  if (!allowed) return json({ error: 'forbidden' }, 403)
 
   // 4) Opret auth-brugeren (invitation eller fast/genereret adgangskode).
   //    Ved invitation genererer vi selv accept-linket og sender via Resend.

@@ -16,12 +16,20 @@
 
     <!-- home -->
     <string name="greeting_morning">Good morning</string>
-    <string name="greeting_day">Hello</string>
+    <string name="greeting_day">Good afternoon</string>
     <string name="greeting_evening">Good evening</string>
+    <string name="greeting_night">Good night</string>
     <string name="tile_receive">Receive parcel</string>
     <string name="tile_receive_sub">Scan &amp; register</string>
     <string name="tile_handout">Handover</string>
     <string name="tile_handout_sub">Find &amp; sign off</string>
+    <string name="tile_move">Move</string>
+    <string name="tile_move_sub">Scan &amp; move</string>
+    <string name="tile_condition">Condition</string>
+    <string name="tile_condition_sub">Photo &amp; note</string>
+    <string name="tile_parcel_group">Parcels</string>
+    <string name="tile_parcel_group_sub">All parcel functions</string>
+    <string name="parcel_group_empty">No parcel functions available</string>
     <string name="tile_search">Search</string>
     <string name="tile_search_sub">Find a parcel</string>
     <string name="tile_route">Route plan</string>
@@ -65,6 +73,12 @@
     <string name="receive_title">Receive parcels</string>
     <string name="receive_scan_label">Scan parcels</string>
     <string name="storage_location_optional">Storage location (optional)</string>
+    <string name="carrier_optional">Carrier (optional)</string>
+    <string name="handling_optional">Handling (optional)</string>
+    <string name="receiver">Receiver</string>
+    <string name="carrier">Carrier</string>
+    <string name="handling">Handling</string>
+    <string name="storage_location">Storage location</string>
     <string name="receive_already_scanned">Already scanned</string>
     <string name="receive_pick_recipient_first">Pick a receiver first</string>
     <string name="receive_added">Added</string>
@@ -75,6 +89,9 @@
     <string name="receive_note_placeholder">e.g. condition / remark</string>
     <string name="receive_save_button">Save %1$d parcel(s)</string>
     <string name="receive_scan_at_least_one">Scan at least one parcel</string>
+    <string name="receive_unassigned_title">Register as unassigned?</string>
+    <string name="receive_unassigned_body">No receiver is selected. The parcels will be registered as unassigned and shown under Dashboard → Exceptions until a manager assigns a receiver.</string>
+    <string name="receive_unassigned_confirm">Register</string>
     <string name="receive_saved">%1$d parcel(s) saved</string>
     <string name="receive_queued">%1$d parcel(s) saved locally — will sync when you are online</string>
     <string name="receive_save_failed">Could not save</string>
@@ -102,6 +119,37 @@
     <string name="handout_return_confirm">Return</string>
     <string name="handout_rejected">Parcel rejected</string>
     <string name="handout_returned">Parcel returned to sender</string>
+
+    <!-- move (relocation) -->
+    <string name="move_title">Move parcel</string>
+    <string name="move_scan_label">Scan parcel</string>
+    <string name="move_empty">Scan a parcel to move it</string>
+    <string name="move_not_movable">This parcel cannot be moved in its current status</string>
+    <string name="move_current_location">Current location: %1$s</string>
+    <string name="move_status_label">New status</string>
+    <string name="move_location_label">Location</string>
+    <string name="move_location_label_optional">Location (optional)</string>
+    <string name="move_pick_status">Pick a status first</string>
+    <string name="move_pick_location">Pick a location</string>
+    <string name="move_confirm_button">Move parcel</string>
+    <string name="move_done">Parcel moved</string>
+
+    <!-- condition (documentation) -->
+    <string name="condition_title">Condition</string>
+    <string name="condition_scan_label">Scan parcel</string>
+    <string name="condition_empty">Scan a parcel to document it</string>
+    <string name="condition_existing">Documentation (%1$d)</string>
+    <string name="condition_none">No documentation yet</string>
+    <string name="condition_photo_label">Photo</string>
+    <string name="condition_take_photo">Take photo</string>
+    <string name="condition_pick_gallery">Pick from gallery</string>
+    <string name="condition_remove_photo">Remove photo</string>
+    <string name="condition_photo_required">Add a photo first</string>
+    <string name="condition_photo_failed">Could not read the image</string>
+    <string name="condition_camera_denied">Camera access was denied</string>
+    <string name="condition_save">Save documentation</string>
+    <string name="condition_saved">Documentation saved</string>
+    <string name="condition_save_failed">Could not save</string>
 
     <!-- signature -->
     <string name="signature_title">Signature</string>

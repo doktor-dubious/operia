@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,8 +57,10 @@ private val REJECTABLE = setOf("registered", "in_storage", "in_transit")
 private val RETURNABLE = setOf("unassigned", "in_storage", "in_transit", "in_locker", "rejected")
 
 /** Statusser hvor skærmen har noget at tilbyde. Kun 'delivered' og 'returned'
- *  er terminale — en allerede afvist pakke kan fx stadig returneres. */
-private val ACTIONABLE = DELIVERABLE + REJECTABLE + RETURNABLE + "unassigned"
+ *  er terminale — en allerede afvist pakke kan fx stadig returneres. Delt med
+ *  SearchScreen, så hurtig-handlingen "Udlever" kun vises når skærmen faktisk
+ *  har et udfald for pakkens status. */
+internal val ACTIONABLE = DELIVERABLE + REJECTABLE + RETURNABLE + "unassigned"
 
 /**
  * Udlever pakke (spec §handover: accept/afvis). Scan → find pakken → enten
@@ -66,7 +69,7 @@ private val ACTIONABLE = DELIVERABLE + REJECTABLE + RETURNABLE + "unassigned"
  * (state-maskinen tillader ikke unassigned → delivered).
  */
 @Composable
-fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit) {
+fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = null) {
     val toast = rememberToast()
     val scope = rememberCoroutineScope()
 
@@ -90,11 +93,6 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit) {
     val msgFailed = stringResource(R.string.handout_failed)
     val msgRejected = stringResource(R.string.handout_rejected)
     val msgReturned = stringResource(R.string.handout_returned)
-
-    fun receiverLabel(p: Parcel): String = listOfNotNull(
-        vm.departments.firstOrNull { it.id == p.department_id }?.name,
-        vm.employees.firstOrNull { it.id == p.receiver_employee_id }?.full_name,
-    ).joinToString(" · ").ifBlank { "—" }
 
     fun find(code: String) {
         scope.launch {
@@ -195,6 +193,9 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
     }
 
+    // Åbnet fra Søg med en pakke valgt → slå den straks op, som var den scannet.
+    LaunchedEffect(Unit) { initialCode?.takeIf { it.isNotBlank() }?.let { find(it) } }
+
     Screen(title = stringResource(R.string.handout_title), onBack = onBack, toast = toast) {
         ScanBox(label = stringResource(R.string.handout_scan_label), onScan = ::find, focusStamp = focusStamp)
 
@@ -205,7 +206,7 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit) {
             Card {
                 Text(p.barcode ?: p.id.take(8), color = C.txt, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 Text(
-                    stringResource(R.string.receiver_prefix, receiverLabel(p)),
+                    stringResource(R.string.receiver_prefix, receiverLabel(vm, p)),
                     color = C.muted,
                     modifier = Modifier.padding(top = 4.dp),
                 )

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Midlertidige kamera-optagelser (deles med kamera-appen via FileProvider). -->
+    <cache-path name="captures" path="captures/" />
+</paths>

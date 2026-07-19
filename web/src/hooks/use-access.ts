@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { AccessInfo } from '@/lib/nav'
+import type { AccessInfo, AppRole } from '@/lib/roles'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
 
@@ -12,15 +12,25 @@ export function useAccess() {
     enabled: !!session,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<AccessInfo> => {
-      const [admin, manager, prods] = await Promise.all([
+      const [admin, roleRows, prods] = await Promise.all([
         supabase.rpc('is_platform_admin'),
-        supabase.rpc('has_role', { r: 'manager' }),
+        supabase.from('user_roles').select('role').eq('user_id', session!.user.id),
         supabase.from('company_products').select('product_key, valid_until, product_catalog (enabled)'),
       ])
+      // supabase-js afviser IKKE ved fejl — den løser med { data: null, error }.
+      // Uden dette tjek ville en forbigående fejl på user_roles blive til et tomt
+      // rollesæt, der caches som "succes" i staleTime (5 min): en manager låst
+      // ude af hele UI'et. Kast i stedet, så react-query prøver igen/fejler
+      // synligt (RoleGuard viser en fejl, ikke en tavs adgangsnægtelse).
+      if (admin.error) throw admin.error
+      if (roleRows.error) throw roleRows.error
+      if (prods.error) throw prods.error
       const today = new Date().toISOString().slice(0, 10)
+      const roles = new Set<AppRole>((roleRows.data ?? []).map((r) => r.role))
       return {
         isPlatformAdmin: admin.data === true,
-        isManager: manager.data === true,
+        isManager: roles.has('manager'),
+        roles,
         products: new Set(
           (prods.data ?? [])
             .filter((p) => p.product_catalog?.enabled !== false)

@@ -25,6 +25,9 @@ import { CopyButton } from '@/components/copy-button'
 import { ParcelStatusBadge, statusLabelKey } from '@/components/parcel-status-badge'
 import { ParcelReceiveForm } from '@/components/parcel-receive-form'
 import { ParcelHandoverDialog } from '@/components/parcel-handover-dialog'
+import { ParcelRelocateDialog } from '@/components/parcel-relocate-dialog'
+import { ParcelConditionTab } from '@/components/parcel-condition'
+import { moveTargets } from '@/lib/parcel-moves'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
@@ -54,8 +57,8 @@ function useRows() {
       const { data, error } = await supabase
         .from('parcels')
         .select(
-          `id, barcode, status, registered_at, sender, parcel_type, is_private,
-           delivered_to, delivered_note, delivered_at, condition_preset, condition_note,
+          `id, barcode, status, registered_at, sender, parcel_type, is_private, storage_location_id,
+           delivered_to, delivered_note, delivered_at, condition_preset, condition_note, condition_photo_path,
            receiver:employees (full_name),
            department:departments (name),
            location:storage_locations (name),
@@ -90,9 +93,11 @@ function ParcelDetailPane({
   const [busy, setBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [handoverOpen, setHandoverOpen] = useState(false)
+  const [relocateOpen, setRelocateOpen] = useState(false)
 
   const canReject = REJECTABLE_STATUSES.includes(row.status)
   const canHandover = DELIVERABLE_STATUSES.includes(row.status)
+  const canRelocate = moveTargets(row.status).length > 0
 
   const typeLabel = (ty: string) =>
     t(`parcelDetail.type${ty.charAt(0).toUpperCase()}${ty.slice(1)}`)
@@ -122,6 +127,7 @@ function ParcelDetailPane({
 
   const tabs = [
     { key: 'details', label: t('detail.tabDetails') },
+    { key: 'condition', label: t('parcelDetail.tabCondition') },
     { key: 'delivery', label: t('parcelDetail.tabDelivery') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
@@ -176,17 +182,15 @@ function ParcelDetailPane({
             <Field label={t('parcels.registeredAt')}>
               <span className="text-[13px]">{dateFormat.format(new Date(row.registered_at))}</span>
             </Field>
-            {row.condition_preset && (
-              <Field label={t('parcelDetail.condition')}>
-                <span className="text-[13px]">{row.condition_preset}</span>
-              </Field>
-            )}
-            {row.condition_note && (
-              <Field label={t('parcelDetail.conditionNote')}>
-                <span className="whitespace-pre-wrap text-[13px]">{row.condition_note}</span>
-              </Field>
-            )}
           </div>
+        )}
+        {tab === 'condition' && (
+          <ParcelConditionTab
+            parcelId={row.id}
+            conditionPreset={row.condition_preset}
+            conditionNote={row.condition_note}
+            conditionPhotoPath={row.condition_photo_path}
+          />
         )}
         {tab === 'delivery' && (
           <div className="flex flex-col gap-5">
@@ -216,6 +220,26 @@ function ParcelDetailPane({
                 <div className="flex justify-end">
                   <Button size="sm" disabled={!companyId} onClick={() => setHandoverOpen(true)}>
                     {t('parcelDetail.handover')}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {canRelocate && (
+              <div className="flex flex-col gap-3 rounded-md border p-4">
+                <div>
+                  <p className="text-[13px] font-[450]">{t('parcelDetail.relocateTitle')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('parcelDetail.relocateActionDescription')}
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!companyId}
+                    onClick={() => setRelocateOpen(true)}
+                  >
+                    {t('parcelDetail.relocate')}
                   </Button>
                 </div>
               </div>
@@ -292,6 +316,21 @@ function ParcelDetailPane({
             barcode: row.barcode,
             receiverName: row.receiver?.full_name ?? null,
             allowProxy: row.handling?.allow_proxy_collection ?? true,
+          }}
+          companyId={companyId}
+          onDone={refresh}
+        />
+      )}
+
+      {companyId && (
+        <ParcelRelocateDialog
+          open={relocateOpen}
+          onOpenChange={setRelocateOpen}
+          parcel={{
+            id: row.id,
+            barcode: row.barcode,
+            status: row.status,
+            locationId: row.storage_location_id,
           }}
           companyId={companyId}
           onDone={refresh}

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.dcalogic.operia.R
 import kotlinx.coroutines.delay
 
@@ -342,6 +343,98 @@ fun ScanBox(
     }
 }
 
+/* ---------- bekræftelses-dialog (titel + brødtekst + annullér/bekræft) ----------
+ * Til handlinger der er gyldige, men bør bekræftes bevidst — fx at registrere
+ * pakker uden modtager (bliver 'unassigned'), som på webbens modtag-formular.
+ */
+@Composable
+fun ConfirmDialog(
+    title: String,
+    body: String,
+    confirmText: String,
+    confirmColor: Color = C.green,
+    contentColor: Color = C.greenInk,
+    busy: Boolean = false,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(C.panel, RoundedCornerShape(18.dp))
+                .padding(20.dp),
+        ) {
+            Text(title, color = C.txt, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+            Text(body, color = C.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(top = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                GhostButton(
+                    text = stringResource(R.string.cancel),
+                    modifier = Modifier.weight(1f),
+                ) { if (!busy) onDismiss() }
+                BigButton(
+                    text = confirmText,
+                    color = confirmColor,
+                    contentColor = contentColor,
+                    busy = busy,
+                    modifier = Modifier.weight(1f),
+                ) { onConfirm() }
+            }
+        }
+    }
+}
+
+/* ---------- fold-ud-sektion for valgfrie felter ----------
+ * Kollapset som standard: en klikbar overskrift (label + evt. valgt værdi + pil).
+ * Foldes ud for at vise selve feltet. Bruges til de valgfrie inputs på Modtag,
+ * så skærmen er kompakt og scan-fokuseret, men fuld detalje er ét tryk væk.
+ */
+@Composable
+fun FoldSection(
+    title: String,
+    summary: String? = null, // vist til højre når foldet sammen (fx den valgte værdi)
+    content: @Composable () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .border(1.5.dp, if (expanded) C.blue else C.line, RoundedCornerShape(14.dp))
+                .background(C.panel, RoundedCornerShape(14.dp))
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title.uppercase(),
+                color = C.muted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.weight(1f),
+            )
+            if (!expanded && !summary.isNullOrBlank()) {
+                Text(
+                    summary,
+                    color = C.txt,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+            Text(if (expanded) "▾" else "▸", color = C.muted, fontSize = 15.sp)
+        }
+        if (expanded) {
+            Column(Modifier.padding(top = 8.dp)) { content() }
+        }
+    }
+}
+
 /* ---------- opslags-vælger (afdeling / medarbejder) ----------
  * Ren udvælgelse — stamdata oprettes i admin-webappen (master data-politik:
  * medarbejdere ejes af Flow 0-importen, afdelinger af manageren).
@@ -352,13 +445,14 @@ fun LookupPicker(
     items: List<Pair<String, String>>, // id → visningsnavn
     selectedId: String?,
     onSelect: (String?) -> Unit,
+    showLabel: Boolean = true, // slås fra når vælgeren sidder i en FoldSection (som selv har label)
 ) {
     var open by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val selected = items.firstOrNull { it.first == selectedId }
 
-    Column(Modifier.padding(bottom = 12.dp)) {
-        FieldLabel(title)
+    Column(Modifier.padding(bottom = if (showLabel) 12.dp else 0.dp)) {
+        if (showLabel) FieldLabel(title)
         Box(
             Modifier
                 .fillMaxWidth()

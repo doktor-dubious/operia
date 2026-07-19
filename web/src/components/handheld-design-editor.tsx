@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'motion/react'
-import { Plus, Settings2, X } from 'lucide-react'
+import { FolderOpen, GripVertical, Plus, Settings2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -24,11 +24,13 @@ import { ColorPicker } from '@/components/color-picker'
 import { DesignImageField, ToggleSection } from '@/components/design-editor-fields'
 import { DetailTabs } from '@/components/detail-tabs'
 import {
+  applyDesignTokens,
   DEFAULT_HANDHELD_DESIGN,
   HANDHELD_ICONS,
   HANDHELD_ICON_THEMES,
   HANDHELD_TILE_BY_KEY,
   mergeVisibleOrder,
+  timeGreetingKey,
   tileEnabled,
   tileIcon,
   tileSubtitleShown,
@@ -58,20 +60,34 @@ const HH = {
   muted: '#8FA2C4',
 }
 
-const sameTile = (a: HandheldTileItem, b: HandheldTileItem) =>
-  a.key === b.key &&
-  (a.enabled ?? true) === (b.enabled ?? true) &&
-  (a.title ?? '') === (b.title ?? '') &&
-  (a.titleEnabled ?? true) === (b.titleEnabled ?? true) &&
-  (a.subtitle ?? '') === (b.subtitle ?? '') &&
-  (a.subtitleEnabled ?? true) === (b.subtitleEnabled ?? true) &&
-  (a.icon ?? '') === (b.icon ?? '') &&
-  (a.color ?? '') === (b.color ?? '') &&
-  (a.background ?? '') === (b.background ?? '')
-const sameTiles = (a: HandheldTileItem[], b: HandheldTileItem[]) =>
-  a.length === b.length && a.every((t, i) => sameTile(t, b[i]))
+// Funktionserklæringer (ikke arrow-const) så sameTile/sameTiles kan referere
+// hinanden — gruppe-fliser sammenlignes rekursivt på deres børneliste.
+function sameTile(a: HandheldTileItem, b: HandheldTileItem): boolean {
+  return (
+    a.key === b.key &&
+    (a.enabled ?? true) === (b.enabled ?? true) &&
+    (a.title ?? '') === (b.title ?? '') &&
+    (a.titleEnabled ?? true) === (b.titleEnabled ?? true) &&
+    (a.subtitle ?? '') === (b.subtitle ?? '') &&
+    (a.subtitleEnabled ?? true) === (b.subtitleEnabled ?? true) &&
+    (a.icon ?? '') === (b.icon ?? '') &&
+    (a.color ?? '') === (b.color ?? '') &&
+    (a.background ?? '') === (b.background ?? '') &&
+    sameTiles(a.children ?? [], b.children ?? [])
+  )
+}
+function sameTiles(a: HandheldTileItem[], b: HandheldTileItem[]): boolean {
+  return a.length === b.length && a.every((t, i) => sameTile(t, b[i]))
+}
 const sameDesign = (a: HandheldDesign, b: HandheldDesign) =>
-  (Object.keys(DEFAULT_HANDHELD_DESIGN) as (keyof HandheldDesign)[]).every((k) => a[k] === b[k])
+  (Object.keys(DEFAULT_HANDHELD_DESIGN) as (keyof HandheldDesign)[]).every((k) => {
+    const av = a[k]
+    const bv = b[k]
+    if (Array.isArray(av) && Array.isArray(bv)) {
+      return av.length === bv.length && av.every((x, i) => x === bv[i])
+    }
+    return av === bv
+  })
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-[13px] font-semibold text-foreground">{children}</h2>
@@ -335,25 +351,24 @@ const STEP_Y = TILE_H + TILE_GAP
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n))
 
-// Mock-up af håndterminalens startskærm: statuslinje, brandbjælke, hilsen +
-// indholdselementer, fliserne to og to, og "Log ud". Hver flise har et
-// tandhjul, der åbner dens konfiguration, og kan trækkes for at ombytte
-// rækkefølgen (rækkefølgen er den, appen viser fliserne i).
-function HandheldPreview({
+// Det trækbare flisegitter (delt af mock-up'en og gruppe-mappen): to kolonner,
+// hver flise med tandhjul (konfigurér) og ✕ (fjern); gruppe-fliser får desuden
+// et mappe-ikon (åbn) til venstre for tandhjulet. Trækkes for at ombytte
+// rækkefølgen — den rækkefølge, appen viser fliserne i.
+function TileGrid({
   tiles,
   design,
   onConfigure,
   onReorder,
   onRemove,
+  onOpen,
 }: {
-  // Kun de viste fliser — mock-up'en er hvad enheden viser, så fjernede
-  // fliser hører ikke til her. Rækkefølgen her er de viste flisers indbyrdes
-  // rækkefølge; forælderen fletter den tilbage i den fulde liste.
   tiles: HandheldTileItem[]
   design: HandheldDesign
   onConfigure: (key: string) => void
   onReorder: (next: HandheldTileItem[]) => void
   onRemove: (key: string) => void
+  onOpen?: (key: string) => void
 }) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -365,8 +380,7 @@ function HandheldPreview({
   tilesRef.current = tiles
 
   // Træk: flyt den trukne flise hen på den nærmeste gitterplads og skub de
-  // øvrige på plads (splice — ikke ombytning), så rækkefølgen følger med
-  // musen. Selve positionen animeres af motion.
+  // øvrige på plads (splice — ikke ombytning), så rækkefølgen følger med musen.
   const onPointerMove = useCallback(
     (e: PointerEvent) => {
       const drag = dragRef.current
@@ -427,6 +441,138 @@ function HandheldPreview({
 
   return (
     <div
+      ref={containerRef}
+      className="relative select-none"
+      style={{
+        width: COLS * STEP_X - TILE_GAP,
+        height: gridRows * STEP_Y - TILE_GAP,
+        touchAction: 'none',
+      }}
+    >
+      {tiles.map((item, i) => {
+        const tile = HANDHELD_TILE_BY_KEY[item.key]
+        if (!tile) return null
+        const title = item.title?.trim() || t(`handheldDesignPage.${tile.labelKey}`)
+        const sub = item.subtitle?.trim() || t(`handheldDesignPage.${tile.subKey}`)
+        const isGroup = !!tile.children
+        const isDragging = draggingKey === item.key
+        const pos =
+          isDragging && dragPos
+            ? dragPos
+            : { x: (i % COLS) * STEP_X, y: Math.floor(i / COLS) * STEP_Y }
+        return (
+          <motion.div
+            key={item.key}
+            initial={false}
+            animate={{ x: pos.x, y: pos.y }}
+            transition={
+              isDragging ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }
+            }
+            onPointerDown={(e) => onTilePointerDown(item.key, e)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: TILE_W,
+              height: TILE_H,
+              borderColor: HH.line,
+              background: item.background?.trim() || HH.panel,
+            }}
+            className={cn(
+              'flex touch-none flex-col justify-center rounded-2xl border p-3.5',
+              isDragging ? 'z-50 cursor-grabbing opacity-95 shadow-xl' : 'z-[1] cursor-grab',
+            )}
+          >
+            {/* Handlingsknapper (åbn?/konfigurér/fjern) samlet øverst til højre;
+                stopper træk så et klik ikke starter en flytning. */}
+            <div
+              className="absolute right-1.5 top-1.5 flex gap-0.5"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {isGroup && onOpen && (
+                <button
+                  type="button"
+                  aria-label={t('handheldDesignPage.openFolderAria', { name: title })}
+                  title={t('handheldDesignPage.openFolderAria', { name: title })}
+                  onClick={() => onOpen(item.key)}
+                  className="flex size-6 cursor-pointer items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+                >
+                  <FolderOpen size={14} />
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label={t('handheldDesignPage.configureTileAria', { name: title })}
+                title={t('handheldDesignPage.configureTileAria', { name: title })}
+                onClick={() => onConfigure(item.key)}
+                className="flex size-6 cursor-pointer items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                <Settings2 size={14} />
+              </button>
+              <button
+                type="button"
+                aria-label={t('handheldDesignPage.removeTileAria', { name: title })}
+                title={t('handheldDesignPage.removeTileAria', { name: title })}
+                onClick={() => onRemove(item.key)}
+                className="flex size-6 cursor-pointer items-center justify-center rounded-md text-white/60 transition-colors hover:bg-destructive/80 hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <TileIcon item={item} tile={tile} theme={design.iconTheme} size={32} />
+            {tileTitleShown(item) && (
+              <span
+                className="mt-2 text-[14px] font-extrabold leading-tight"
+                style={{ color: HH.txt }}
+              >
+                {title}
+              </span>
+            )}
+            {tileSubtitleShown(item) && (
+              <span
+                className="mt-0.5 text-[11px] font-semibold leading-tight"
+                style={{ color: HH.muted }}
+              >
+                {sub}
+              </span>
+            )}
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Mock-up af håndterminalens startskærm: statuslinje, brandbjælke, hilsen +
+// indholdselementer, flisegitteret og "Log ud". Et mappe-ikon på en gruppe-flise
+// åbner dens underside (onOpen).
+function HandheldPreview({
+  tiles,
+  design,
+  onConfigure,
+  onReorder,
+  onRemove,
+  onOpen,
+}: {
+  // Kun de viste fliser — mock-up'en er hvad enheden viser.
+  tiles: HandheldTileItem[]
+  design: HandheldDesign
+  onConfigure: (key: string) => void
+  onReorder: (next: HandheldTileItem[]) => void
+  onRemove: (key: string) => void
+  onOpen: (key: string) => void
+}) {
+  const { t } = useTranslation()
+  // Eksempeldata til forhåndsvisning af skabelon-koderne (rigtige værdier
+  // udfyldes på enheden af den indloggede bruger + klokkeslættet).
+  const previewTokens = {
+    firstName: t('handheldDesignPage.previewName'),
+    lastName: t('handheldDesignPage.previewLastName'),
+    timeGreeting: t(timeGreetingKey(new Date().getHours())),
+  }
+
+  return (
+    <div
       className="w-[340px] shrink-0 overflow-hidden rounded-[28px] border-[6px] shadow-xl"
       style={{ borderColor: '#0a0a0a', background: HH.bg }}
     >
@@ -457,102 +603,34 @@ function HandheldPreview({
           </div>
         )}
 
-        {/* Hilsen: undertitel over navnet, som på enheden */}
-        {design.subtitleEnabled && (
-          <p className="text-[12px]" style={{ color: HH.muted }}>
-            {design.subtitle.trim() || t('handheldDesignPage.previewGreeting')}
-          </p>
+        {/* Hilsen-elementerne i den valgte rækkefølge (design.greetingOrder), som
+            på enheden. Skabelon-koderne ({{name}} osv.) vises opløst med
+            eksempeldata. Slået fra ⇒ elementet skjules helt. */}
+        {design.greetingOrder.map((gk) =>
+          gk === 'subtitle'
+            ? design.subtitleEnabled && (
+                <p key="subtitle" className="text-[12px]" style={{ color: HH.muted }}>
+                  {applyDesignTokens(design.subtitle, previewTokens).trim() ||
+                    t('handheldDesignPage.previewGreeting')}
+                </p>
+              )
+            : design.welcomeTitleEnabled && (
+                <p key="title" className="text-[19px] font-extrabold" style={{ color: HH.txt }}>
+                  {applyDesignTokens(design.welcomeTitle, previewTokens).trim() ||
+                    t('handheldDesignPage.previewName')}
+                </p>
+              ),
         )}
-        {/* Slået fra (eller tom) ⇒ standardnavnet — som på enheden. */}
-        <p className="text-[19px] font-extrabold" style={{ color: HH.txt }}>
-          {(design.welcomeTitleEnabled && design.welcomeTitle.trim()) ||
-            t('handheldDesignPage.previewName')}
-        </p>
 
-        {/* Fliserne — absolut placeret på et 2-kolonners gitter, så de kan
-            trækkes rundt og animere på plads. */}
-        <div
-          ref={containerRef}
-          className="relative mt-4 select-none"
-          style={{
-            width: COLS * STEP_X - TILE_GAP,
-            height: gridRows * STEP_Y - TILE_GAP,
-            touchAction: 'none',
-          }}
-        >
-          {tiles.map((item, i) => {
-            const tile = HANDHELD_TILE_BY_KEY[item.key]
-            if (!tile) return null
-            const title = item.title?.trim() || t(`handheldDesignPage.${tile.labelKey}`)
-            const sub = item.subtitle?.trim() || t(`handheldDesignPage.${tile.subKey}`)
-            const isDragging = draggingKey === item.key
-            const pos =
-              isDragging && dragPos
-                ? dragPos
-                : { x: (i % COLS) * STEP_X, y: Math.floor(i / COLS) * STEP_Y }
-            return (
-              <motion.div
-                key={item.key}
-                initial={false}
-                animate={{ x: pos.x, y: pos.y }}
-                transition={
-                  isDragging ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 42 }
-                }
-                onPointerDown={(e) => onTilePointerDown(item.key, e)}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: TILE_W,
-                  height: TILE_H,
-                  borderColor: HH.line,
-                  background: item.background?.trim() || HH.panel,
-                }}
-                className={cn(
-                  'flex touch-none flex-col justify-center rounded-2xl border p-3.5',
-                  isDragging ? 'z-50 cursor-grabbing opacity-95 shadow-xl' : 'z-[1] cursor-grab',
-                )}
-              >
-                <button
-                  type="button"
-                  aria-label={t('handheldDesignPage.configureTileAria', { name: title })}
-                  title={t('handheldDesignPage.configureTileAria', { name: title })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => onConfigure(item.key)}
-                  className="absolute right-8 top-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/15 hover:text-white"
-                >
-                  <Settings2 size={14} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={t('handheldDesignPage.removeTileAria', { name: title })}
-                  title={t('handheldDesignPage.removeTileAria', { name: title })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => onRemove(item.key)}
-                  className="absolute right-1.5 top-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-white/60 transition-colors hover:bg-destructive/80 hover:text-white"
-                >
-                  <X size={14} />
-                </button>
-                <TileIcon item={item} tile={tile} theme={design.iconTheme} size={32} />
-                {tileTitleShown(item) && (
-                  <span
-                    className="mt-2 text-[14px] font-extrabold leading-tight"
-                    style={{ color: HH.txt }}
-                  >
-                    {title}
-                  </span>
-                )}
-                {tileSubtitleShown(item) && (
-                  <span
-                    className="mt-0.5 text-[11px] font-semibold leading-tight"
-                    style={{ color: HH.muted }}
-                  >
-                    {sub}
-                  </span>
-                )}
-              </motion.div>
-            )
-          })}
+        <div className="mt-4">
+          <TileGrid
+            tiles={tiles}
+            design={design}
+            onConfigure={onConfigure}
+            onReorder={onReorder}
+            onRemove={onRemove}
+            onOpen={onOpen}
+          />
         </div>
 
         <div
@@ -585,7 +663,14 @@ export function HandheldDesignEditor({
   const [tiles, setTiles] = useState<HandheldTileItem[]>(baseTiles)
   const [design, setDesign] = useState<HandheldDesign>(baseDesign)
   const [tab, setTab] = useState('details')
-  const [configKey, setConfigKey] = useState<string | null>(null)
+  const [dragGreeting, setDragGreeting] = useState<string | null>(null)
+  // Hvilken flise konfigureres — enten på top-niveau (groupKey null) eller et
+  // barn inde i en gruppe-mappe (groupKey = gruppens nøgle).
+  const [configTarget, setConfigTarget] = useState<{ groupKey: string | null; key: string } | null>(
+    null,
+  )
+  // Den åbne gruppe-mappe (dens underside redigeres), eller null.
+  const [openGroupKey, setOpenGroupKey] = useState<string | null>(null)
 
   // Nulstil fra base-props når de skifter (første load + efter gem/invalidering).
   useEffect(() => {
@@ -597,6 +682,34 @@ export function HandheldDesignEditor({
   const patchDesign = (patch: Partial<HandheldDesign>) => setDesign((d) => ({ ...d, ...patch }))
   const patchTile = (key: string, patch: Partial<HandheldTileItem>) =>
     setTiles((prev) => prev.map((o) => (o.key === key ? { ...o, ...patch } : o)))
+
+  // Patch/omarrangér et barn inde i en gruppe-mappe.
+  const patchChild = (groupKey: string, childKey: string, patch: Partial<HandheldTileItem>) =>
+    setTiles((prev) =>
+      prev.map((o) =>
+        o.key === groupKey
+          ? { ...o, children: (o.children ?? []).map((c) => (c.key === childKey ? { ...c, ...patch } : c)) }
+          : o,
+      ),
+    )
+  const reorderGroupVisible = (groupKey: string, nextVisible: HandheldTileItem[]) =>
+    setTiles((prev) =>
+      prev.map((o) =>
+        o.key === groupKey ? { ...o, children: mergeVisibleOrder(o.children ?? [], nextVisible) } : o,
+      ),
+    )
+
+  // Byt om på hilsen-elementernes rækkefølge (træk-og-slip på detaljefanen).
+  const reorderGreeting = (from: string, over: string) =>
+    setDesign((d) => {
+      const order = [...d.greetingOrder]
+      const fromI = order.indexOf(from)
+      const overI = order.indexOf(over)
+      if (fromI < 0 || overI < 0 || fromI === overI) return d
+      order.splice(fromI, 1)
+      order.splice(overI, 0, from)
+      return { ...d, greetingOrder: order }
+    })
 
   const visible = tiles.filter(tileEnabled)
   const removed = tiles.filter((o) => !tileEnabled(o))
@@ -611,8 +724,22 @@ export function HandheldDesignEditor({
     setDesign(baseDesign)
   }
 
-  const configItem = configKey ? (tiles.find((o) => o.key === configKey) ?? null) : null
+  // Konfigurations-målet kan være en top-niveau-flise eller et barn i en gruppe.
+  const configItem = configTarget
+    ? configTarget.groupKey
+      ? (tiles
+          .find((o) => o.key === configTarget.groupKey)
+          ?.children?.find((c) => c.key === configTarget.key) ?? null)
+      : (tiles.find((o) => o.key === configTarget.key) ?? null)
+    : null
   const configTile = configItem ? (HANDHELD_TILE_BY_KEY[configItem.key] ?? null) : null
+
+  // Den åbne gruppe-mappe og dens børn (viste/fjernede).
+  const openGroupItem = openGroupKey ? (tiles.find((o) => o.key === openGroupKey) ?? null) : null
+  const openGroupTile = openGroupItem ? (HANDHELD_TILE_BY_KEY[openGroupItem.key] ?? null) : null
+  const groupChildren = openGroupItem?.children ?? []
+  const groupVisible = groupChildren.filter(tileEnabled)
+  const groupRemoved = groupChildren.filter((o) => !tileEnabled(o))
 
   return (
     <div className="flex min-h-full flex-col">
@@ -638,31 +765,73 @@ export function HandheldDesignEditor({
                 <section className="flex flex-col gap-3">
                   <SectionTitle>{t('handheldDesignPage.contentSection')}</SectionTitle>
                   <div className="flex flex-col gap-4">
-                    <ToggleSection
-                      id="hh-welcome"
-                      label={t('handheldDesignPage.welcomeTitle')}
-                      checked={design.welcomeTitleEnabled}
-                      onCheckedChange={(v) => patchDesign({ welcomeTitleEnabled: v })}
-                    >
-                      <Input
-                        value={design.welcomeTitle}
-                        placeholder={t('handheldDesignPage.welcomeTitlePlaceholder')}
-                        onChange={(e) => patchDesign({ welcomeTitle: e.target.value })}
-                      />
-                    </ToggleSection>
+                    {/* Hilsen-elementerne (undertitel/titel) i den gemte rækkefølge,
+                        træk i grebet for at bytte om — enheden viser dem i samme
+                        rækkefølge (design.greetingOrder). */}
+                    {design.greetingOrder.map((gk) => (
+                      <div
+                        key={gk}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          if (dragGreeting && dragGreeting !== gk) reorderGreeting(dragGreeting, gk)
+                        }}
+                        className={cn('flex items-start gap-2', dragGreeting === gk && 'opacity-60')}
+                      >
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={() => setDragGreeting(gk)}
+                          onDragEnd={() => setDragGreeting(null)}
+                          aria-label={t('handheldDesignPage.reorderHandle')}
+                          title={t('handheldDesignPage.reorderHandle')}
+                          className="mt-3.5 cursor-grab text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
+                        >
+                          <GripVertical className="size-4" />
+                        </button>
+                        <div className="flex-1">
+                          {gk === 'title' ? (
+                            <ToggleSection
+                              id="hh-welcome"
+                              label={t('handheldDesignPage.welcomeTitle')}
+                              checked={design.welcomeTitleEnabled}
+                              onCheckedChange={(v) => patchDesign({ welcomeTitleEnabled: v })}
+                            >
+                              <Input
+                                value={design.welcomeTitle}
+                                placeholder={t('handheldDesignPage.welcomeTitlePlaceholder')}
+                                onChange={(e) => patchDesign({ welcomeTitle: e.target.value })}
+                              />
+                            </ToggleSection>
+                          ) : (
+                            <ToggleSection
+                              id="hh-subtitle"
+                              label={t('handheldDesignPage.subtitleLabel')}
+                              checked={design.subtitleEnabled}
+                              onCheckedChange={(v) => patchDesign({ subtitleEnabled: v })}
+                            >
+                              <Input
+                                value={design.subtitle}
+                                placeholder={t('handheldDesignPage.subtitlePlaceholder')}
+                                onChange={(e) => patchDesign({ subtitle: e.target.value })}
+                              />
+                            </ToggleSection>
+                          )}
+                        </div>
+                      </div>
+                    ))}
 
-                    <ToggleSection
-                      id="hh-subtitle"
-                      label={t('handheldDesignPage.subtitleLabel')}
-                      checked={design.subtitleEnabled}
-                      onCheckedChange={(v) => patchDesign({ subtitleEnabled: v })}
-                    >
-                      <Input
-                        value={design.subtitle}
-                        placeholder={t('handheldDesignPage.subtitlePlaceholder')}
-                        onChange={(e) => patchDesign({ subtitle: e.target.value })}
-                      />
-                    </ToggleSection>
+                    {/* Skabelon-koder til velkomsttitel/undertitel. Literalerne står
+                        i JSX (ikke i i18n-strengen), ellers ville i18next selv
+                        forsøge at interpolere {{name}} osv. */}
+                    <p className="text-xs text-muted-foreground">
+                      {t('handheldDesignPage.tokenHintPrefix')}{' '}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{name}}'}</code>{' '}
+                      {t('handheldDesignPage.tokenName')},{' '}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{lastname}}'}</code>{' '}
+                      {t('handheldDesignPage.tokenLastname')},{' '}
+                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{time-greeting}}'}</code>{' '}
+                      {t('handheldDesignPage.tokenTimeGreeting')}
+                    </p>
 
                     <ToggleSection
                       id="hh-logo"
@@ -764,9 +933,10 @@ export function HandheldDesignEditor({
                     <HandheldPreview
                       tiles={visible}
                       design={design}
-                      onConfigure={setConfigKey}
+                      onConfigure={(key) => setConfigTarget({ groupKey: null, key })}
                       onReorder={reorderVisible}
                       onRemove={(key) => patchTile(key, { enabled: false })}
+                      onOpen={setOpenGroupKey}
                     />
                   </div>
                 )}
@@ -787,13 +957,75 @@ export function HandheldDesignEditor({
         </div>
       )}
 
+      {/* Gruppe-mappe: rediger undersidens fliser (konfigurér, omarrangér,
+          tilføj/fjern) — de vises på håndterminalens underside i samme orden. */}
+      {openGroupItem && openGroupTile && (
+        <Dialog open onOpenChange={(o) => !o && setOpenGroupKey(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {t('handheldDesignPage.folderTitle', {
+                  name: openGroupItem.title?.trim() || t(`handheldDesignPage.${openGroupTile.labelKey}`),
+                })}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">{t('handheldDesignPage.folderHint')}</p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={groupRemoved.length === 0}>
+                    <Plus className="size-4" /> {t('handheldDesignPage.addTile')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {groupRemoved.map((item) => {
+                    const tile = HANDHELD_TILE_BY_KEY[item.key]
+                    if (!tile) return null
+                    const Icon = tileIcon(item, tile).icon
+                    return (
+                      <DropdownMenuItem
+                        key={item.key}
+                        className="cursor-pointer"
+                        onClick={() => patchChild(openGroupItem.key, item.key, { enabled: true })}
+                      >
+                        <Icon className="size-4" />
+                        {item.title?.trim() || t(`handheldDesignPage.${tile.labelKey}`)}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            {groupVisible.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">
+                {t('handheldDesignPage.noTiles')}
+              </p>
+            ) : (
+              <div className="flex justify-center overflow-x-auto pt-1">
+                <TileGrid
+                  tiles={groupVisible}
+                  design={design}
+                  onConfigure={(key) => setConfigTarget({ groupKey: openGroupItem.key, key })}
+                  onReorder={(next) => reorderGroupVisible(openGroupItem.key, next)}
+                  onRemove={(key) => patchChild(openGroupItem.key, key, { enabled: false })}
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
       {configItem && configTile && (
         <HandheldTileDialog
           item={configItem}
           tile={configTile}
           theme={design.iconTheme}
-          onPatch={(patch) => patchTile(configItem.key, patch)}
-          onClose={() => setConfigKey(null)}
+          onPatch={(patch) =>
+            configTarget?.groupKey
+              ? patchChild(configTarget.groupKey, configItem.key, patch)
+              : patchTile(configItem.key, patch)
+          }
+          onClose={() => setConfigTarget(null)}
         />
       )}
     </div>

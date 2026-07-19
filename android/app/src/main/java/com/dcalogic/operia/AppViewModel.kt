@@ -17,6 +17,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import com.dcalogic.operia.data.Repository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -35,6 +37,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var employees by mutableStateOf<List<Employee>>(emptyList())
     var assetLocations by mutableStateOf<List<AssetLocation>>(emptyList())
     var storageLocations by mutableStateOf<List<com.dcalogic.operia.data.StorageLocation>>(emptyList())
+    var carriers by mutableStateOf<List<com.dcalogic.operia.data.Carrier>>(emptyList())
+    var handlingClasses by mutableStateOf<List<com.dcalogic.operia.data.HandlingClass>>(emptyList())
     var brand by mutableStateOf(Brand()); private set
     /** Platformens handheld-design (Operia → Handheld-design). Tom = appens
      *  standardudseende, så skærmen virker før/uden konfiguration. */
@@ -44,10 +48,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private var validFeatures: Set<String> = emptySet()
     private var handheldConfigured = false
+    // null = rollerne er ikke kendt endnu (fx fejlede hentningen). Da hver flise
+    // nu også rolle-gates, ville et tomt sæt ved en forbigående netværksfejl
+    // skjule ALLE fliser og efterlade en tom, fastlåst startskærm; ukendt
+    // behandles derfor tilladende (som has()'s default-open), så featuren alene
+    // stadig viser fliserne.
+    private var roles: Set<String>? = null
 
     /** Prototype-semantik: er ingen hh_*-features sat op i admin → vis alt. */
     fun has(featureKey: String): Boolean =
         if (handheldConfigured) featureKey in validFeatures else true
+
+    /** Rollemodel v2: manager kan alt; ellers kræves den konkrete
+     *  håndterminal-rolle (fx handheld_parcel_handler). Kun UI-gating —
+     *  RLS er den reelle håndhævelse. Ukendte roller (endnu ikke hentet/fejlet)
+     *  behandles tilladende, så en fejl ikke tømmer startskærmen. */
+    fun hasRole(role: String): Boolean {
+        val r = roles ?: return true
+        return "manager" in r || role in r
+    }
 
     init {
         brand = LocalStore.brand(app)
@@ -81,33 +100,48 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             companyId = au.company_id
             userName = au.full_name.ifBlank { au.email ?: "" }
+            val cid = au.company_id
 
-            departments = runCatching { Repository.departments(au.company_id) }.getOrDefault(emptyList())
-            employees = runCatching { Repository.employees(au.company_id) }.getOrDefault(emptyList())
-            assetLocations = runCatching { Repository.assetLocations(au.company_id) }.getOrDefault(emptyList())
-            storageLocations = runCatching { Repository.storageLocations(au.company_id) }.getOrDefault(emptyList())
+            // Stamdata-listerne er indbyrdes uafhængige — hent dem samtidig i
+            // stedet for i syv serielle rundture, så login-til-forside ikke
+            // vokser lineært med hver ny liste (mærkbart på warehouse-Wi-Fi).
+            coroutineScope {
+                val rolesD = async { runCatching { Repository.currentRoles() }.getOrNull() }
+                val deptD = async { runCatching { Repository.departments(cid) }.getOrDefault(emptyList()) }
+                val empD = async { runCatching { Repository.employees(cid) }.getOrDefault(emptyList()) }
+                val assetLocD = async { runCatching { Repository.assetLocations(cid) }.getOrDefault(emptyList()) }
+                val storageD = async { runCatching { Repository.storageLocations(cid) }.getOrDefault(emptyList()) }
+                val carrierD = async { runCatching { Repository.carriers(cid) }.getOrDefault(emptyList()) }
+                val handlingD = async { runCatching { Repository.handlingClasses(cid) }.getOrDefault(emptyList()) }
+                val featureD = async { runCatching { Repository.featureRows(cid) }.getOrNull() }
+                val handheldD = async { runCatching { Repository.handheldConfig() }.getOrNull() }
+                val appearanceD = async { runCatching { Repository.appearance(cid) }.getOrNull() }
 
-            runCatching {
-                val rows = Repository.featureRows(au.company_id)
-                val now = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString()
-                handheldConfigured = rows.any { it.feature_key.startsWith("hh_") }
-                validFeatures = rows
-                    .filter { it.valid_until == null || it.valid_until > now }
-                    .map { it.feature_key }
-                    .toSet()
-            }
+                roles = rolesD.await()
+                departments = deptD.await()
+                employees = empD.await()
+                assetLocations = assetLocD.await()
+                storageLocations = storageD.await()
+                carriers = carrierD.await()
+                handlingClasses = handlingD.await()
 
-            // Handheld-designet er platform-globalt (ikke pr. virksomhed) —
-            // fejler hentningen, beholder vi det cachede/standarden.
-            runCatching {
-                Repository.handheldConfig()?.let { cfg ->
+                featureD.await()?.let { rows ->
+                    val now = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString()
+                    handheldConfigured = rows.any { it.feature_key.startsWith("hh_") }
+                    validFeatures = rows
+                        .filter { it.valid_until == null || it.valid_until > now }
+                        .map { it.feature_key }
+                        .toSet()
+                }
+
+                // Handheld-designet er platform-globalt (ikke pr. virksomhed) —
+                // fejler hentningen, beholder vi det cachede/standarden.
+                handheldD.await()?.let { cfg ->
                     handheld = cfg
                     LocalStore.cacheHandheld(ctx, cfg)
                 }
-            }
 
-            runCatching {
-                Repository.appearance(au.company_id)?.let { ap ->
+                appearanceD.await()?.let { ap ->
                     val b = Brand(
                         name = ap.header_name?.takeIf { it.isNotBlank() } ?: "Operia",
                         color = ap.header_color?.takeIf { it.isNotBlank() } ?: "#2D6FF0",

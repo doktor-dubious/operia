@@ -5,6 +5,14 @@ import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Camera, ImagePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -215,6 +223,7 @@ export function ParcelReceiveForm({
   const [note, setNote] = useState('')
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [saving, setSaving] = useState(false)
+  const [confirmUnassignedOpen, setConfirmUnassignedOpen] = useState(false)
   // Remount-nøgle: EmployeePicker har intern skrivetilstand, som skal nulstilles
   // sammen med formularen — ellers står et forældet navn tilbage i feltet.
   const [formKey, setFormKey] = useState(0)
@@ -268,8 +277,20 @@ export function ParcelReceiveForm({
     barcodeRef.current?.focus()
   }
 
-  const submit = async (e: React.FormEvent) => {
+  // Uden matchet modtager bliver pakken 'unassigned' (DB-guarden). Det er en
+  // gyldig, bevidst tilstand (spec Flow 1), men må ikke ske ved et uheld — så
+  // gemning uden modtager kræver en eksplicit bekræftelse.
+  const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!receiver) {
+      setConfirmUnassignedOpen(true)
+      return
+    }
+    void doSubmit()
+  }
+
+  const doSubmit = async () => {
+    setConfirmUnassignedOpen(false)
     setSaving(true)
     try {
       const { data: parcel, error } = await supabase
@@ -320,6 +341,7 @@ export function ParcelReceiveForm({
   }
 
   return (
+    <>
     <form className="flex flex-col gap-4" onSubmit={submit}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -442,5 +464,30 @@ export function ParcelReceiveForm({
         </Button>
       </div>
     </form>
+
+    <Dialog
+      open={confirmUnassignedOpen}
+      onOpenChange={(o) => !saving && setConfirmUnassignedOpen(o)}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('receive.unassignedTitle')}</DialogTitle>
+          <DialogDescription>{t('receive.unassignedBody')}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmUnassignedOpen(false)}
+            disabled={saving}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button onClick={() => void doSubmit()} disabled={saving}>
+            {saving ? t('common.loading') : t('receive.unassignedConfirm')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

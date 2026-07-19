@@ -1376,6 +1376,51 @@ export type Database = {
           },
         ]
       }
+      parcel_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          parcel_id: string
+          storage_path: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          parcel_id: string
+          storage_path: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          parcel_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcel_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcel_documents_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcel_events: {
         Row: {
           actor_user_id: string | null
@@ -2148,6 +2193,10 @@ export type Database = {
       }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
       current_company_id: { Args: never; Returns: string }
+      has_any_role: {
+        Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
+        Returns: boolean
+      }
       has_feature: { Args: { f: string }; Returns: boolean }
       has_product: { Args: { p: string }; Returns: boolean }
       has_role: {
@@ -2247,7 +2296,22 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "manager" | "parcel_handler" | "final_receiver"
+      app_role:
+        | "manager"
+        | "parcel_handler"
+        | "final_receiver"
+        | "data_manager"
+        | "parcel_manager"
+        | "handheld_parcel_handler"
+        | "asset_handler"
+        | "asset_manager"
+        | "handheld_asset_handler"
+        | "inventory_handler"
+        | "inventory_manager"
+        | "handheld_inventory_handler"
+        | "route_planner_handler"
+        | "route_planner_manager"
+        | "handheld_route_planner"
       asset_status: "in_stock" | "assigned" | "on_loan" | "service" | "retired"
       notification_channel: "email" | "sms"
       notification_kind: "arrival" | "reminder_1" | "reminder_2" | "manual"
@@ -2392,7 +2456,23 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["manager", "parcel_handler", "final_receiver"],
+      app_role: [
+        "manager",
+        "parcel_handler",
+        "final_receiver",
+        "data_manager",
+        "parcel_manager",
+        "handheld_parcel_handler",
+        "asset_handler",
+        "asset_manager",
+        "handheld_asset_handler",
+        "inventory_handler",
+        "inventory_manager",
+        "handheld_inventory_handler",
+        "route_planner_handler",
+        "route_planner_manager",
+        "handheld_route_planner",
+      ],
       asset_status: ["in_stock", "assigned", "on_loan", "service", "retired"],
       notification_channel: ["email", "sms"],
       notification_kind: ["arrival", "reminder_1", "reminder_2", "manual"],

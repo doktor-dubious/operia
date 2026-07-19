@@ -31,8 +31,10 @@ import com.dcalogic.operia.data.Repository
 import com.dcalogic.operia.data.supabase
 import com.dcalogic.operia.ui.BigButton
 import com.dcalogic.operia.ui.C
+import com.dcalogic.operia.ui.ConfirmDialog
 import com.dcalogic.operia.ui.EmptyBox
 import com.dcalogic.operia.ui.FieldLabel
+import com.dcalogic.operia.ui.FoldSection
 import com.dcalogic.operia.ui.LookupPicker
 import com.dcalogic.operia.ui.ScanBox
 import com.dcalogic.operia.ui.Screen
@@ -62,8 +64,11 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     var deptId by remember { mutableStateOf<String?>(null) }
     var empId by remember { mutableStateOf<String?>(null) }
     var locationId by remember { mutableStateOf<String?>(null) }
+    var carrierId by remember { mutableStateOf<String?>(null) }
+    var handlingId by remember { mutableStateOf<String?>(null) }
     var note by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<ScannedItem>>(emptyList()) }
+    var confirmUnassignedOpen by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var lastCount by remember { mutableStateOf(0) }
     var focusStamp by remember { mutableStateOf(0L) }
@@ -83,7 +88,6 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     val hasRecipient = (showDept && deptId != null) || (showEmp && empId != null)
 
     val msgAlready = stringResource(R.string.receive_already_scanned)
-    val msgPickFirst = stringResource(R.string.receive_pick_recipient_first)
     val msgAdded = stringResource(R.string.receive_added)
     val msgScanOne = stringResource(R.string.receive_scan_at_least_one)
     val msgSaved = stringResource(R.string.receive_saved)
@@ -95,10 +99,9 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             toast.show("info", "$msgAlready: $code")
             return
         }
-        if (!hasRecipient) {
-            toast.show("err", msgPickFirst)
-            return
-        }
+        // Ingen modtager kræves for at scanne — som på webben kan pakker
+        // registreres uden modtager (bliver 'unassigned'); det bekræftes ved
+        // gemning, ikke ved scanning.
         items = listOf(
             ScannedItem(
                 barcode = code,
@@ -110,11 +113,8 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         toast.show("ok", "$msgAdded: $code")
     }
 
-    fun save() {
-        if (items.isEmpty()) {
-            toast.show("err", msgScanOne)
-            return
-        }
+    fun doSave() {
+        confirmUnassignedOpen = false
         val companyId = vm.companyId ?: return
         val uid = supabase.auth.currentUserOrNull()?.id
         val rows = items.map { item ->
@@ -124,6 +124,8 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 department_id = if (multidept) item.departmentId else deptId.takeIf { showDept },
                 receiver_employee_id = if (multidept) item.employeeId else empId.takeIf { showEmp },
                 storage_location_id = locationId,
+                carrier_id = carrierId,
+                handling_class_id = handlingId,
                 condition_note = note.trim().ifBlank { null },
                 registered_by = uid,
                 // Idempotens-nøgle: har serveren allerede committet (svar tabt),
@@ -159,18 +161,33 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
     }
 
-    Screen(title = stringResource(R.string.receive_title), onBack = onBack, toast = toast) {
-        if (showDept) {
-            LookupPicker(
-                title = stringResource(R.string.department),
-                items = vm.departments.map { it.id to it.name },
-                selectedId = deptId,
-                onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
-            )
+    fun save() {
+        if (items.isEmpty()) {
+            toast.show("err", msgScanOne)
+            return
         }
+        // Uden modtager bliver pakkerne 'unassigned' (DB-guarden). Gyldigt, men
+        // bekræftes bevidst — som webbens modtag-formular. I multidept-tilstand
+        // bærer hver scannet post sin egen modtager (fanget ved scanning), så vi
+        // tjekker posterne, ikke den aktuelle vælger: en pakke scannet FØR en
+        // modtager blev valgt ville ellers snige sig forbi bekræftelsen.
+        val anyUnassigned =
+            if (multidept) items.any { it.departmentId == null && it.employeeId == null }
+            else !hasRecipient
+        if (anyUnassigned) {
+            confirmUnassignedOpen = true
+            return
+        }
+        doSave()
+    }
+
+    Screen(title = stringResource(R.string.receive_title), onBack = onBack, toast = toast) {
+        // Rækkefølge som webbens modtag-formular: Modtager, Afdeling, Fragtfirma,
+        // Håndtering, Placering. Modtageren er altid synlig; de valgfrie felter
+        // foldes ud efter behov, så skærmen er kompakt og scan-fokuseret.
         if (showEmp) {
             LookupPicker(
-                title = stringResource(R.string.employee),
+                title = stringResource(R.string.receiver),
                 items = vm.employees.map {
                     it.id to (it.full_name + (it.initials?.let { i -> " ($i)" } ?: ""))
                 },
@@ -178,13 +195,70 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 onSelect = { empId = it; focusStamp = System.currentTimeMillis() },
             )
         }
+        if (showDept) {
+            // Afdeling er valgfri når der også er en modtager (som på webben) og
+            // foldes derfor sammen; i "modtag til afdeling"-tilstand (uden
+            // medarbejder) er afdelingen selve modtageren og vises altid.
+            if (showEmp) {
+                FoldSection(title = stringResource(R.string.department), summary = deptName(deptId)) {
+                    LookupPicker(
+                        title = stringResource(R.string.department),
+                        items = vm.departments.map { it.id to it.name },
+                        selectedId = deptId,
+                        onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
+                        showLabel = false,
+                    )
+                }
+            } else {
+                LookupPicker(
+                    title = stringResource(R.string.department),
+                    items = vm.departments.map { it.id to it.name },
+                    selectedId = deptId,
+                    onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
+                )
+            }
+        }
+        if (vm.carriers.isNotEmpty()) {
+            FoldSection(
+                title = stringResource(R.string.carrier),
+                summary = vm.carriers.firstOrNull { it.id == carrierId }?.name,
+            ) {
+                LookupPicker(
+                    title = stringResource(R.string.carrier),
+                    items = vm.carriers.map { it.id to it.name },
+                    selectedId = carrierId,
+                    onSelect = { carrierId = it; focusStamp = System.currentTimeMillis() },
+                    showLabel = false,
+                )
+            }
+        }
+        if (vm.handlingClasses.isNotEmpty()) {
+            FoldSection(
+                title = stringResource(R.string.handling),
+                summary = vm.handlingClasses.firstOrNull { it.id == handlingId }?.name,
+            ) {
+                LookupPicker(
+                    title = stringResource(R.string.handling),
+                    items = vm.handlingClasses.map { it.id to it.name },
+                    selectedId = handlingId,
+                    onSelect = { handlingId = it; focusStamp = System.currentTimeMillis() },
+                    showLabel = false,
+                )
+            }
+        }
         if (vm.storageLocations.isNotEmpty()) {
-            LookupPicker(
-                title = stringResource(R.string.storage_location_optional),
-                items = vm.storageLocations.map { it.id to it.name },
-                selectedId = locationId,
-                onSelect = { locationId = it; focusStamp = System.currentTimeMillis() },
-            )
+            FoldSection(
+                title = stringResource(R.string.storage_location),
+                summary = vm.storageLocations.firstOrNull { it.id == locationId }?.name,
+            ) {
+                LookupPicker(
+                    title = stringResource(R.string.storage_location),
+                    items = vm.storageLocations.map { it.id to it.name },
+                    selectedId = locationId,
+                    onSelect = { locationId = it; focusStamp = System.currentTimeMillis() },
+                    showLabel = false,
+                )
+            }
         }
 
         ScanBox(label = stringResource(R.string.receive_scan_label), onScan = ::addScan, focusStamp = focusStamp)
@@ -242,16 +316,20 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             }
         }
 
-        FieldLabel(stringResource(R.string.receive_note_label), topPadding = 16)
-        OutlinedTextField(
-            value = note,
-            onValueChange = { note = it },
-            placeholder = { Text(stringResource(R.string.receive_note_placeholder)) },
-            singleLine = true,
-            colors = operiaFieldColors(),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        FoldSection(
+            title = stringResource(R.string.receive_note_label),
+            summary = note.trim().ifBlank { null },
+        ) {
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                placeholder = { Text(stringResource(R.string.receive_note_placeholder)) },
+                singleLine = true,
+                colors = operiaFieldColors(),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         BigButton(
             stringResource(R.string.receive_save_button, items.size),
@@ -270,5 +348,16 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
+    }
+
+    if (confirmUnassignedOpen) {
+        ConfirmDialog(
+            title = stringResource(R.string.receive_unassigned_title),
+            body = stringResource(R.string.receive_unassigned_body),
+            confirmText = stringResource(R.string.receive_unassigned_confirm),
+            busy = busy,
+            onDismiss = { confirmUnassignedOpen = false },
+            onConfirm = { doSave() },
+        )
     }
 }

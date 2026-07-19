@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -91,13 +92,15 @@ import java.util.Calendar
  * web/src/lib/handheld-tiles.ts — designet gemt i Operia → Handheld-design
  * refererer fliserne på netop de nøgler.
  */
-private data class Tile(
+internal data class Tile(
     val key: String,
     val icon: String,
     val titleRes: Int,
     val subRes: Int,
     val route: String,
-    val feature: String,
+    // feature-nøgle; flisen vises kun med entitlement. Null for gruppe-fliser:
+    // de gates på deres børn, ikke på en egen (misvisende) filler-feature.
+    val feature: String? = null,
 )
 
 // Standard-ikonerne SKAL matche HANDHELD_TILES i web/src/lib/handheld-tiles.ts
@@ -105,9 +108,32 @@ private data class Tile(
 private val CATALOG = listOf(
     Tile("receive", "parcel-add", R.string.tile_receive, R.string.tile_receive_sub, "receive", "hh_receive"),
     Tile("handout", "parcel-check", R.string.tile_handout, R.string.tile_handout_sub, "handout", "hh_handout"),
+    Tile("move", "truck", R.string.tile_move, R.string.tile_move_sub, "move", "hh_move"),
+    Tile("condition", "scan", R.string.tile_condition, R.string.tile_condition_sub, "condition", "hh_condition"),
     Tile("search", "search", R.string.tile_search, R.string.tile_search_sub, "search", "hh_search"),
     Tile("route", "route", R.string.tile_route, R.string.tile_route_sub, "route", "hh_route"),
     Tile("stock", "boxes", R.string.tile_stock, R.string.tile_stock_sub, "stock", "hh_stock"),
+    // Gruppe-/mappeflise: åbner en underside med pakke-fliserne. Ingen feature —
+    // GROUP_CHILDREN afgør synligheden (mindst ét tilgængeligt barn). Matcher
+    // parcel_group i web/src/lib/handheld-tiles.ts.
+    Tile("parcel_group", "inbox", R.string.tile_parcel_group, R.string.tile_parcel_group_sub, "parcel_group"),
+)
+
+// Gruppe-fliser: nøgle → børne-fliser vist på undersiden (i denne rækkefølge).
+private val GROUP_CHILDREN = mapOf(
+    "parcel_group" to listOf("receive", "handout", "move", "condition", "search"),
+)
+
+// Rollemodel v2: hver flise kræver sin håndterminal-rolle (managers ser alt).
+// Nøglerne matcher app_role-enum'et i databasen.
+private val TILE_ROLES = mapOf(
+    "receive" to "handheld_parcel_handler",
+    "handout" to "handheld_parcel_handler",
+    "move" to "handheld_parcel_handler",
+    "condition" to "handheld_parcel_handler",
+    "search" to "handheld_parcel_handler",
+    "route" to "handheld_route_planner",
+    "stock" to "handheld_inventory_handler",
 )
 
 /**
@@ -221,12 +247,14 @@ private fun cfgColor(value: String?): Color? {
  * Sammensæt fliserne ud fra designet: gemt rækkefølge først, derefter
  * katalogfliser der endnu ikke er i designet (spejler normalizeHandheldTiles i
  * webben, så en ny flise aldrig forsvinder). Udeladt bliver dels fliser fjernet
- * i designet (enabled == false), dels fliser uden entitlement — BEGGE porte skal
- * passeres: designet er platformens valg, entitlementet er kundens.
+ * i designet (enabled == false), dels fliser uden entitlement eller rolle —
+ * ALLE tre porte skal passeres: designet er platformens valg, entitlementet er
+ * kundens, rollen er brugerens.
  */
 private fun resolveTiles(
     cfg: List<HandheldTileCfg>,
     has: (String) -> Boolean,
+    hasRole: (String) -> Boolean,
 ): List<Pair<Tile, HandheldTileCfg?>> {
     val seen = mutableSetOf<String>()
     val out = mutableListOf<Pair<Tile, HandheldTileCfg?>>()
@@ -240,8 +268,113 @@ private fun resolveTiles(
         if (tile.key in seen) continue // også fjernede er "set" — ingen genopstandelse
         out += tile to null
     }
-    return out.filter { has(it.first.feature) }
+    return out.filter { (tile, _) ->
+        // En gruppe vises kun hvis mindst ét af dens (aktive) børn er tilgængeligt
+        // for brugeren — resolveGroupChildren honorerer det gemte underside-layout.
+        if (GROUP_CHILDREN.containsKey(tile.key)) {
+            resolveGroupChildren(tile.key, cfg, has, hasRole).isNotEmpty()
+        } else {
+            tile.feature != null && has(tile.feature) && TILE_ROLES[tile.key]?.let(hasRole) != false
+        }
+    }
 }
+
+/** Passerer en enkelt flise entitlement- + rolle-portene? Bruges til at afgøre
+ *  om en gruppe (og dens underside) skal vise et givent barn. */
+private fun childAccessible(
+    key: String,
+    has: (String) -> Boolean,
+    hasRole: (String) -> Boolean,
+): Boolean {
+    val tile = CATALOG.firstOrNull { it.key == key } ?: return false
+    return tile.feature != null && has(tile.feature) && TILE_ROLES[key]?.let(hasRole) != false
+}
+
+/** De tilgængelige børne-fliser for en gruppe, med hver flises design-overstyring
+ *  fra det gemte layout. Bruges af ParcelGroupScreen til at tegne undersiden. */
+internal fun resolveGroupChildren(
+    groupKey: String,
+    cfg: List<HandheldTileCfg>,
+    has: (String) -> Boolean,
+    hasRole: (String) -> Boolean,
+): List<Pair<Tile, HandheldTileCfg?>> {
+    if (!GROUP_CHILDREN.containsKey(groupKey)) return emptyList()
+    // Gemt underside-layout (rækkefølge + fjernede + overstyringer) vinder;
+    // uden ét (gammelt design) bruges katalogets standardbørn.
+    val childCfgs = cfg.firstOrNull { it.key == groupKey }?.children
+    if (!childCfgs.isNullOrEmpty()) {
+        return childCfgs.mapNotNull { c ->
+            if (c.enabled == false) return@mapNotNull null
+            if (!childAccessible(c.key, has, hasRole)) return@mapNotNull null
+            CATALOG.firstOrNull { it.key == c.key }?.let { it to c }
+        }
+    }
+    val defaults = GROUP_CHILDREN[groupKey] ?: emptyList()
+    return defaults.mapNotNull { key ->
+        if (!childAccessible(key, has, hasRole)) return@mapNotNull null
+        CATALOG.firstOrNull { it.key == key }?.let { it to null }
+    }
+}
+
+/**
+ * Én flise, tegnet som startskærmen (og gruppe-undersiden) viser den: titel/
+ * undertitel/ikon/farve fra designets per-flise-overstyring, ellers katalogets
+ * standard. `modifier` bærer RowScope-vægten fra kalderen. Delt af HomeScreen og
+ * ParcelGroupScreen, så en flise ser ens ud begge steder.
+ */
+@Composable
+internal fun TileCard(
+    tile: Tile,
+    cfg: HandheldTileCfg?,
+    iconTheme: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val title = cfg?.title?.takeIf { it.isNotBlank() } ?: stringResource(tile.titleRes)
+    val sub = cfg?.subtitle?.takeIf { it.isNotBlank() } ?: stringResource(tile.subRes)
+    val iconKey = (cfg?.icon ?: tile.icon).takeIf { ICONS.containsKey(it) } ?: tile.icon
+    Column(
+        modifier
+            .heightIn(min = 130.dp)
+            .border(1.dp, C.line, RoundedCornerShape(16.dp))
+            .background(cfgColor(cfg?.background) ?: C.panel, RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(18.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        TileIcon(iconKey = iconKey, theme = iconTheme, accent = cfgColor(cfg?.color))
+        if (cfg?.titleEnabled != false) {
+            Text(
+                title,
+                color = C.txt,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+        if (cfg?.subtitleEnabled != false) {
+            Text(
+                sub,
+                color = C.muted,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+/** Tidsafhængig hilsen til {{time-greeting}}. Buckets spejler timeGreetingKey i
+ *  web/src/lib/handheld-tiles.ts, så web-forhåndsvisning og enhed hilser ens. */
+@Composable
+private fun timeGreeting(hour: Int): String = stringResource(
+    when (hour) {
+        in 5..11 -> R.string.greeting_morning
+        in 12..17 -> R.string.greeting_day
+        in 18..21 -> R.string.greeting_evening
+        else -> R.string.greeting_night
+    },
+)
 
 @Composable
 fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
@@ -250,16 +383,13 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
     val syncedMsg = stringResource(R.string.sync_done)
 
     val design = vm.handheld.design
-    val tiles = resolveTiles(vm.handheld.tiles) { vm.has(it) }
+    val tiles = resolveTiles(vm.handheld.tiles, { vm.has(it) }, { vm.hasRole(it) })
 
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    val greeting = stringResource(
-        when {
-            hour < 10 -> R.string.greeting_morning
-            hour < 18 -> R.string.greeting_day
-            else -> R.string.greeting_evening
-        },
-    )
+    // Samme tidshilsen som {{time-greeting}} og webbens forhåndsvisning — ét
+    // sæt buckets (timeGreeting), så standard-undertitlen og token ikke hilser
+    // forskelligt på samme klokkeslæt.
+    val greeting = timeGreeting(hour)
 
     Box(Modifier.fillMaxSize().background(C.bg)) {
         Column(Modifier.fillMaxSize()) {
@@ -316,21 +446,44 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
                 // Velkomstindhold fra designet. Undertitlen erstatter hilsenen;
                 // velkomsttitlen erstatter brugerens fornavn. Slået fra (eller
                 // tom) ⇒ appens standard.
-                val firstName = vm.userName.split(" ").firstOrNull() ?: ""
-                if (design.subtitleEnabled) {
-                    Text(
-                        design.subtitle.ifBlank { "$greeting," },
-                        color = C.muted,
-                        fontSize = 15.sp,
-                    )
+                // Skabelon-koder i velkomsttitel/undertitel, udfyldt med den
+                // indloggede bruger + klokkeslættet. Spejler applyDesignTokens i
+                // web/src/lib/handheld-tiles.ts, så webbens forhåndsvisning og
+                // enheden erstatter ens.
+                val nameParts = vm.userName.trim().split(" ").filter { it.isNotBlank() }
+                val firstName = nameParts.firstOrNull() ?: ""
+                val lastName = nameParts.drop(1).joinToString(" ")
+                val greetingToken = timeGreeting(hour)
+                fun applyTokens(s: String): String = s
+                    .replace("{{name}}", firstName)
+                    .replace("{{lastname}}", lastName)
+                    .replace("{{time-greeting}}", greetingToken)
+                // Hilsen-elementerne i den rækkefølge designet angiver
+                // (design.greetingOrder) — samme rækkefølge som webbens editor.
+                // Titel slået fra ⇒ ingen titel (skjules helt); slået til men tom
+                // ⇒ brugerens fornavn som standard.
+                design.greetingOrder.forEach { gk ->
+                    when (gk) {
+                        "subtitle" -> if (design.subtitleEnabled) {
+                            Text(
+                                applyTokens(design.subtitle).ifBlank { "$greeting," },
+                                color = C.muted,
+                                fontSize = 15.sp,
+                            )
+                        }
+                        "title" -> if (design.welcomeTitleEnabled) {
+                            Text(
+                                applyTokens(design.welcomeTitle).ifBlank { firstName },
+                                color = C.txt,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                    }
                 }
-                Text(
-                    if (design.welcomeTitleEnabled) design.welcomeTitle.ifBlank { firstName } else firstName,
-                    color = C.txt,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(bottom = 18.dp),
-                )
+                if (design.subtitleEnabled || design.welcomeTitleEnabled) {
+                    Spacer(Modifier.height(18.dp))
+                }
 
                 if (vm.pendingCount > 0) {
                     Row(
@@ -372,55 +525,27 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         rowTiles.forEach { (tile, cfg) ->
-                            val title = cfg?.title?.takeIf { it.isNotBlank() }
-                                ?: stringResource(tile.titleRes)
-                            val sub = cfg?.subtitle?.takeIf { it.isNotBlank() }
-                                ?: stringResource(tile.subRes)
-                            val iconKey = (cfg?.icon ?: tile.icon).takeIf { ICONS.containsKey(it) }
-                                ?: tile.icon
-                            Column(
-                                Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 130.dp)
-                                    .border(1.dp, C.line, RoundedCornerShape(16.dp))
-                                    .background(cfgColor(cfg?.background) ?: C.panel, RoundedCornerShape(16.dp))
-                                    .clickable { onNavigate(tile.route) }
-                                    .padding(18.dp),
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                TileIcon(
-                                    iconKey = iconKey,
-                                    theme = design.iconTheme,
-                                    accent = cfgColor(cfg?.color),
-                                )
-                                if (cfg?.titleEnabled != false) {
-                                    Text(
-                                        title,
-                                        color = C.txt,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        modifier = Modifier.padding(top = 8.dp),
-                                    )
-                                }
-                                if (cfg?.subtitleEnabled != false) {
-                                    Text(
-                                        sub,
-                                        color = C.muted,
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(top = 2.dp),
-                                    )
-                                }
+                            TileCard(tile, cfg, design.iconTheme, Modifier.weight(1f)) {
+                                onNavigate(tile.route)
                             }
                         }
                         if (rowTiles.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
 
-                GhostButton(
-                    stringResource(R.string.sign_out),
-                    modifier = Modifier.padding(top = 10.dp),
-                ) { vm.logout() }
+            }
+
+            // "Log ud" fast i bunden af skærmen (uden for scroll-området), så
+            // den altid er synlig uanset antal fliser.
+            Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(C.bg)
+                    .navigationBarsPadding()
+                    .padding(16.dp),
+            ) {
+                GhostButton(stringResource(R.string.sign_out)) { vm.logout() }
             }
         }
         ToastOverlay(toast)

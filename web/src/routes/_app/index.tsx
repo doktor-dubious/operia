@@ -16,6 +16,7 @@ import {
   type TileLayoutItem,
 } from '@/lib/home-tiles'
 import { cn } from '@/lib/utils'
+import { canSeeProductTile, productTileHref } from '@/lib/roles'
 import { supabase } from '@/lib/supabase'
 
 // Home — startsiden (landing page). Metro/Windows 8-agtig: flade, ensfarvede
@@ -64,13 +65,14 @@ function HomePage() {
   const { data: config } = useHomeConfig(companyId)
 
   const design = config?.design
-  // Kun fliser for produkter virksomheden har adgang til (kerneproduktet altid;
-  // platform-admins ser alt). Rækkefølgen bevares fra det gemte design.
+  // Kun fliser for produkter virksomheden har adgang til, og som brugerens
+  // roller åbner (platform-admins ser alt). Rækkefølgen bevares fra designet.
   const visible: TileLayoutItem[] = (config?.tiles ?? []).filter((item) => {
     // Billede-/tomme fliser er platform-designet dekoration: altid synlige.
     if (item.kind !== 'product') return true
     const tile = item.product ? TILE_BY_PRODUCT[item.product] : null
     if (!tile) return false
+    if (access && !canSeeProductTile(tile.product, tile.href, access)) return false
     if (tile.core) return true
     return access?.isPlatformAdmin || (tile.entitlement && access?.products.has(tile.entitlement))
   })
@@ -163,12 +165,15 @@ function HomePage() {
             )
           }
 
-          // Produkt-flise: klikbar genvej.
+          // Produkt-flise: klikbar genvej. Destinationen er rolle-afhængig, så
+          // en handler lander på en side, rollen faktisk kan åbne (fx
+          // /parcels/receive) frem for produktets manager-hovedside.
           const tile = TILE_BY_PRODUCT[p.product!]
+          const href = access ? productTileHref(tile.href, access) : tile.href
           return (
             <Link
               key={p.id}
-              to={tile.href}
+              to={href}
               style={{ ...box, background: tileBackground(p, tile, theme) }}
               className={cn(
                 'group flex flex-col justify-end overflow-hidden p-3 text-white shadow-sm outline-none',

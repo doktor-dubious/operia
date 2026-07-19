@@ -31,6 +31,12 @@ data class Employee(
 data class StorageLocation(val id: String, val name: String, val barcode: String? = null)
 
 @Serializable
+data class Carrier(val id: String, val name: String)
+
+@Serializable
+data class HandlingClass(val id: String, val name: String)
+
+@Serializable
 data class Parcel(
     val id: String,
     val company_id: String,
@@ -60,9 +66,28 @@ data class ParcelInsert(
     val receiver_employee_id: String? = null,
     val department_id: String? = null,
     val storage_location_id: String? = null,
+    val carrier_id: String? = null,
+    val handling_class_id: String? = null,
     val condition_note: String? = null,
     val registered_by: String? = null,
     val client_key: String? = null,
+)
+
+@Serializable
+data class ParcelDocument(
+    val id: String,
+    val storage_path: String,
+    val note: String? = null,
+    val created_at: String? = null,
+)
+
+@Serializable
+data class ParcelDocumentInsert(
+    val parcel_id: String,
+    val company_id: String,
+    val storage_path: String,
+    val note: String? = null,
+    val created_by: String? = null,
 )
 
 @Serializable
@@ -105,6 +130,9 @@ data class HandheldTileCfg(
     val icon: String? = null,
     val color: String? = null,
     val background: String? = null,
+    /** Kun for gruppe-fliser: børnefliserne vist på undersiden (rækkefølge +
+     *  overstyringer). Spejler `children` i web/src/lib/handheld-tiles.ts. */
+    val children: List<HandheldTileCfg>? = null,
 )
 
 /** Indholdselementer + ikon-tema. */
@@ -112,9 +140,14 @@ data class HandheldTileCfg(
 data class HandheldDesignCfg(
     val iconTheme: String = "happy",
     val welcomeTitle: String = "",
-    val welcomeTitleEnabled: Boolean = false,
+    // Titel-linjen er tændt som standard: med tom welcomeTitle falder den tilbage
+    // til brugerens fornavn, så en virksomhed der aldrig har rørt handheld-
+    // designet stadig får den personlige hilsen (ellers forsvandt navnet helt).
+    val welcomeTitleEnabled: Boolean = true,
     val subtitle: String = "",
     val subtitleEnabled: Boolean = true,
+    /** Rækkefølgen af hilsen-elementerne (undertitel/titel). */
+    val greetingOrder: List<String> = listOf("subtitle", "title"),
     val logoUrl: String = "",
     val logoEnabled: Boolean = false,
     val heroUrl: String = "",

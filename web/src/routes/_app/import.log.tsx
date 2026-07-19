@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable, type ColumnDef } from '@/components/data-table'
-import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { summarizeReasons } from '@/lib/import-reasons'
 import { supabase } from '@/lib/supabase'
@@ -19,7 +18,6 @@ const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeSt
 
 function ImportLogPage() {
   const { t } = useTranslation()
-  const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
 
   const { data, isPending } = useQuery({
@@ -42,9 +40,6 @@ function ImportLogPage() {
     },
   })
 
-  if (access && !access.isManager && !access.isPlatformAdmin) {
-    return <p className="text-sm text-muted-foreground">{t('common.noPermission')}</p>
-  }
   if (isPending || !companyId) return <Skeleton className="h-40 w-full" />
 
   type Run = NonNullable<typeof data>[number]

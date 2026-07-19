@@ -24,22 +24,23 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
-import { generateStrongPassword } from '@/lib/password'
+import { GeneratablePasswordField } from '@/components/generatable-password-field'
+import { ChangePasswordDialog } from '@/components/change-password-dialog'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
 import { type Company } from '@/components/company-provider'
+import { RoleChecklist } from '@/components/role-checklist'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useSession } from '@/hooks/use-session'
-import type { Database } from '@/lib/database.types'
+import { ASSIGNABLE_ROLES, roleLabelKey, type AppRole } from '@/lib/roles'
 import { readEdgeError } from '@/lib/edge'
 import { supabase } from '@/lib/supabase'
 
@@ -54,31 +55,11 @@ export const Route = createFileRoute('/_app/operia/users')({
   component: UsersPage,
 })
 
-type AppRole = Database['public']['Enums']['app_role']
-
-const ROLES: { value: AppRole; labelKey: string; descKey: string; hintKey?: string }[] = [
-  {
-    value: 'manager',
-    labelKey: 'usersPage.roleManager',
-    descKey: 'userDetail.roleManagerDescription',
-  },
-  {
-    value: 'parcel_handler',
-    labelKey: 'usersPage.roleParcelHandler',
-    descKey: 'userDetail.roleParcelHandlerDescription',
-    hintKey: 'userDetail.roleParcelHandlerHint',
-  },
-  // 'final_receiver' udelades bevidst: rollen giver ingen adgang (kun i enum'et)
-  // og modtagere er medarbejder-kartoteket uden systemadgang. Enum-værdien
-  // bevares i DB'en, men tilbydes ikke som brugerrolle.
-]
+// 'final_receiver' udelades bevidst af rollekataloget (lib/roles.ts): rollen
+// giver ingen adgang (kun i enum'et) og modtagere er medarbejder-kartoteket
+// uden systemadgang.
 
 const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
-
-const roleLabelKey = Object.fromEntries(ROLES.map((r) => [r.value, r.labelKey])) as Record<
-  AppRole,
-  string
->
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
@@ -107,8 +88,8 @@ function rolesOf(row: Row): AppRole[] {
 function RoleBadges({ roles }: { roles: AppRole[] }) {
   const { t } = useTranslation()
   if (!roles.length) return <span className="text-muted-foreground">—</span>
-  // Behold ROLES-rækkefølgen (manager først) uanset databasens ordning.
-  const ordered = ROLES.filter((r) => roles.includes(r.value))
+  // Behold katalog-rækkefølgen (manager først) uanset databasens ordning.
+  const ordered = ASSIGNABLE_ROLES.filter((r) => roles.includes(r.value))
   return (
     <div className="flex flex-wrap gap-1">
       {ordered.map((r) => (
@@ -141,6 +122,7 @@ function UserDetailPane({
   const [roles, setRoles] = useState<Set<AppRole>>(new Set(rolesOf(row)))
   const [saving, setSaving] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
 
   const initialRoles = rolesOf(row)
   const rolesKey = (set: Iterable<AppRole>) => [...set].sort().join(',')
@@ -262,31 +244,25 @@ function UserDetailPane({
           </div>
         )}
         {tab === 'access' && (
-          <div className="flex max-w-2xl flex-col gap-4">
+          <div className="flex max-w-4xl flex-col gap-4">
             <p className="text-xs text-muted-foreground">{t('userDetail.accessHint')}</p>
-            {ROLES.map((r) => (
-              <label
-                key={r.value}
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-4"
-              >
-                <Checkbox
-                  className="mt-0.5"
-                  checked={roles.has(r.value)}
-                  onCheckedChange={(v) => toggleRole(r.value, v === true)}
-                />
-                <div>
-                  <p className="text-[13px] font-[450]">{t(r.labelKey)}</p>
-                  <p className="text-xs text-muted-foreground">{t(r.descKey)}</p>
-                  {r.hintKey && (
-                    <p className="mt-1 text-[11px] text-muted-foreground/70">{t(r.hintKey)}</p>
-                  )}
-                </div>
-              </label>
-            ))}
+            <RoleChecklist roles={roles} onToggle={toggleRole} />
           </div>
         )}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div>
+                <p className="text-[13px] font-[450]">{t('changePassword.title')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('changePassword.cardHint')}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setPwOpen(true)}>
+                <KeyRound className="size-3.5" />
+                {t('changePassword.title')}
+              </Button>
+            </div>
             <div className="flex items-center justify-between rounded-md border border-destructive/40 p-4">
               <div>
                 <p className="text-[13px] font-[450] text-destructive">
@@ -319,6 +295,13 @@ function UserDetailPane({
           </Button>
         </div>
       )}
+
+      <ChangePasswordDialog
+        open={pwOpen}
+        onOpenChange={setPwOpen}
+        userId={row.user_id}
+        email={row.email}
+      />
 
       <ConfirmDeleteDialog
         open={removeOpen}
@@ -354,7 +337,6 @@ function InviteUserDialog({
   const [email, setEmail] = useState('')
   const [invite, setInvite] = useState(false)
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [roles, setRoles] = useState<Set<AppRole>>(new Set())
   const [busy, setBusy] = useState(false)
 
@@ -370,7 +352,6 @@ function InviteUserDialog({
     setEmail('')
     setInvite(false)
     setPassword('')
-    setShowPassword(false)
     setRoles(new Set())
   }
 
@@ -507,70 +488,25 @@ function InviteUserDialog({
         </label>
 
         {!invite && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="invite-pw" className="text-label">
+          <GeneratablePasswordField
+            id="invite-pw"
+            label={
+              <>
                 {t('userDetail.password')}{' '}
                 <span className="font-normal text-muted-foreground">
                   ({t('userDetail.passwordOptional')})
                 </span>
-              </Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-6 text-xs"
-                onClick={() => setShowPassword((s) => !s)}
-              >
-                {showPassword ? t('common.hide') : t('common.show')}
-              </Button>
-            </div>
-            <Input
-              id="invite-pw"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              placeholder={t('userDetail.passwordPlaceholder')}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-7 w-fit gap-1.5 text-xs"
-              onClick={() => {
-                setPassword(generateStrongPassword())
-                setShowPassword(true)
-              }}
-            >
-              <KeyRound className="size-3.5" />
-              {t('userDetail.generatePassword')}
-            </Button>
-          </div>
+              </>
+            }
+            value={password}
+            onChange={setPassword}
+            placeholder={t('userDetail.passwordPlaceholder')}
+          />
         )}
 
         <div className="flex flex-col gap-2">
           <Label className="text-label">{t('userDetail.rolesLabel')}</Label>
-          <div className="flex flex-col gap-2">
-            {ROLES.map((r) => (
-              <label
-                key={r.value}
-                className="flex cursor-pointer items-start gap-3 rounded-md border p-3"
-              >
-                <Checkbox
-                  className="mt-0.5"
-                  checked={roles.has(r.value)}
-                  onCheckedChange={(v) => toggleRole(r.value, v === true)}
-                />
-                <div>
-                  <p className="text-[13px] font-[450]">{t(r.labelKey)}</p>
-                  <p className="text-xs text-muted-foreground">{t(r.descKey)}</p>
-                  {r.hintKey && (
-                    <p className="mt-1 text-[11px] text-muted-foreground/70">{t(r.hintKey)}</p>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
+          <RoleChecklist roles={roles} onToggle={toggleRole} compact />
         </div>
 
         <DialogFooter>
