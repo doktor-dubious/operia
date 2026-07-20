@@ -163,26 +163,28 @@ function AnonymizeDialog({
   const run = async () => {
     setBusy(true)
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .update({
-          full_name: t('employeesActions.anonymizedName'),
-          initials: null,
-          email: null,
-          phone: null,
-          employee_no: null,
-          is_active: false,
-          anonymized_at: new Date().toISOString(),
-        })
-        .in('id', ids)
-        .select('id')
+      // Serveren ejer feltlisten (public.anonymize_employees). Tidligere skrev
+      // denne dialog sin egen update, som ikke ryddede fornavn/efternavn/
+      // NFC-kort/stillingsbetegnelse — og som skulle udvides hver gang der kom
+      // en ny persondatakolonne. Nu kan de to veje ikke komme ud af trit.
+      // Ét kald = én transaktion: fejler én medarbejder, anonymiseres ingen —
+      // en klient-løkke kunne stoppe halvvejs uden at nogen kunne se hvem der
+      // faktisk var slettet.
+      const { data, error } = await supabase.rpc('anonymize_employees', {
+        p_ids: ids,
+        p_label: t('employeesActions.anonymizedName'),
+      })
       if (error) throw error
-      if ((data?.length ?? 0) !== ids.length) {
-        // RLS afviste (nogle af) skrivningerne — må ikke ligne succes
-        toast.error(t('common.noPermission'))
-        return
-      }
+      const hadLogin = data ?? 0
       toast.success(t('employeesActions.anonymizedToast', { count: ids.length }))
+      // Loginkontoen (navn + e-mail under Brugere) ligger uden for medarbejder-
+      // rækken og skal fjernes separat — ellers ser sletningen komplet ud uden
+      // at være det.
+      if (hadLogin > 0) {
+        toast.warning(t('employeesActions.anonymizedHadLogin', { count: hadLogin }), {
+          duration: 10000,
+        })
+      }
       onDone()
       handleOpenChange(false)
     } catch (error) {

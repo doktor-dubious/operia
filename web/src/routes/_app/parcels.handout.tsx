@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +19,10 @@ import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/_app/parcels/handout')({
   component: HandoutPage,
+  // ?code=… forudfylder opslaget (fx fra Søg-siden).
+  validateSearch: (search: Record<string, unknown>) => ({
+    code: typeof search.code === 'string' && search.code ? search.code : undefined,
+  }),
 })
 
 // Udlever pakke (spec §handover): opslag på stregkode → pakkeinfo →
@@ -45,6 +49,7 @@ function HandoutPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { companyId } = useCompanyContext()
+  const { code } = Route.useSearch()
 
   const [lookup, setLookup] = useState('')
   const [parcel, setParcel] = useState<FoundParcel | null>(null)
@@ -125,6 +130,16 @@ function HandoutPage() {
       search(code)
     },
   })
+
+  // Forudfyldt stregkode fra ?code= — slå op én gang, når virksomheden er kendt.
+  const prefilled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!code || !companyId || prefilled.current === code) return
+    prefilled.current = code
+    setLookup(code)
+    search(code)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, companyId])
 
   const isProxy =
     !!parcel?.receiverName &&

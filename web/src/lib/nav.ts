@@ -3,6 +3,7 @@ import {
   Archive,
   Boxes,
   CalendarRange,
+  Camera,
   Cog,
   FileText,
   Handshake,
@@ -17,6 +18,7 @@ import {
   PackagePlus,
   Radio,
   Route,
+  Search,
   Settings,
   Ship,
   SlidersHorizontal,
@@ -53,10 +55,14 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'groupParcels',
     items: [
+      { labelKey: 'parcelBoard', href: '/parcels/board', icon: Boxes },
       { labelKey: 'dashboard', href: '/parcels/dashboard', icon: LayoutDashboard },
       { labelKey: 'parcels', href: '/parcels', icon: Package },
       { labelKey: 'receive', href: '/parcels/receive', icon: PackagePlus },
       { labelKey: 'handout', href: '/parcels/handout', icon: PackageCheck },
+      { labelKey: 'move', href: '/parcels/move', icon: Truck },
+      { labelKey: 'condition', href: '/parcels/condition', icon: Camera },
+      { labelKey: 'search', href: '/parcels/search', icon: Search },
       { labelKey: 'reports', href: '/reports', icon: FileText },
       { labelKey: 'stats', href: '/stats', icon: Layers },
     ],
@@ -178,7 +184,9 @@ export const configureConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'configureLogo', href: '/configure/logo' },
   { labelKey: 'configureAppearance', href: '/configure/appearance' },
   { labelKey: 'configureHomeDesign', href: '/configure/home-design' },
+  { labelKey: 'configureHandheldDesign', href: '/configure/handheld-design' },
   { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
+  { labelKey: 'configureIntegrations', href: '/configure/integrations' },
   { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
 ]
 
@@ -193,6 +201,7 @@ export const operiaNav: NavItem = {
 export const operiaConfigNav: { labelKey: string; href: string }[] = [
   { labelKey: 'operiaCustomers', href: '/operia/customers' },
   { labelKey: 'operiaUsers', href: '/operia/users' },
+  { labelKey: 'operiaFeedback', href: '/operia/feedback' },
   { labelKey: 'operiaGeneral', href: '/operia/general' },
   { labelKey: 'operiaProducts', href: '/operia/products' },
   { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
@@ -215,6 +224,29 @@ export const operiaConfigNav: { labelKey: string; href: string }[] = [
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
 // ikke hentet) vises ingen grupper — så punkter ikke blinker frem og
 // forsvinder igen. Home/Indstillinger står uden for grupperne og er åbne.
+// Forenklet navigation ('modern'): kun de fem daglige pakkehandlinger — samme
+// sæt som håndterminalens fliser. Tænkt til ikke-IT-vante brugere, der får store
+// knapper i stedet for hele menutræet. Rækkefølgen her er den viste.
+export const SIMPLE_NAV_HREFS = [
+  '/parcels/board',
+  '/parcels/receive',
+  '/parcels/handout',
+  '/parcels/move',
+  '/parcels/condition',
+  '/parcels/search',
+]
+
+export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
+  if (!access) return []
+  const byHref = new Map(navGroups.flatMap((g) => g.items).map((i) => [i.href, i]))
+  return SIMPLE_NAV_HREFS.map((href) => byHref.get(href)).filter(
+    (item): item is NavItem =>
+      !!item &&
+      (!item.productKey || access.isPlatformAdmin || access.products.has(item.productKey)) &&
+      canAccessPath(item.href, access),
+  )
+}
+
 export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {
   if (!access) return []
   return navGroups

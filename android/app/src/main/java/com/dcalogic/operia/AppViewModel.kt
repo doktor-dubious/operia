@@ -114,7 +114,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val carrierD = async { runCatching { Repository.carriers(cid) }.getOrDefault(emptyList()) }
                 val handlingD = async { runCatching { Repository.handlingClasses(cid) }.getOrDefault(emptyList()) }
                 val featureD = async { runCatching { Repository.featureRows(cid) }.getOrNull() }
-                val handheldD = async { runCatching { Repository.handheldConfig() }.getOrNull() }
+                val handheldD = async { runCatching { Repository.handheldConfig(cid) }.getOrNull() }
                 val appearanceD = async { runCatching { Repository.appearance(cid) }.getOrNull() }
 
                 roles = rolesD.await()

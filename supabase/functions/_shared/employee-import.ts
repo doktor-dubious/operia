@@ -45,6 +45,15 @@ export type ImportOptions = {
   // trunkeret-men-parsbar fil ville deaktivere en stor andel af medarbejderne.
   // Den manuelle /import-flade har et menneske i tørkørsels-previewet i stedet.
   guardDeactivations?: boolean
+  // Beregn diff'en men skriv intet. Bruges af AD-tørkørslen før første synk.
+  dryRun?: boolean
+  // AD-kilden matcher primært på external_id (Entra-GUID) med medarbejder-nr.
+  // som reserve, så et eksisterende CSV-direktorie adopteres frem for at blive
+  // duplikeret ved overgangen. CSV-kilden matcher kun på medarbejder-nr.
+  matchOn?: 'employee_no' | 'external_id'
+  // Fratrådte får EX-markering / anonymiseres i stedet for ren deaktivering.
+  anonymizeRetired?: boolean
+  anonymizeLabel?: string
 }
 
 // Ubemandet værn: afvis når filen ville deaktivere mindst 5 medarbejdere OG
@@ -57,9 +66,12 @@ type RawRecord = Partial<Record<string, string>>
 // oversætter dem ved visning (web/src/lib/import-reasons.ts).
 type RowError = { row: number; code: string; params?: Record<string, string> }
 
-type CsvRow = {
+// Én normaliseret række, uanset om den kom fra en CSV-fil eller fra Graph.
+export type ImportRow = {
   rowNumber: number
+  // Tom for AD-brugere uden employeeId; der er external_id nøglen i stedet.
   employee_no: string
+  external_id?: string | null
   full_name: string
   first_name: string | null
   last_name: string | null
@@ -240,7 +252,7 @@ export async function processEmployeeCsv(
   if (records.length === 0) return reject('empty')
 
   // Række-validering (fælles).
-  const rows: CsvRow[] = []
+  const rows: ImportRow[] = []
   const errors: RowError[] = []
   const seen = new Set<string>()
   records.forEach((rec, i) => {
@@ -261,17 +273,36 @@ export async function processEmployeeCsv(
     })
   })
 
-  // Nuværende tilstand (sidevis — se fetchAllPages).
-  type ExistingEmployee = {
-    id: string; employee_no: string | null; full_name: string; first_name: string | null
-    last_name: string | null; initials: string | null; email: string | null; phone: string | null
-    language: string; department_id: string | null; is_active: boolean; is_manual: boolean
-    nfc_card_id: string | null; role: string | null
-  }
+  return await applyEmployeeRows(admin, companyId, rows, errors, owned, opts)
+}
+
+// Nuværende tilstand (sidevis — se fetchAllPages).
+type ExistingEmployee = {
+  id: string; employee_no: string | null; external_id: string | null; full_name: string
+  first_name: string | null; last_name: string | null; initials: string | null
+  email: string | null; phone: string | null; language: string; department_id: string | null
+  is_active: boolean; is_manual: boolean; nfc_card_id: string | null; role: string | null
+  retired_at: string | null
+}
+
+// Diff + anvendelse. Fælles for CSV-filer og AD-synkronisering: kilden leverer
+// færdigvaliderede rækker og hvilke felter den ejer; alt herunder — beskyttelse
+// af manuelt oprettede, afdelings-oprettelse, deaktiveringsværn, fratrædelse —
+// er ens uanset hvor rækkerne kom fra.
+export async function applyEmployeeRows(
+  admin: SupabaseClient,
+  companyId: string,
+  rows: ImportRow[],
+  errors: RowError[],
+  owned: Set<string>,
+  opts?: ImportOptions,
+): Promise<ImportResult> {
+  const matchOn = opts?.matchOn ?? 'employee_no'
   const [employees, departments] = await Promise.all([
     fetchAllPages<ExistingEmployee>((from, to) =>
       admin.from('employees')
-        .select('id, employee_no, full_name, first_name, last_name, initials, email, phone, language, department_id, is_active, is_manual, nfc_card_id, role')
+        .select('id, employee_no, external_id, full_name, first_name, last_name, initials, email, phone, language, department_id, is_active, is_manual, nfc_card_id, role, retired_at')
+        .is('anonymized_at', null) // anonymiserede rækker er løsrevet fra personen
         .eq('company_id', companyId)
         .order('id')
         .range(from, to),
@@ -284,20 +315,62 @@ export async function processEmployeeCsv(
   const deptByName = new Map<string, { id: string; name: string }>(
     departments.map((d) => [d.name.toLowerCase(), d]),
   )
+  // AD: nr.-reserven må kun adoptere CSV-æraens rækker (uden GUID). En række
+  // der allerede er GUID-styret må ikke kunne genbindes via medarbejder-nr. —
+  // to Graph-brugere med samme employeeId kunne ellers ramme samme række og
+  // vælte hele upserten ("ON CONFLICT ... cannot affect row a second time").
   const byNo = new Map(
-    employees.filter((e) => e.employee_no).map((e) => [e.employee_no as string, e]),
+    employees
+      .filter((e) => e.employee_no && (matchOn !== 'external_id' || !e.external_id))
+      .map((e) => [e.employee_no as string, e]),
+  )
+  const byExternal = new Map(
+    employees.filter((e) => e.external_id).map((e) => [e.external_id as string, e]),
   )
 
-  const creates: CsvRow[] = []
-  const updates: { row: CsvRow; existing: ExistingEmployee }[] = []
+  // AD: Entra håndhæver ikke unikke employeeId'er, men vores indeks gør
+  // (company_id, employee_no). Et nr. der allerede er i brug — af en anden række
+  // i samme kørsel eller af en anden GUID-styret medarbejder i basen — ville
+  // vælte hele kørslen på det unikke indeks. Nummeret blankes i stedet på den
+  // tabende række: GUID'en er nøglen for AD-rækker, og næste synk samler
+  // nummeret op når konflikten er rettet i kilden.
+  if (matchOn === 'external_id') {
+    const ownerByNo = new Map(
+      employees
+        .filter((e) => e.employee_no && e.external_id)
+        .map((e) => [e.employee_no as string, e.external_id as string]),
+    )
+    const seenNo = new Set<string>()
+    for (const row of rows) {
+      if (!row.employee_no) continue
+      const owner = ownerByNo.get(row.employee_no)
+      if ((owner && owner !== row.external_id) || seenNo.has(row.employee_no)) {
+        row.employee_no = ''
+      } else {
+        seenNo.add(row.employee_no)
+      }
+    }
+  }
+
+  const creates: ImportRow[] = []
+  const updates: { row: ImportRow; existing: ExistingEmployee }[] = []
+  // Fratrådte der er dukket op i kilden igen: EX-markeringen skal fjernes før
+  // opdateringen, ellers ville navnet blive sammenlignet mod "EX-…".
+  const returning: { row: ImportRow; existing: ExistingEmployee }[] = []
   let unchanged = 0
   let skippedManual = 0
   const newDepartments = new Set<string>()
+  const matchedIds = new Set<string>()
 
   for (const row of rows) {
     if (row.department && !deptByName.has(row.department.toLowerCase())) newDepartments.add(row.department)
-    const existing = byNo.get(row.employee_no)
+    // AD: GUID først, medarbejder-nr. som reserve (adopterer CSV-æraens rækker).
+    const existing =
+      (matchOn === 'external_id' && row.external_id ? byExternal.get(row.external_id) : undefined) ??
+      (row.employee_no ? byNo.get(row.employee_no) : undefined)
     if (!existing) { creates.push(row); continue }
+    matchedIds.add(existing.id)
+    if (existing.retired_at && !existing.is_manual) returning.push({ row, existing })
     if (existing.is_manual) { skippedManual++; continue }
     const targetDept = row.department ? (deptByName.get(row.department.toLowerCase())?.id ?? 'NEW') : null
     const changed =
@@ -316,13 +389,19 @@ export async function processEmployeeCsv(
     else unchanged++
   }
 
-  const fileNos = new Set(rows.map((r) => r.employee_no))
+  // CSV: kun rækker med medarbejder-nr. er importstyrede. AD: alt der ikke blev
+  // matchet af en Graph-bruger er væk fra direktoriet (manuelt oprettede undtaget).
+  const fileNos = new Set(rows.map((r) => r.employee_no).filter(Boolean))
+  const isImportManaged = (e: ExistingEmployee) =>
+    matchOn === 'external_id' ? true : !!e.employee_no
   const deactivations = employees
-    .filter((e) => !e.is_manual && e.is_active && e.employee_no && !fileNos.has(e.employee_no))
+    .filter((e) =>
+      !e.is_manual && e.is_active && isImportManaged(e) &&
+      (matchOn === 'external_id' ? !matchedIds.has(e.id) : !fileNos.has(e.employee_no as string)))
     .map((e) => e.id)
 
   if (opts?.guardDeactivations && deactivations.length >= DEACTIVATION_GUARD_MIN) {
-    const activeImported = employees.filter((e) => !e.is_manual && e.is_active && e.employee_no).length
+    const activeImported = employees.filter((e) => !e.is_manual && e.is_active && isImportManaged(e)).length
     if (deactivations.length > activeImported * DEACTIVATION_GUARD_RATIO) {
       return reject('tooManyDeactivations', rows.length + errors.length, {
         count: String(deactivations.length),
@@ -335,6 +414,21 @@ export async function processEmployeeCsv(
   const counts = {
     rows_total: rows.length + errors.length,
     created: 0, updated: 0, unchanged, deactivated: 0, skippedManual, departments: 0,
+  }
+
+  // Tørkørsel: rapportér hvad der VILLE ske, uden at røre databasen.
+  if (opts?.dryRun) {
+    return {
+      status: 'applied',
+      counts: {
+        ...counts,
+        created: creates.length,
+        updated: updates.length,
+        deactivated: deactivations.length,
+        departments: newDepartments.size,
+      },
+      errors,
+    }
   }
 
   try {
@@ -353,13 +447,19 @@ export async function processEmployeeCsv(
 
     // Kun ejede felter skrives; resten forbliver urørt i databasen. Sprog med
     // tom celle beholder den eksisterende værdi (kolonnen er not-null).
-    const mapRow = (row: CsvRow, existing?: ExistingEmployee) => {
+    const mapRow = (row: ImportRow, existing?: ExistingEmployee) => {
       const rec: Record<string, unknown> = {
         company_id: companyId,
-        employee_no: row.employee_no,
+        // Kilder uden nummer (AD-brugere uden employeeId) må ikke slette et
+        // eksisterende nummer — det er opslagsnøglen for CSV-importen, og et
+        // nulstillet nummer ville give en dublet ved næste CSV-kørsel.
+        employee_no: row.employee_no || existing?.employee_no || null,
         is_active: true,
         is_manual: false,
       }
+      // Sætter GUID'en på rækker der blev adopteret via medarbejder-nr., så
+      // næste synk matcher på den stabile nøgle i stedet.
+      if (row.external_id) rec.external_id = row.external_id
       if (owned.has('full_name')) rec.full_name = row.full_name
       if (owned.has('first_name')) rec.first_name = row.first_name
       if (owned.has('last_name')) rec.last_name = row.last_name
@@ -373,6 +473,12 @@ export async function processEmployeeCsv(
         rec.department_id = row.department ? (deptIdByName.get(row.department.toLowerCase()) ?? null) : null
       }
       return rec
+    }
+
+    // 1b) genkomster: fjern EX-markeringen før navnet overskrives af kilden
+    for (const { existing } of returning) {
+      const { error } = await admin.rpc('unretire_employee', { p_employee_id: existing.id })
+      if (error) throw error
     }
 
     // 2) oprettelser
@@ -392,16 +498,38 @@ export async function processEmployeeCsv(
       counts.updated += data?.length ?? 0
     })
 
-    // 4) deaktiveringer
-    await chunked(deactivations, 500, async (chunk) => {
-      const { data, error } = await admin
-        .from('employees')
-        .update({ is_active: false })
-        .in('id', chunk)
-        .select('id')
-      if (error) throw error
-      counts.deactivated += data?.length ?? 0
-    })
+    // 4) fratrædelser
+    if (opts?.anonymizeRetired) {
+      // Én ad gangen: serveren afgør pr. medarbejder om der stadig er åbne
+      // pakker (EX-markering) eller om der kan anonymiseres med det samme.
+      for (const id of deactivations) {
+        const { error } = await admin.rpc('retire_employee', {
+          p_employee_id: id,
+          p_anonymize: true,
+          p_label: opts.anonymizeLabel ?? 'Anonymiseret medarbejder',
+        })
+        if (error) throw error
+        counts.deactivated++
+      }
+      // Fanger dem der blev EX-markeret ved en tidligere kørsel og siden har
+      // fået deres sidste pakke lukket uden at triggeren nåede det (fx fordi
+      // politikken først blev slået til bagefter).
+      const { error: sweepError } = await admin.rpc('sweep_retired_employees', {
+        p_company_id: companyId,
+        p_label: opts.anonymizeLabel ?? 'Anonymiseret medarbejder',
+      })
+      if (sweepError) throw sweepError
+    } else {
+      await chunked(deactivations, 500, async (chunk) => {
+        const { data, error } = await admin
+          .from('employees')
+          .update({ is_active: false })
+          .in('id', chunk)
+          .select('id')
+        if (error) throw error
+        counts.deactivated += data?.length ?? 0
+      })
+    }
   } catch (e) {
     const err: ImportApplyError = e instanceof Error ? e : new Error(String(e))
     err.partialCounts = counts

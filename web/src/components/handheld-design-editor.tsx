@@ -89,6 +89,14 @@ const sameDesign = (a: HandheldDesign, b: HandheldDesign) =>
     return av === bv
   })
 
+// Skabelon-koderne til velkomsttitel/undertitel og nøglen til deres
+// forklaring. En tom oversættelse betyder "koden forklarer sig selv".
+const TOKEN_HINTS = [
+  ['{{name}}', 'tokenName'],
+  ['{{lastname}}', 'tokenLastname'],
+  ['{{time-greeting}}', 'tokenTimeGreeting'],
+] as const
+
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-[13px] font-semibold text-foreground">{children}</h2>
 )
@@ -647,6 +655,7 @@ function HandheldPreview({
 export function HandheldDesignEditor({
   title,
   subtitle,
+  banner,
   baseTiles,
   baseDesign,
   saving,
@@ -654,6 +663,9 @@ export function HandheldDesignEditor({
 }: {
   title: string
   subtitle?: string
+  // Valgfri note over fanerne — bruges af kundefladen til at fortælle om
+  // designet er arvet fra Operia eller virksomhedens eget.
+  banner?: React.ReactNode
   baseTiles: HandheldTileItem[]
   baseDesign: HandheldDesign
   saving: boolean
@@ -750,6 +762,7 @@ export function HandheldDesignEditor({
         </header>
 
         <div className="max-w-3xl">
+          {banner}
           <DetailTabs
             tabs={[
               { key: 'details', label: t('detail.tabDetails') },
@@ -825,12 +838,20 @@ export function HandheldDesignEditor({
                         forsøge at interpolere {{name}} osv. */}
                     <p className="text-xs text-muted-foreground">
                       {t('handheldDesignPage.tokenHintPrefix')}{' '}
-                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{name}}'}</code>{' '}
-                      {t('handheldDesignPage.tokenName')},{' '}
-                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{lastname}}'}</code>{' '}
-                      {t('handheldDesignPage.tokenLastname')},{' '}
-                      <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{'{{time-greeting}}'}</code>{' '}
-                      {t('handheldDesignPage.tokenTimeGreeting')}
+                      {TOKEN_HINTS.map(([token, key], i) => {
+                        const raw = t(`handheldDesignPage.${key}`)
+                        // Udelad forklaringen når den blot ville gentage selve
+                        // koden (engelsk: "{{lastname}} (last name)"); på dansk
+                        // er den en oversættelse og bevares derfor.
+                        const desc = raw && raw !== `handheldDesignPage.${key}` ? raw : ''
+                        return (
+                          <span key={token}>
+                            {i > 0 && ', '}
+                            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{token}</code>
+                            {desc ? ` ${desc}` : ''}
+                          </span>
+                        )
+                      })}
                     </p>
 
                     <ToggleSection

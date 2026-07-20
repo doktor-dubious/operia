@@ -152,6 +152,10 @@ export const roleLabelKey = Object.fromEntries(
 const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/parcels/receive', roles: ['parcel_handler', 'parcel_manager'] },
   { prefix: '/parcels/handout', roles: ['parcel_handler', 'parcel_manager'] },
+  { prefix: '/parcels/board', roles: ['parcel_handler', 'parcel_manager'] },
+  { prefix: '/parcels/condition', roles: ['parcel_handler', 'parcel_manager'] },
+  { prefix: '/parcels/move', roles: ['parcel_handler', 'parcel_manager'] },
+  { prefix: '/parcels/search', roles: ['parcel_handler', 'parcel_manager'] },
   { prefix: '/parcels', roles: ['parcel_manager'] },
   { prefix: '/reports', roles: ['parcel_manager'] },
   { prefix: '/stats', roles: ['parcel_manager'] },

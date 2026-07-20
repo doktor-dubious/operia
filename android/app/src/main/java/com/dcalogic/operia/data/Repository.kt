@@ -114,16 +114,33 @@ object Repository {
             }.decodeList<ProductAppearance>().firstOrNull()
 
     /**
-     * Platformens handheld-design (Operia → Handheld-design). Singleton-række;
-     * platform_settings_select er `using (true)`, så enhver logget ind bruger
-     * må læse den — kun skrivning er platform-admin.
+     * Handheld-designet for virksomheden: kundens eget (Konfigurér →
+     * Handheld-design) hvis det findes, ellers platformens standard (Operia →
+     * Handheld-design). Samme fald-tilbage-regel som Home-designet på webben —
+     * en kunde uden egen række arver platformens design, og en ændring af
+     * standarden slår derfor igennem hos alle der ikke har taget stilling.
+     *
+     * platform_settings_select er `using (true)`, og company_handheld_config er
+     * læsbar for alle i virksomheden, så begge opslag virker som handler.
      */
-    suspend fun handheldConfig(): HandheldConfig? =
-        supabase.from("platform_settings")
+    suspend fun handheldConfig(companyId: String): HandheldConfig? {
+        val own = runCatching {
+            supabase.from("company_handheld_config")
+                .select(Columns.list("handheld_tiles", "handheld_design")) {
+                    filter { eq("company_id", companyId) }
+                    limit(1)
+                }
+                .decodeList<PlatformHandheldRow>()
+                .firstOrNull()
+        }.getOrNull()
+        if (own != null) return HandheldConfig(own.handheld_tiles, own.handheld_design)
+
+        return supabase.from("platform_settings")
             .select(Columns.list("handheld_tiles", "handheld_design")) { limit(1) }
             .decodeList<PlatformHandheldRow>()
             .firstOrNull()
             ?.let { HandheldConfig(it.handheld_tiles, it.handheld_design) }
+    }
 
     // ---------- pakker ----------
 

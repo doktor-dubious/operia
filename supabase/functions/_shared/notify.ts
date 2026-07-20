@@ -153,3 +153,23 @@ export function inQuietHours(nowMin: number, start: string | null, end: string |
   if (s == null || e == null || s === e) return false
   return s < e ? nowMin >= s && nowMin < e : nowMin >= s || nowMin < e
 }
+
+// Maskér en modtager før den skrives i revisionsloggen. audit_log er
+// UPDATE/DELETE-spærret og videresendes til kundens log drains, så en fuld
+// e-mailadresse eller et mobilnummer dér kan aldrig fjernes igen — heller ikke
+// når pakken/udlånet siden anonymiseres. Maskeringen bevarer det man fejlsøger
+// på (hvilken slags adresse, hvilket domæne, de sidste cifre) uden at gemme
+// selve identifikatoren.
+export function maskRecipient(value: string | null | undefined): string | null {
+  const v = (value ?? '').trim()
+  if (!v) return null
+  const at = v.indexOf('@')
+  if (at > 0) {
+    const local = v.slice(0, at)
+    const head = local.length <= 2 ? local[0] : local.slice(0, 2)
+    return `${head}${'*'.repeat(Math.max(1, local.length - head.length))}@${v.slice(at + 1)}`
+  }
+  const digits = v.replace(/\D/g, '')
+  if (digits.length >= 4) return `${'*'.repeat(digits.length - 4)}${digits.slice(-4)}`
+  return '****'
+}

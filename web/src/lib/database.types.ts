@@ -178,6 +178,7 @@ export type Database = {
       }
       asset_loans: {
         Row: {
+          anonymized_at: string | null
           asset_id: string
           bounce_reason: string | null
           bounced_at: string | null
@@ -195,6 +196,7 @@ export type Database = {
           to_phone: string | null
         }
         Insert: {
+          anonymized_at?: string | null
           asset_id: string
           bounce_reason?: string | null
           bounced_at?: string | null
@@ -212,6 +214,7 @@ export type Database = {
           to_phone?: string | null
         }
         Update: {
+          anonymized_at?: string | null
           asset_id?: string
           bounce_reason?: string | null
           bounced_at?: string | null
@@ -670,6 +673,103 @@ export type Database = {
           },
         ]
       }
+      company_entra_config: {
+        Row: {
+          anonymize_retired: boolean | null
+          client_id: string | null
+          client_secret_set: boolean
+          company_id: string
+          created_at: string
+          dry_run_at: string | null
+          enabled: boolean
+          first_sync_at: string | null
+          group_id: string | null
+          group_name: string | null
+          initials_source: string | null
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          sync_interval_minutes: number | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          anonymize_retired?: boolean | null
+          client_id?: string | null
+          client_secret_set?: boolean
+          company_id: string
+          created_at?: string
+          dry_run_at?: string | null
+          enabled?: boolean
+          first_sync_at?: string | null
+          group_id?: string | null
+          group_name?: string | null
+          initials_source?: string | null
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          sync_interval_minutes?: number | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anonymize_retired?: boolean | null
+          client_id?: string | null
+          client_secret_set?: boolean
+          company_id?: string
+          created_at?: string
+          dry_run_at?: string | null
+          enabled?: boolean
+          first_sync_at?: string | null
+          group_id?: string | null
+          group_name?: string | null
+          initials_source?: string | null
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          sync_interval_minutes?: number | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_entra_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_entra_secret: {
+        Row: {
+          client_secret: string | null
+          company_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          client_secret?: string | null
+          company_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          client_secret?: string | null
+          company_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_entra_secret_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_features: {
         Row: {
           company_id: string
@@ -703,6 +803,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "feature_catalog"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      company_handheld_config: {
+        Row: {
+          company_id: string
+          created_at: string
+          handheld_design: Json
+          handheld_tiles: Json
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          handheld_design?: Json
+          handheld_tiles?: Json
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          handheld_design?: Json
+          handheld_tiles?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_handheld_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -852,6 +984,7 @@ export type Database = {
           department_id: string | null
           email: string | null
           employee_no: string | null
+          external_id: string | null
           first_name: string | null
           full_name: string
           id: string
@@ -862,6 +995,7 @@ export type Database = {
           last_name: string | null
           nfc_card_id: string | null
           phone: string | null
+          retired_at: string | null
           role: string | null
           updated_at: string
           user_id: string | null
@@ -873,6 +1007,7 @@ export type Database = {
           department_id?: string | null
           email?: string | null
           employee_no?: string | null
+          external_id?: string | null
           first_name?: string | null
           full_name: string
           id?: string
@@ -883,6 +1018,7 @@ export type Database = {
           last_name?: string | null
           nfc_card_id?: string | null
           phone?: string | null
+          retired_at?: string | null
           role?: string | null
           updated_at?: string
           user_id?: string | null
@@ -894,6 +1030,7 @@ export type Database = {
           department_id?: string | null
           email?: string | null
           employee_no?: string | null
+          external_id?: string | null
           first_name?: string | null
           full_name?: string
           id?: string
@@ -904,6 +1041,7 @@ export type Database = {
           last_name?: string | null
           nfc_card_id?: string | null
           phone?: string | null
+          retired_at?: string | null
           role?: string | null
           updated_at?: string
           user_id?: string | null
@@ -960,6 +1098,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_catalog"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          page_path: string | null
+          screenshot_path: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          page_path?: string | null
+          screenshot_path?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          page_path?: string | null
+          screenshot_path?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1721,6 +1900,9 @@ export type Database = {
           email_antispoof_strict: boolean
           email_base_domain: string | null
           email_enabled: boolean
+          entra_anonymize_retired: boolean
+          entra_enabled: boolean
+          entra_sync_interval_minutes: number
           handheld_design: Json
           handheld_tiles: Json
           home_design: Json
@@ -1733,6 +1915,7 @@ export type Database = {
           maps_provider: string
           notify_email_enabled: boolean
           notify_sms_enabled: boolean
+          parcel_files_retention_days: number | null
           parcel_notifications_enabled: boolean
           parcel_reminder_1_days: number
           parcel_reminder_1_enabled: boolean
@@ -1768,6 +1951,9 @@ export type Database = {
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          entra_anonymize_retired?: boolean
+          entra_enabled?: boolean
+          entra_sync_interval_minutes?: number
           handheld_design?: Json
           handheld_tiles?: Json
           home_design?: Json
@@ -1780,6 +1966,7 @@ export type Database = {
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
+          parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
@@ -1815,6 +2002,9 @@ export type Database = {
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          entra_anonymize_retired?: boolean
+          entra_enabled?: boolean
+          entra_sync_interval_minutes?: number
           handheld_design?: Json
           handheld_tiles?: Json
           home_design?: Json
@@ -1827,6 +2017,7 @@ export type Database = {
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
+          parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number
           parcel_reminder_1_enabled?: boolean
@@ -2182,6 +2373,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      anonymize_asset_loan: {
+        Args: { p_label?: string; p_loan_id: string }
+        Returns: undefined
+      }
+      anonymize_employee: {
+        Args: { p_employee_id: string; p_label?: string }
+        Returns: boolean
+      }
+      anonymize_employee_internal: {
+        Args: { p_employee_id: string; p_label?: string }
+        Returns: boolean
+      }
+      anonymize_employees: {
+        Args: { p_ids: string[]; p_label?: string }
+        Returns: number
+      }
       asset_status_from_text: {
         Args: { p_text: string }
         Returns: Database["public"]["Enums"]["asset_status"]
@@ -2193,6 +2400,14 @@ export type Database = {
       }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
       current_company_id: { Args: never; Returns: string }
+      employee_has_open_parcels: {
+        Args: { p_employee_id: string }
+        Returns: boolean
+      }
+      generate_parcel_barcode: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       has_any_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean
@@ -2268,6 +2483,10 @@ export type Database = {
         Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
         Returns: undefined
       }
+      retire_employee: {
+        Args: { p_anonymize: boolean; p_employee_id: string; p_label?: string }
+        Returns: string
+      }
       return_asset: { Args: { p_asset_id: string }; Returns: undefined }
       run_retention_purge: { Args: never; Returns: undefined }
       set_company_sftp_password: {
@@ -2280,8 +2499,14 @@ export type Database = {
           company_id: string
         }[]
       }
+      sweep_retired_employees: {
+        Args: { p_company_id: string; p_label?: string }
+        Returns: number
+      }
+      sweep_returned_loans: { Args: { p_company_id?: string }; Returns: number }
       try_import_lock: { Args: { p_company_id: string }; Returns: boolean }
       try_import_lock_self: { Args: { p_company_id: string }; Returns: boolean }
+      unretire_employee: { Args: { p_employee_id: string }; Returns: undefined }
       update_asset_loan: {
         Args: {
           p_expires_at?: string

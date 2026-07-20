@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, ChevronUp, MessageCircle, Search } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp, Search } from 'lucide-react'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { RefreshCw } from '@/components/animate-ui/icons/refresh-cw'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -27,6 +27,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { CompanySwitcher } from '@/components/company-switcher'
+import { FeedbackPopover } from '@/components/feedback-popover'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -35,7 +36,15 @@ import { useParcelsRealtime } from '@/hooks/use-parcels-realtime'
 import { useActiveAppearance } from '@/hooks/use-active-appearance'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
-import { allNavItems, configureNav, homeNav, navGroups, operiaNav, visibleNavGroups } from '@/lib/nav'
+import {
+  allNavItems,
+  configureNav,
+  homeNav,
+  navGroups,
+  operiaNav,
+  simpleNavItems,
+  visibleNavGroups,
+} from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { useAccess } from '@/hooks/use-access'
 import { BrandLogo } from '@/components/brand-logo'
@@ -317,25 +326,32 @@ function ClassicSidebar() {
   )
 }
 
-// Moderne tilstand: samme bredde (240px) og styling som den klassiske
-// sidemenu, men viser kun Pakker-gruppen direkte. Resten af navigationen
-// (samt Konfiguration/Operia) ligger i bruger-dropdownen nederst til venstre.
+// Moderne tilstand: forenklet navigation til ikke-IT-vante brugere. Kun de fem
+// daglige pakkehandlinger (samme sæt som håndterminalens fliser), vist som
+// store, tydelige knapper med ikon + label. Resten af navigationen (samt
+// Konfiguration/Operia) ligger i bruger-dropdownen nederst til venstre.
+const bigNavItemClass =
+  'flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/30 px-3 py-3 ' +
+  'text-[15px] font-medium text-foreground-light transition-colors ' +
+  'hover:border-foreground/20 hover:bg-sidebar-accent hover:text-foreground [&_svg]:size-5 [&_svg]:shrink-0'
+
 function ModernRail() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
-  const parcels = visibleNavGroups(access).find((g) => g.labelKey === 'groupParcels')
+  const items = simpleNavItems(access)
   return (
-    <aside className="flex w-60 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar">
+    <aside className="flex w-64 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-10 items-center gap-2 px-4 pt-1">
         <BrandLogo className="h-5 w-5 shrink-0" />
         <span className="text-[13px] font-semibold">{t('app.name')}</span>
       </div>
       <CompanySwitcher />
-      <nav className="flex-1 overflow-y-auto px-2 py-2">
-        <div className="flex flex-col gap-0.5">
-          {/* Home — øverst, med en separator under. */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="flex flex-col gap-2">
+          {/* Home — øverst som lille link, med en separator under; de store
+              knapper nedenunder er de daglige handlinger. */}
           <Link
             to={homeNav.href}
             className={cn(
@@ -347,15 +363,15 @@ function ModernRail() {
             <homeNav.icon />
             <span>{t('nav.home')}</span>
           </Link>
-          <div className="my-1 border-b border-sidebar-border" />
-          {parcels?.items.map((item) => (
+          <div className="border-b border-sidebar-border" />
+          {items.map((item) => (
             <Link
               key={item.href}
               to={item.href}
               className={cn(
-                menuItemClass,
-                'flex items-center hover:bg-sidebar-accent',
-                pathname === item.href && 'bg-sidebar-accent text-foreground',
+                bigNavItemClass,
+                pathname === item.href &&
+                  'border-primary/40 bg-primary/10 text-foreground shadow-sm',
               )}
             >
               <item.icon />
@@ -436,15 +452,7 @@ function HeaderActions() {
           </span>
         )}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
-        aria-label={t('nav.feedback')}
-        title={t('nav.feedback')}
-      >
-        <MessageCircle className="size-4" />
-      </Button>
+      <FeedbackPopover />
       <Button
         variant="ghost"
         size="icon"

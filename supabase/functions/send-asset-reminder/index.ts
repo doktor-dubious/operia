@@ -23,7 +23,14 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendSms } from '../_shared/send-sms.ts'
 import { sendEmail } from '../_shared/send-email.ts'
-import { classifySendError, copenhagenDate, fmtDate, render, renderHtml } from '../_shared/notify.ts'
+import {
+  classifySendError,
+  copenhagenDate,
+  fmtDate,
+  maskRecipient,
+  render,
+  renderHtml,
+} from '../_shared/notify.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -205,10 +212,10 @@ Deno.serve(async (req) => {
       p_action: result.ok ? 'asset.reminder_sent' : 'asset.reminder_failed',
       p_entity_type: 'asset_loan',
       p_entity_id: loan.id,
-      p_summary: `${tokens.asset_name || '—'} → ${loan.to_name}`,
+      p_summary: `${tokens.asset_name || '—'}`,
       p_detail: {
         channel,
-        recipient: to,
+        recipient: maskRecipient(to),
         manual: true,
         asset_id: loan.asset_id,
         ...(result.ok

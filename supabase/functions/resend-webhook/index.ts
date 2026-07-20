@@ -17,6 +17,7 @@
 // skal bestå, så cron ikke gen-sender til en død adresse; loggen bærer udfaldet.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { maskRecipient } from '../_shared/notify.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -167,8 +168,8 @@ Deno.serve(async (req) => {
       p_action: isBounce ? 'asset.reminder_bounced' : 'asset.reminder_complained',
       p_entity_type: 'asset_loan',
       p_entity_id: a.loan_id,
-      p_summary: `${a.asset?.name || a.asset?.asset_tag || '—'} → ${a.loan?.to_name || a.recipient || '—'}`,
-      p_detail: { channel: a.channel, recipient: a.recipient, reason, event: type },
+      p_summary: `${a.asset?.name || a.asset?.asset_tag || '—'}`,
+      p_detail: { channel: a.channel, recipient: maskRecipient(a.recipient), reason, event: type },
     })
     return json({ ok: true, matched: 'asset' })
   }
@@ -187,8 +188,8 @@ Deno.serve(async (req) => {
       p_action: isBounce ? 'parcel.notification_bounced' : 'parcel.notification_complained',
       p_entity_type: 'parcel',
       p_entity_id: parcelRow.parcel_id,
-      p_summary: parcelRow.recipient ?? '—',
-      p_detail: { channel: parcelRow.channel, recipient: parcelRow.recipient, reason, event: type },
+      p_summary: null,
+      p_detail: { channel: parcelRow.channel, recipient: maskRecipient(parcelRow.recipient), reason, event: type },
     })
     return json({ ok: true, matched: 'parcel' })
   }
