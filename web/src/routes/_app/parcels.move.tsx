@@ -22,7 +22,7 @@ import {
   type ParcelStatus,
 } from '@/components/parcel-status-badge'
 import { ScannerIndicator } from '@/components/scanner-indicator'
-import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { moveRequiresLocation, moveTargets, type MoveStatus } from '@/lib/parcel-moves'
 import { supabase } from '@/lib/supabase'
@@ -81,7 +81,7 @@ function MovePage() {
   })
 
   const search = async (term?: string) => {
-    const q = (term ?? lookup).trim()
+    const q = normalizeScan(term ?? lookup)
     if (!q || !companyId) return
     setNotFound(false)
     setParcel(null)

@@ -1,8 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+}
+
+// Release-signering: læses fra android/keystore.properties (gitignored — symlink til
+// ~/Android/keystores/operia-keystore.properties på byggemaskinen). Mangler filen,
+// bygges release usigneret; kun byggemaskinen med nøglen kan udgive.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -26,10 +36,29 @@ android {
         )
     }
 
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) {
+            val missing = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+                .filter { keystoreProps.getProperty(it).isNullOrBlank() }
+            if (missing.isNotEmpty()) {
+                error("keystore.properties findes, men mangler nøglerne: $missing")
+            }
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (keystoreProps.isNotEmpty()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

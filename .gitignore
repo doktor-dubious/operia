@@ -26,6 +26,7 @@ android/local.properties
 android/.kotlin/
 *.keystore
 *.jks
+android/keystore.properties
 
 # IDE / OS
 .idea/

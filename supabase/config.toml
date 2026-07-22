@@ -143,9 +143,9 @@ max_catalogs = 2
 # Analytics Buckets is available to Supabase Pro plan.
 # [storage.analytics.buckets.my-warehouse]
 
-# Store vector embeddings in S3 for large and durable datasets
+# Store vector embeddings in S3 for large and durable datasets (kræver betalt tier — hold disabled)
 [storage.vector]
-enabled = true
+enabled = false
 max_buckets = 10
 max_indexes = 5
 
@@ -156,11 +156,19 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# NB: config.toml styrer BÅDE `supabase config push` (hostet projekt) og den
+# lokale stack (`supabase start`). Produktions-URL'en her betyder, at auth-mails
+# fra en LOKAL stack linker til produktion — test af mailflows lokalt kræver
+# midlertidigt site_url = "http://localhost:5173" (uden config push imens).
+site_url = "https://operia.predictioninstitute.com"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "https://operia.predictioninstitute.com/**",
+  "http://localhost:5173/**",
+  "http://127.0.0.1:5173/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -225,13 +233,13 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "1m0s"
 # Number of characters used in the email OTP.
-otp_length = 6
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
@@ -250,9 +258,11 @@ otp_expiry = 3600
 # sender_name = "Operia"
 
 # Operia-brandet invitations-e-mail (dansk). Emne + HTML-skabelon i git.
-[auth.email.template.invite]
-subject = "Du er blevet inviteret til Operia"
-content_path = "./supabase/templates/invite.html"
+# NB: Invitations sendes via Resend + generateLink (edge function), ikke Supabase Auths
+# SMTP-skabelon. Skabelon-push er desuden ikke tilladt på free tier (400 fra config push).
+# [auth.email.template.invite]
+# subject = "Du er blevet inviteret til Operia"
+# content_path = "./supabase/templates/invite.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -306,8 +316,8 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

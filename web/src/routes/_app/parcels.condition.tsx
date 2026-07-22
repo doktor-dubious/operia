@@ -14,7 +14,7 @@ import { ParcelStatusBadge, type ParcelStatus } from '@/components/parcel-status
 import { ParcelDocumentList } from '@/components/parcel-condition'
 import { PhotoCapture } from '@/components/photo-capture'
 import { ScannerIndicator } from '@/components/scanner-indicator'
-import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
@@ -60,7 +60,7 @@ function ConditionPage() {
 
   // term kan gives af scanneren, da lookup-state opdateres asynkront.
   const search = async (term?: string) => {
-    const q = (term ?? lookup).trim()
+    const q = normalizeScan(term ?? lookup)
     if (!q || !companyId) return
     setNotFound(false)
     setParcel(null)

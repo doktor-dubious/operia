@@ -5,7 +5,7 @@
   },
   "scanner": {
     "ready": "Klar til scanning",
-    "scanned": "Stregkode scannet"
+    "scanned": "Kode scannet"
   },
   "appearance": {
     "subtitle": "Tilpas hvert produkts udseende — navn, farve, tema, logo og watermark. Uden tilpasning bruges systemets standard.",
@@ -822,7 +822,7 @@
   "receive": {
     "company": "Virksomhed",
     "barcode": "Stregkode",
-    "barcodePlaceholder": "Scan eller skriv stregkode",
+    "barcodePlaceholder": "Scan stregkode/QR eller skriv koden",
     "duplicateWarning": "Der findes allerede en åben pakke med denne stregkode.",
     "receiver": "Modtager",
     "receiverPlaceholder": "Søg på navn eller initialer…",
@@ -1297,7 +1297,7 @@
     "sizeCustom": "Brugerdefineret",
     "widthMm": "Bredde (mm)",
     "heightMm": "Højde (mm)",
-    "barcodeFrom": "Stregkode fra",
+    "barcodeFrom": "Stregkode/QR fra",
     "barcodeFromReference": "Reference (fx Operia)",
     "barcodeFromParcel": "Pakkens stregkode",
     "headingText": "Overskriftstekst",
@@ -1308,6 +1308,7 @@
     "field_date": "Dato",
     "field_recipientName": "Modtagernavn",
     "field_barcode": "Stregkode",
+    "field_qrcode": "QR-kode",
     "field_carrier": "Fragtfirma",
     "field_companyName": "Virksomhedsnavn",
     "addTextField": "Tilføj tekstfelt",
@@ -1316,6 +1317,7 @@
     "textContent": "Tekst",
     "clickToAdjust": "Klik på et element i designet for at justere det.",
     "barcodeWidth": "Stregkodebredde (%)",
+    "qrWidth": "QR-kodestørrelse (%)",
     "fontSize": "Skriftstørrelse (pt)",
     "bold": "Fed",
     "alignment": "Justering",
@@ -1518,7 +1520,7 @@
     "lendEmailInvalid": "Ugyldig e-mailadresse.",
     "loanNote": "Note",
     "barcode": "Stregkode",
-    "barcodePlaceholder": "Scan eller indtast stregkode",
+    "barcodePlaceholder": "Scan stregkode/QR eller indtast koden",
     "hasBarcode": "Har stregkode",
     "barcodeTaken": "Denne stregkode er allerede i brug.",
     "tabLender": "Låner",

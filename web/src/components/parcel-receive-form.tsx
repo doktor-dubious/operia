@@ -26,7 +26,7 @@ import { EmployeePicker, type PickedEmployee } from '@/components/employee-picke
 import { PhotoCapture } from '@/components/photo-capture'
 import { ScannerIndicator } from '@/components/scanner-indicator'
 import type { ParcelStatus } from '@/components/parcel-status-badge'
-import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { supabase } from '@/lib/supabase'
 
 // Modtag pakke (spec Flow 1): stregkode → modtager-autocomplete (afdeling
@@ -122,7 +122,8 @@ export function ParcelReceiveForm({
   // Advarsel ved gen-scan af åben pakke (duplikat-scan er uafklaret i spec —
   // vi advarer, men blokerer ikke)
   const checkDuplicate = async (code: string) => {
-    if (!code.trim()) {
+    const q = normalizeScan(code)
+    if (!q) {
       setDuplicate(false)
       return
     }
@@ -130,7 +131,7 @@ export function ParcelReceiveForm({
       .from('parcels')
       .select('id')
       .eq('company_id', companyId)
-      .eq('barcode', code.trim())
+      .eq('barcode', q)
       .not('status', 'in', '("delivered","returned","rejected")')
       .limit(1)
     setDuplicate(!!data?.length)
@@ -181,7 +182,7 @@ export function ParcelReceiveForm({
         .from('parcels')
         .insert({
           company_id: companyId,
-          barcode: barcode.trim() || null,
+          barcode: normalizeScan(barcode) || null,
           receiver_employee_id: receiver?.id ?? null,
           department_id: departmentId === NONE ? null : departmentId,
           carrier_id: carrierId === NONE ? null : carrierId,

@@ -15,6 +15,20 @@ import { useEffect, useRef } from 'react'
 // indsender formularen med et halvfærdigt indhold), stregkoden fjernes fra
 // feltet igen, og scanningen leveres som var den sket uden fokus i feltet.
 
+// Scannere kan være sat op til at sende et AIM-symbologi-id foran koden
+// (]Q1 = QR-kode, ]C1 = Code 128, ]d2 = DataMatrix, ]E0 = EAN …). Det er
+// metadata om kodetypen — ikke indhold — og fjernes altid, så QR og stregkode
+// med samme værdi gemmes og slås op som samme kode.
+//
+// Normaliseringen gælder ALLE indgange til en stregkode — scanning, manuel
+// indtastning og indsætning — på både web og håndterminal (samme rækkefølge
+// som Components.kt: trim → strip → trim), så gem og opslag altid mødes.
+const AIM_PREFIX = /^\][A-Za-z]\d/
+
+export function normalizeScan(raw: string): string {
+  return raw.trim().replace(AIM_PREFIX, '').trim()
+}
+
 type Options = {
   onScan: (code: string) => void
   enabled?: boolean
@@ -88,9 +102,11 @@ export function useBarcodeScanner({
           const target = targetRef?.current ?? null
           const active = document.activeElement
           if (active && isEditable(active) && active !== target) {
+            // Oprydning i feltet sker med den rå serie — det var den, der blev "tastet".
             stripScannedSuffix(active, code)
           }
-          onScanRef.current(code)
+          const normalized = normalizeScan(code)
+          if (normalized) onScanRef.current(normalized)
         }
         return
       }

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { useTranslation } from 'react-i18next'
 import JsBarcode from 'jsbarcode'
+import { QRCodeSVG } from 'qrcode.react'
 import { AlignCenter, AlignLeft, AlignRight, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -31,7 +33,7 @@ export type LabelElementStyle = {
   fontSize: number // pt (ignoreres af stregkoden)
   bold: boolean
   align: LabelAlign
-  width: number // kun stregkode: % af labelbredden
+  width: number // kun stregkode/QR-kode: % af labelbredden
 }
 
 export type LabelDesign = {
@@ -60,6 +62,7 @@ export const LABEL_FIELD_KEYS = [
   'date',
   'recipientName',
   'barcode',
+  'qrcode',
   'carrier',
   'companyName',
 ] as const
@@ -72,6 +75,8 @@ const DEFAULT_STYLES: Record<string, Partial<LabelElementStyle>> = {
   date: { x: 96, y: 30, fontSize: 8, align: 'right' },
   recipientName: { x: 4, y: 55, fontSize: 10, bold: true, align: 'left' },
   barcode: { x: 50, y: 40, width: 70 },
+  // QR er kvadratisk — bredden er sidelængden, så den holdes lille som standard.
+  qrcode: { x: 82, y: 50, width: 26 },
   carrier: { x: 4, y: 70, fontSize: 8, align: 'left' },
   companyName: { x: 96, y: 92, fontSize: 7, align: 'right' },
 }
@@ -436,10 +441,12 @@ export function LabelDesigner({
                 </div>
               )}
 
-              {selected === 'barcode' ? (
+              {selected === 'barcode' || selected === 'qrcode' ? (
                 <div className="grid grid-cols-3 gap-3">
-                  {numberInput(t('labelDesigner.barcodeWidth'), selectedStyle.width, (n) =>
-                    patchElement(selected, { width: Math.min(100, Math.max(10, n)) }),
+                  {numberInput(
+                    t(selected === 'qrcode' ? 'labelDesigner.qrWidth' : 'labelDesigner.barcodeWidth'),
+                    selectedStyle.width,
+                    (n) => patchElement(selected, { width: Math.min(100, Math.max(10, n)) }),
                   )}
                   {numberInput('X (%)', selectedStyle.x, (n) =>
                     patchElement(selected, { x: Math.min(100, Math.max(0, n)) }),
@@ -528,6 +535,8 @@ export function LabelDesigner({
             {activeIds.map((id) => {
               const el = style(design, id)
               const isBarcode = id === 'barcode'
+              const isQr = id === 'qrcode'
+              const isCode = isBarcode || isQr
               return (
                 <div
                   key={id}
@@ -540,10 +549,10 @@ export function LabelDesigner({
                   style={{
                     left: `${el.x}%`,
                     top: `${el.y}%`,
-                    transform: alignTransform[isBarcode ? 'center' : el.align],
+                    transform: alignTransform[isCode ? 'center' : el.align],
                     fontSize: `${el.fontSize}pt`,
                     fontWeight: el.bold ? 700 : 400,
-                    width: isBarcode ? `${el.width}%` : undefined,
+                    width: isCode ? `${el.width}%` : undefined,
                   }}
                   onPointerDown={(e) => {
                     e.stopPropagation()
@@ -555,6 +564,13 @@ export function LabelDesigner({
                 >
                   {isBarcode ? (
                     <BarcodeSvg value={barcodeSample(design)} className="h-auto w-full" />
+                  ) : isQr ? (
+                    <QRCodeSVG
+                      value={barcodeSample(design)}
+                      marginSize={4}
+                      bgColor="transparent"
+                      className="h-auto w-full"
+                    />
                   ) : (
                     elementText(design, lang, id, activeCompany?.name)
                   )}
@@ -586,6 +602,15 @@ export function printTestLabel(design: LabelDesign, lang: string, companyName?: 
       })
       svg.setAttribute('style', 'width:100%;height:auto')
       return `<div style="position:absolute;left:${el.x}%;top:${el.y}%;width:${el.width}%;transform:${alignTransform.center}">${svg.outerHTML}</div>`
+    }
+    if (id === 'qrcode') {
+      // Samme kilde som stregkoden — QR er blot en anden aftegning af koden.
+      // marginSize=4 er QR-standardens "quiet zone" (4 moduler fri kant) —
+      // uden den fejlaflæser scannere koden, når den står tæt på kant/tekst.
+      const svg = renderToStaticMarkup(
+        <QRCodeSVG value={barcodeSample(design)} marginSize={4} style={{ width: '100%', height: 'auto' }} />,
+      )
+      return `<div style="position:absolute;left:${el.x}%;top:${el.y}%;width:${el.width}%;transform:${alignTransform.center}">${svg}</div>`
     }
     const text = elementText(design, lang, id, companyName)
       .replaceAll('&', '&amp;')

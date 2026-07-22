@@ -263,11 +263,20 @@ fun Card(content: @Composable ColumnScope.() -> Unit) {
 
 /* ---------- scan-felt ----------
  * Håndterminal-scannere opfører sig som tastaturer: koden kommer som
- * hurtige tastetryk, ofte afsluttet med Enter. Feltet sender automatisk:
+ * hurtige tastetryk, ofte afsluttet med Enter. Gælder både 1D-stregkoder og
+ * QR-koder — scanneren afkoder, feltet modtager bare teksten. Feltet sender
+ * automatisk:
  *  - ved Enter/linjeskift i input
  *  - i scan-tilstand: når input holder pause i 250 ms
  * ⌨-knappen slår soft-keyboard til for manuel indtastning.
  */
+
+// AIM-symbologi-id foran koden (]Q1 = QR, ]C1 = Code 128, ]d2 = DataMatrix …)
+// er metadata fra scanneren, ikke kodeindhold — fjernes så QR og stregkode med
+// samme værdi rammer samme pakke. Samme regel og rækkefølge (trim → strip →
+// trim) som webbens use-barcode-scanner, og for ALLE indgange (scan såvel som
+// manuel indtastning), så gem og opslag altid normaliserer ens.
+private val AIM_PREFIX = Regex("""^\][A-Za-z]\d""")
 @Composable
 fun ScanBox(
     label: String,
@@ -281,7 +290,8 @@ fun ScanBox(
 
     fun fire(code: String) {
         value = ""
-        if (code.isNotBlank()) onScan(code.trim())
+        val clean = code.trim().replaceFirst(AIM_PREFIX, "").trim()
+        if (clean.isNotBlank()) onScan(clean)
     }
 
     LaunchedEffect(focusStamp) {

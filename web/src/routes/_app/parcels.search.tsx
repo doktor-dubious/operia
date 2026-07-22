@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import type { ParcelStatus } from '@/components/parcel-status-badge'
 import { ParcelSummary } from '@/components/parcel-summary'
 import { ScannerIndicator } from '@/components/scanner-indicator'
-import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
 
@@ -47,7 +47,7 @@ function SearchPage() {
   const lookupRef = useRef<HTMLInputElement>(null)
 
   const search = async (term?: string) => {
-    const q = (term ?? lookup).trim()
+    const q = normalizeScan(term ?? lookup)
     if (!q || !companyId) return
     const { data, error } = await supabase
       .from('parcels')

@@ -5,7 +5,7 @@
   },
   "scanner": {
     "ready": "Ready to scan",
-    "scanned": "Barcode scanned"
+    "scanned": "Code scanned"
   },
   "appearance": {
     "subtitle": "Customize each product's look — name, colour, theme, logo and watermark. Without customization the system default is used.",
@@ -822,7 +822,7 @@
   "receive": {
     "company": "Company",
     "barcode": "Barcode",
-    "barcodePlaceholder": "Scan or type barcode",
+    "barcodePlaceholder": "Scan barcode/QR or type the code",
     "duplicateWarning": "An open parcel with this barcode already exists.",
     "receiver": "Receiver",
     "receiverPlaceholder": "Search by name or initials…",
@@ -1297,7 +1297,7 @@
     "sizeCustom": "Custom",
     "widthMm": "Width (mm)",
     "heightMm": "Height (mm)",
-    "barcodeFrom": "Barcode from",
+    "barcodeFrom": "Barcode/QR from",
     "barcodeFromReference": "Reference (e.g. Operia)",
     "barcodeFromParcel": "Parcel barcode",
     "headingText": "Heading text",
@@ -1308,6 +1308,7 @@
     "field_date": "Date",
     "field_recipientName": "Recipient name",
     "field_barcode": "Barcode",
+    "field_qrcode": "QR code",
     "field_carrier": "Carrier",
     "field_companyName": "Company name",
     "addTextField": "Add text field",
@@ -1316,6 +1317,7 @@
     "textContent": "Text",
     "clickToAdjust": "Click an element in the design to adjust it.",
     "barcodeWidth": "Barcode width (%)",
+    "qrWidth": "QR code size (%)",
     "fontSize": "Font size (pt)",
     "bold": "Bold",
     "alignment": "Alignment",
@@ -1518,7 +1520,7 @@
     "lendEmailInvalid": "Invalid email address.",
     "loanNote": "Note",
     "barcode": "Barcode",
-    "barcodePlaceholder": "Scan or enter barcode",
+    "barcodePlaceholder": "Scan barcode/QR or enter the code",
     "hasBarcode": "Has barcode",
     "barcodeTaken": "This barcode is already in use.",
     "tabLender": "Borrower",
