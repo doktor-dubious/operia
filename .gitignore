@@ -33,3 +33,6 @@ android/keystore.properties
 .vscode/
 *.iml
 .DS_Store
+
+# LibreOffice-låsefiler (transient editor-tilstand)
+.~lock.*#

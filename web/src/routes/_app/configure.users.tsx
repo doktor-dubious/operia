@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { KeyRound, Plus } from 'lucide-react'
+import { Check, KeyRound, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -45,24 +46,40 @@ export const Route = createFileRoute('/_app/configure/users')({
 })
 
 const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
+const dateTimeFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
 
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
 
 // Kun den aktuelle virksomheds brugere — for managers begrænser RLS alligevel,
 // men platform-admins kan se alt, så eq-filteret er det der afgrænser visningen.
+// Verifikations-/login-status hentes via admin_user_verification (samme RPC som
+// Operia → Brugere; den giver managers status for egen virksomhed).
 function useRows(companyId: string | null) {
   return useQuery({
     queryKey: ['app-users', companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('user_id, full_name, email, created_at, company_id, user_roles (role)')
-        .eq('company_id', companyId!)
-        .order('full_name')
+      const [{ data, error }, { data: verification, error: verifyError }] = await Promise.all([
+        supabase
+          .from('app_users')
+          .select('user_id, full_name, email, created_at, company_id, user_roles (role)')
+          .eq('company_id', companyId!)
+          .order('full_name'),
+        supabase.rpc('admin_user_verification'),
+      ])
       if (error) throw error
+      // Verifikation er berigelse — fejler RPC'en (fx migration endnu ikke
+      // udrullet), vises listen stadig, blot med "—" i status-kolonnerne.
+      if (verifyError) console.warn('admin_user_verification utilgængelig:', verifyError)
+      const confirmedAt = new Map((verification ?? []).map((v) => [v.user_id, v.email_confirmed_at]))
+      const lastSignInAt = new Map((verification ?? []).map((v) => [v.user_id, v.last_sign_in_at]))
       // DataTable kræver et `id`-felt; app_users' nøgle er user_id.
-      return data.map((row) => ({ ...row, id: row.user_id }))
+      return data.map((row) => ({
+        ...row,
+        id: row.user_id,
+        verified: verifyError ? null : confirmedAt.get(row.user_id) != null,
+        lastLogin: lastSignInAt.get(row.user_id) ?? null,
+      }))
     },
   })
 }
@@ -71,18 +88,57 @@ function rolesOf(row: Row): AppRole[] {
   return row.user_roles.map((r) => r.role)
 }
 
+// Fjern ADGANG, ikke kontoen: slet app_users-rækken (RLS afgør retten).
+// Login-kontoen i auth.users bevares bevidst — hård sletning er platform-
+// admin-only (delete-user-funktionen, Operia → Brugere). Kaster ved fejl, så
+// DataTable/panelet viser en fejl.
+async function revokeAccess(userIds: string[], t: (k: string) => string): Promise<void> {
+  const { data, error } = await supabase
+    .from('app_users')
+    .delete()
+    .in('user_id', userIds)
+    .select('user_id')
+  if (error) throw error
+  if ((data?.length ?? 0) !== userIds.length) {
+    toast.error(t('common.noPermission'))
+    throw new Error('RLS afviste fjernelse')
+  }
+}
+
+// Hold rollekolonnen kompakt: vis højst 2 badges, og saml resten i et
+// "+N mere"-badge, hvis hover viser den fulde liste (samme som Operia → Brugere).
+const MAX_VISIBLE_ROLES = 2
+
 function RoleBadges({ roles }: { roles: AppRole[] }) {
   const { t } = useTranslation()
   if (!roles.length) return <span className="text-muted-foreground">—</span>
   // Behold katalog-rækkefølgen (manager først) uanset databasens ordning.
   const ordered = ASSIGNABLE_ROLES.filter((r) => roles.includes(r.value))
+  const visible = ordered.slice(0, MAX_VISIBLE_ROLES)
+  const overflow = ordered.slice(MAX_VISIBLE_ROLES)
   return (
-    <div className="flex flex-wrap gap-1">
-      {ordered.map((r) => (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map((r) => (
         <Badge key={r.value} variant="secondary" className="font-normal">
           {t(r.labelKey)}
         </Badge>
       ))}
+      {overflow.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="cursor-default font-normal text-muted-foreground">
+              {t('usersPage.moreRoles', { count: overflow.length })}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="flex flex-col gap-1">
+              {ordered.map((r) => (
+                <span key={r.value}>{t(r.labelKey)}</span>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -192,17 +248,8 @@ function UserDetailPane({
   }
 
   const remove = async () => {
-    const { data, error } = await supabase
-      .from('app_users')
-      .delete()
-      .eq('user_id', row.user_id)
-      .select('user_id')
-    if (error) throw error
-    if (!data?.length) {
-      toast.error(t('common.noPermission'))
-      throw new Error('RLS afviste fjernelse')
-    }
-    toast.success(t('userDetail.removedToast', { name: row.full_name || row.email }))
+    await revokeAccess([row.user_id], t)
+    toast.success(t('userDetail.revokedToast', { name: row.full_name || row.email }))
     onRemoved()
     refresh()
   }
@@ -260,7 +307,7 @@ function UserDetailPane({
                   {t('userDetail.remove')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {isSelf ? t('userDetail.selfHint') : t('userDetail.removeDescription')}
+                  {isSelf ? t('userDetail.selfHint') : t('userDetail.revokeDescription')}
                 </p>
               </div>
               <Button
@@ -298,8 +345,8 @@ function UserDetailPane({
         open={removeOpen}
         onOpenChange={setRemoveOpen}
         title={t('userDetail.removeTitle', { name: row.full_name || row.email })}
-        description={t('userDetail.removeWarning')}
-        acknowledgeText={t('userDetail.removeAcknowledge')}
+        description={t('userDetail.revokeWarning')}
+        acknowledgeText={t('userDetail.revokeAcknowledge')}
         confirmLabel={t('userDetail.remove')}
         onConfirm={remove}
       />
@@ -480,18 +527,14 @@ function CompanyUsersPage() {
       toast.error(t('userDetail.selfHint'))
       throw new Error('Kan ikke fjerne egen adgang')
     }
-    const { data: deleted, error } = await supabase
-      .from('app_users')
-      .delete()
-      .in('user_id', ids)
-      .select('user_id')
-    if (error) throw error
-    if ((deleted?.length ?? 0) !== ids.length) {
-      toast.error(t('common.noPermission'))
-      throw new Error('RLS afviste (delvist) fjernelse')
+    try {
+      await revokeAccess(ids, t)
+    } finally {
+      // Delvis succes er mulig (RLS kan afvise enkelte rækker) — genindlæs
+      // altid, så de faktisk fjernede rækker forsvinder fra tabellen.
+      if (activeId && ids.includes(activeId)) setActiveId(null)
+      await refresh()
     }
-    if (activeId && ids.includes(activeId)) setActiveId(null)
-    await refresh()
   }
 
   if (!companyId || isPending) return <Skeleton className="h-40 w-full" />
@@ -522,6 +565,39 @@ function CompanyUsersPage() {
       key: 'roles',
       header: t('usersPage.roles'),
       render: (r) => <RoleBadges roles={rolesOf(r)} />,
+    },
+    {
+      key: 'verified',
+      header: t('usersPage.verified'),
+      sortable: true,
+      sortValue: (r) => (r.verified ? 1 : 0),
+      render: (r) =>
+        r.verified == null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : r.verified ? (
+          <Badge variant="secondary" className="font-normal">
+            <Check className="size-3" /> {t('usersPage.verifiedYes')}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="font-normal text-muted-foreground">
+            {t('usersPage.verifiedNo')}
+          </Badge>
+        ),
+    },
+    {
+      key: 'last_login',
+      header: t('usersPage.lastLogin'),
+      sortable: true,
+      // Sortér på tidsstempel; aldrig-loggede-ind sidst (0 = ældst).
+      sortValue: (r) => (r.lastLogin ? new Date(r.lastLogin).getTime() : 0),
+      render: (r) =>
+        r.lastLogin ? (
+          dateTimeFormat.format(new Date(r.lastLogin))
+        ) : r.verified == null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <span className="text-muted-foreground">{t('usersPage.lastLoginNever')}</span>
+        ),
     },
     {
       key: 'created_at',

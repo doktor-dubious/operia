@@ -240,7 +240,19 @@ secure_password_change = false
 max_frequency = "1m0s"
 # Number of characters used in the email OTP.
 otp_length = 8
-# Number of seconds before the email OTP expires (defaults to 1 hour).
+# Invitations-timeout (og udløb for nulstillings-/magic-links + e-mail-OTP — de
+# deler denne ene globale auth-indstilling). Ret værdien her og udrul med
+# `supabase config push`. Der er bevidst ingen knap på operia/general: det er en
+# global GoTrue-indstilling, som kun kan sættes fra web via Management API + en
+# konto-bred Personal Access Token — valgt fra i stedet for CLI-ruten (2026-07-23).
+#
+# HOLDES PÅ 1 TIME (code review 2026-07-24): fordi indstillingen er global,
+# ville fx 24 t også gøre password-reset-links og magic-links (inkl.
+# impersonerings-tokens) gyldige et helt døgn — et lækket/videresendt link
+# bliver så til kontoovertagelse længe efter. Længere invitations-gyldighed
+# kræver et selvbygget invitations-token adskilt fra GoTrue's OTP — ikke bygget.
+# /welcome accepterer i øvrigt et gen-klik på et brugt link, så længe sessionen
+# fra første klik stadig lever.
 otp_expiry = 3600
 
 # Egen afsenderadresse kræver en produktions-SMTP-server (Resend, Postmark,

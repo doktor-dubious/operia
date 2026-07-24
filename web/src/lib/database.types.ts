@@ -1142,6 +1142,36 @@ export type Database = {
           },
         ]
       }
+      handheld_deploys: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          log: string | null
+          requested_by: string | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          log?: string | null
+          requested_by?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          log?: string | null
+          requested_by?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       handling_classes: {
         Row: {
           allow_leave_at_location: boolean
@@ -2366,10 +2396,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_platform_admins: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          last_sign_in_at: string
+          user_id: string
+        }[]
+      }
       admin_user_emails: {
         Args: never
         Returns: {
           email: string
+          user_id: string
+        }[]
+      }
+      admin_user_verification: {
+        Args: never
+        Returns: {
+          email_confirmed_at: string
+          last_sign_in_at: string
           user_id: string
         }[]
       }
@@ -2417,6 +2465,14 @@ export type Database = {
       has_role: {
         Args: { r: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      impersonation_restore_auth_state: {
+        Args: {
+          p_email_confirmed_at: string
+          p_last_sign_in_at: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       is_platform_admin: { Args: never; Returns: boolean }
       lend_asset: {

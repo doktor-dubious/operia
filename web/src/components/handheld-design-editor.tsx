@@ -660,6 +660,8 @@ export function HandheldDesignEditor({
   baseDesign,
   saving,
   onSave,
+  extraTabs = [],
+  companyId,
 }: {
   title: string
   subtitle?: string
@@ -670,6 +672,12 @@ export function HandheldDesignEditor({
   baseDesign: HandheldDesign
   saving: boolean
   onSave: (tiles: HandheldTileItem[], design: HandheldDesign) => void
+  // Ekstra faner efter Detaljer/Fliser — platformsiden bruger den til
+  // "Handlinger" (udgivelse + QR-kode), som kundefladen ikke skal have.
+  extraTabs?: { key: string; label: string; content: React.ReactNode }[]
+  // Null på platformsiden (standard), company_id på kundefladen — styrer
+  // upload-stien i DesignImageField (storage-RLS).
+  companyId?: string | null
 }) {
   const { t } = useTranslation()
   const [tiles, setTiles] = useState<HandheldTileItem[]>(baseTiles)
@@ -767,11 +775,13 @@ export function HandheldDesignEditor({
             tabs={[
               { key: 'details', label: t('detail.tabDetails') },
               { key: 'tiles', label: t('handheldDesignPage.tilesSection') },
+              ...extraTabs.map(({ key, label }) => ({ key, label })),
             ]}
             active={tab}
             onChange={setTab}
             showMaximize={false}
           >
+            {extraTabs.find((et) => et.key === tab)?.content}
             {tab === 'details' && (
               <div className="flex flex-col gap-8">
                 {/* Indholdselementer med til/fra */}
@@ -865,6 +875,8 @@ export function HandheldDesignEditor({
                         onChange={(u) => patchDesign({ logoUrl: u })}
                         kind="logo"
                         pathPrefix="handheld-design"
+                        companyId={companyId}
+                        hint={t('handheldDesignPage.logoHint')}
                         allowUrl
                       />
                     </ToggleSection>
@@ -880,6 +892,8 @@ export function HandheldDesignEditor({
                         onChange={(u) => patchDesign({ heroUrl: u })}
                         kind="hero"
                         pathPrefix="handheld-design"
+                        companyId={companyId}
+                        hint={t('handheldDesignPage.heroHint')}
                       />
                     </ToggleSection>
                   </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Download } from 'lucide-react'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -424,6 +425,37 @@ function SettingsPage() {
               {savingPassword ? t('common.loading') : t('settings.savePassword')}
             </Button>
           </div>
+        </Panel>
+      </section>
+
+      {/* Håndterminal-appen: QR-koden der installerer APK'en (stabil URL, så
+          koden peger altid på nyeste version). Samme billede som på
+          Operia → Handheld-design → Handlinger. */}
+      <section className="mt-10">
+        <SectionHeader
+          title={t('settings.handheldSection')}
+          subtitle={t('settings.handheldSubtitle')}
+        />
+        <Panel>
+          <PanelRow
+            label={t('settings.handheldQrLabel')}
+            description={t('settings.handheldQrDescription')}
+            wide
+          >
+            <div className="flex items-start gap-4">
+              <img
+                src="/operia-handheld-qr.png"
+                alt={t('handheldActions.qrAlt')}
+                className="h-36 w-36 rounded-lg border bg-white p-2"
+              />
+              <Button size="sm" variant="outline" asChild>
+                <a href="/operia-handheld-qr.png" download="operia-handheld-qr.png">
+                  <Download className="size-4" />
+                  {t('handheldActions.downloadQr')}
+                </a>
+              </Button>
+            </div>
+          </PanelRow>
         </Panel>
       </section>
     </div>

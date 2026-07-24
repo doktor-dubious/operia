@@ -20,13 +20,22 @@ export function DesignImageField({
   onChange,
   kind,
   pathPrefix,
+  companyId,
   allowUrl,
+  hint,
 }: {
   url: string
   onChange: (url: string) => void
   kind: 'logo' | 'hero' | 'tile'
-  pathPrefix: string // bucket-mappe, fx 'home-design' eller 'handheld-design'
+  pathPrefix: string // filnavns-prefix, fx 'home-design' eller 'handheld-design'
+  // Virksomhedens id skal være FØRSTE mappe-segment i stien: storage-RLS for
+  // company-logos kræver (storage.foldername(name))[1] = current_company_id()
+  // for at managers må uploade. Null = platform-admin (redigerer standarden),
+  // som ikke er bundet af mappe-tjekket.
+  companyId?: string | null
   allowUrl?: boolean
+  // Valgfri hjælpetekst under upload-feltet (anbefalede mål/format).
+  hint?: string
 }) {
   const { t } = useTranslation()
   const [uploading, setUploading] = useState(false)
@@ -38,7 +47,11 @@ export function DesignImageField({
       return
     }
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
-    const path = `${pathPrefix}/${kind}-${Date.now()}.${ext}`
+    // Company-scope: {companyId}/{prefix}-{kind}-… (mappe-segmentet er company_id
+    // så manager-RLS'en passerer). Platform-admin (companyId null): {prefix}/…
+    const path = companyId
+      ? `${companyId}/${pathPrefix}-${kind}-${Date.now()}.${ext}`
+      : `${pathPrefix}/${kind}-${Date.now()}.${ext}`
     setUploading(true)
     const { error } = await supabase.storage.from('company-logos').upload(path, file, { upsert: true })
     setUploading(false)
@@ -87,6 +100,7 @@ export function DesignImageField({
           e.target.value = ''
         }}
       />
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {url && (
         <div className="flex items-center gap-3">
           <div

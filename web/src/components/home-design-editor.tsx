@@ -91,12 +91,14 @@ function TileConfigDialog({
   onPatch,
   onRemove,
   onClose,
+  companyId,
 }: {
   item: TileLayoutItem
   tile: ProductTile | null
   onPatch: (patch: Partial<TileLayoutItem>) => void
   onRemove: () => void
   onClose: () => void
+  companyId?: string | null
 }) {
   const { t } = useTranslation()
   const productName = tile ? t(`nav.${tile.labelKey}`) : ''
@@ -132,6 +134,7 @@ function TileConfigDialog({
                 onChange={(u) => onPatch({ imageUrl: u })}
                 kind="tile"
                 pathPrefix="home-design"
+                companyId={companyId}
               />
             </div>
           )}
@@ -265,6 +268,7 @@ export function HomeDesignEditor({
   baseDesign,
   saving,
   onSave,
+  companyId,
 }: {
   title: string
   subtitle?: string
@@ -273,6 +277,9 @@ export function HomeDesignEditor({
   baseDesign: HomeDesign
   saving: boolean
   onSave: (tiles: TileLayoutItem[], design: HomeDesign) => void
+  // Null på platformsiden (standard), company_id på kundefladen — styrer
+  // upload-stien i DesignImageField (storage-RLS).
+  companyId?: string | null
 }) {
   const { t } = useTranslation()
 
@@ -663,6 +670,8 @@ export function HomeDesignEditor({
                   onChange={(u) => patchDesign({ logoUrl: u })}
                   kind="logo"
                   pathPrefix="home-design"
+                  companyId={companyId}
+                  hint={t('homeDesignPage.logoHint')}
                   allowUrl
                 />
               </ToggleSection>
@@ -678,6 +687,8 @@ export function HomeDesignEditor({
                   onChange={(u) => patchDesign({ heroUrl: u })}
                   kind="hero"
                   pathPrefix="home-design"
+                  companyId={companyId}
+                  hint={t('homeDesignPage.heroHint')}
                 />
               </ToggleSection>
             </div>
@@ -706,6 +717,7 @@ export function HomeDesignEditor({
           onPatch={(patch) => updateTile(configItem.id, patch)}
           onRemove={() => removeTile(configItem.id)}
           onClose={() => setConfigId(null)}
+          companyId={companyId}
         />
       )}
     </div>

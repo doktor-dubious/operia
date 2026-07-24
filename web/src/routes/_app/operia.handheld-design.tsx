@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { HandheldActions } from '@/components/handheld-actions'
 import { HandheldDesignEditor } from '@/components/handheld-design-editor'
 import {
   normalizeHandheldDesign,
@@ -71,6 +72,13 @@ function HandheldDesignPage() {
       baseDesign={data.design}
       saving={saving}
       onSave={save}
+      extraTabs={[
+        {
+          key: 'actions',
+          label: t('handheldActions.tab'),
+          content: <HandheldActions />,
+        },
+      ]}
     />
   )
 }

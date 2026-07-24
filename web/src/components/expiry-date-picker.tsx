@@ -29,25 +29,41 @@ export function ExpiryDatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          className={cn(
-            'h-8 w-36 justify-start px-2.5 font-normal',
-            !value && 'text-muted-foreground',
-            expired && 'border-destructive/50 text-destructive',
-          )}
-          title={t('productsPage.expiry')}
-        >
-          <CalendarIcon className="size-3.5" />
-          <span className="truncate">
-            {selected ? format.format(selected) : t('productsPage.noExpiry')}
-          </span>
-        </Button>
-      </PopoverTrigger>
+      <div className="relative w-36">
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            className={cn(
+              'h-8 w-full justify-start px-2.5 font-normal',
+              value ? 'pr-7' : 'text-muted-foreground',
+              expired && 'border-destructive/50 text-destructive',
+            )}
+            title={t('productsPage.expiry')}
+          >
+            <CalendarIcon className="size-3.5" />
+            <span className="truncate">
+              {selected ? format.format(selected) : t('productsPage.noExpiry')}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        {value && !disabled && (
+          <button
+            type="button"
+            aria-label={t('productsPage.clearExpiry')}
+            title={t('productsPage.clearExpiry')}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation()
+              onChange(null)
+            }}
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+      </div>
       <PopoverContent className="w-auto p-0" align="end">
         <Calendar
           mode="single"

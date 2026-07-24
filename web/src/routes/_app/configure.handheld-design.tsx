@@ -94,6 +94,7 @@ function ConfigureHandheldDesignPage() {
       baseDesign={data.design}
       saving={saving}
       onSave={save}
+      companyId={companyId}
     />
   )
 }

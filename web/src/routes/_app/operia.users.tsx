@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown, KeyRound, Plus } from 'lucide-react'
+import { Check, ChevronsUpDown, KeyRound, Plus, ShieldCheck, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -43,6 +44,7 @@ import { useSession } from '@/hooks/use-session'
 import { ASSIGNABLE_ROLES, roleLabelKey, type AppRole } from '@/lib/roles'
 import { readEdgeError } from '@/lib/edge'
 import { supabase } from '@/lib/supabase'
+import { startImpersonation } from '@/lib/impersonation'
 
 // Operia → Brugere (kun platform-admins): virksomhedens brugere med systemadgang
 // (app_users) og deres roller (user_roles). Ligger under Operia-konfigurationen,
@@ -60,23 +62,92 @@ export const Route = createFileRoute('/_app/operia/users')({
 // uden systemadgang.
 
 const dateFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' })
+const dateTimeFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
 
-type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
+// Fælles rækketype for både app_users og platform-admin-konti uden app_users-
+// række (adminOnly). Eksplicit typet så union'en nedenfor ikke udleder en bred
+// type — og så `Row` bliver forudsigelig for kolonner og detaljepanel.
+type UserRow = {
+  id: string
+  user_id: string
+  full_name: string
+  email: string | null
+  created_at: string
+  company_id: string | null
+  company: { name: string } | null
+  user_roles: { role: AppRole }[]
+  verified: boolean
+  lastLogin: string | null
+  isPlatformAdmin: boolean
+  // DCA-super-tenant-konto uden app_users-række: ingen virksomhed/roller, og kan
+  // ikke redigeres/slettes fra denne side (administreres i Supabase).
+  adminOnly: boolean
+}
+
+type Row = UserRow
 
 // Platform-admin-visning: alle virksomheders brugere på tværs af tenants (RLS
 // tillader platform-admins at læse alt). Virksomhedsnavnet embeddes så det kan
-// vises som kolonne.
+// vises som kolonne. Oveni fletter vi DCA's platform-admin-konti ind — også dem
+// uden app_users-række — så super-tenant-brugerne er synlige her.
 function useRows() {
   return useQuery({
     queryKey: ['app-users'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('user_id, full_name, email, created_at, company_id, company:companies (name), user_roles (role)')
-        .order('full_name')
+    queryFn: async (): Promise<UserRow[]> => {
+      const [
+        { data, error },
+        { data: verification, error: verifyError },
+        { data: admins, error: adminError },
+      ] = await Promise.all([
+        supabase
+          .from('app_users')
+          .select('user_id, full_name, email, created_at, company_id, company:companies (name), user_roles (role)')
+          .order('full_name'),
+        // Verifikationsstatus fra auth.users (accepteret invitation = bekræftet
+        // e-mail) via platform-admin-RPC — kan ikke embeddes i selecten ovenfor.
+        supabase.rpc('admin_user_verification'),
+        // Platform-admin-konti (super-tenant) med e-mail + verifikation, også
+        // dem uden app_users-række — se admin_platform_admins-migrationen.
+        supabase.rpc('admin_platform_admins'),
+      ])
       if (error) throw error
+      if (verifyError) throw verifyError
+      if (adminError) throw adminError
+      const confirmedAt = new Map(verification.map((v) => [v.user_id, v.email_confirmed_at]))
+      const lastSignInAt = new Map(verification.map((v) => [v.user_id, v.last_sign_in_at]))
+      const adminById = new Map(admins.map((a) => [a.user_id, a]))
+
       // DataTable kræver et `id`-felt; app_users' nøgle er user_id.
-      return data.map((row) => ({ ...row, id: row.user_id }))
+      const rows: UserRow[] = data.map((row) => ({
+        ...row,
+        id: row.user_id,
+        verified: confirmedAt.get(row.user_id) != null,
+        lastLogin: lastSignInAt.get(row.user_id) ?? null,
+        isPlatformAdmin: adminById.has(row.user_id),
+        adminOnly: false,
+      }))
+
+      // Flet platform-admins ind, der ikke allerede har en app_users-række.
+      const seen = new Set(rows.map((r) => r.user_id))
+      for (const a of admins) {
+        if (seen.has(a.user_id)) continue
+        rows.push({
+          id: a.user_id,
+          user_id: a.user_id,
+          full_name: '',
+          email: a.email,
+          created_at: a.created_at,
+          company_id: null,
+          company: null,
+          user_roles: [],
+          verified: a.email_confirmed_at != null,
+          lastLogin: a.last_sign_in_at ?? null,
+          isPlatformAdmin: true,
+          adminOnly: true,
+        })
+      }
+      rows.sort((x, y) => x.full_name.localeCompare(y.full_name, 'da'))
+      return rows
     },
   })
 }
@@ -85,18 +156,68 @@ function rolesOf(row: Row): AppRole[] {
   return row.user_roles.map((r) => r.role)
 }
 
+type DeleteError = { userId: string; error: string }
+
+// Oversæt delete-user-funktionens fejlkoder til en læsbar besked (første fejl).
+function deleteErrorMessage(errors: DeleteError[] | undefined, t: (k: string) => string): string {
+  const code = errors?.[0]?.error
+  if (code === 'cannot_delete_platform_admin') return t('userDetail.cannotDeletePlatformAdmin')
+  if (code === 'cannot_delete_self') return t('userDetail.selfHint')
+  return t('common.noPermission')
+}
+
+// Slet én eller flere brugere via Edge Function'en (fjerner auth.users-login +
+// app_users via cascade). Kaster ved fejl, så DataTable/panelet viser en fejl.
+async function deleteUsers(userIds: string[], t: (k: string) => string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('delete-user', {
+    body: { userIds },
+  })
+  if (error) throw new Error(await readEdgeError(error, t('common.error')))
+  const deleted: string[] = data?.deleted ?? []
+  if (deleted.length !== userIds.length) {
+    // Vis den venlige besked her; kast en teknisk markør så kalderens
+    // catch-log har kontekst (samme mønster som den tidligere RLS-sti).
+    toast.error(deleteErrorMessage(data?.errors, t))
+    throw new Error('delete-user afviste (delvist) sletning')
+  }
+}
+
+// Hold rollekolonnen kompakt: vis højst 2 badges, og saml resten i et
+// "+N mere"-badge, hvis hover viser den fulde liste. Ellers kan en bruger med
+// mange roller skubbe kolonnerne skævt.
+const MAX_VISIBLE_ROLES = 2
+
 function RoleBadges({ roles }: { roles: AppRole[] }) {
   const { t } = useTranslation()
   if (!roles.length) return <span className="text-muted-foreground">—</span>
   // Behold katalog-rækkefølgen (manager først) uanset databasens ordning.
   const ordered = ASSIGNABLE_ROLES.filter((r) => roles.includes(r.value))
+  const visible = ordered.slice(0, MAX_VISIBLE_ROLES)
+  const overflow = ordered.slice(MAX_VISIBLE_ROLES)
   return (
-    <div className="flex flex-wrap gap-1">
-      {ordered.map((r) => (
+    <div className="flex flex-wrap items-center gap-1">
+      {visible.map((r) => (
         <Badge key={r.value} variant="secondary" className="font-normal">
           {t(r.labelKey)}
         </Badge>
       ))}
+      {overflow.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {/* Klik åbner detaljepanelet som resten af rækken; badge'et er kun til hover. */}
+            <Badge variant="outline" className="cursor-default font-normal text-muted-foreground">
+              {t('usersPage.moreRoles', { count: overflow.length })}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="flex flex-col gap-1">
+              {ordered.map((r) => (
+                <span key={r.value}>{t(r.labelKey)}</span>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </div>
   )
 }
@@ -123,6 +244,25 @@ function UserDetailPane({
   const [saving, setSaving] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
+  const [impersonating, setImpersonating] = useState(false)
+
+  // Impersonering: kun tilgængelig for mål der IKKE selv er platform-admin.
+  // Siden er i forvejen platform-admin-only (operia.tsx-vagten), så kalderen er
+  // altid en super-tenant her; edge-funktionen genverificerer alligevel.
+  const canImpersonate = !row.isPlatformAdmin && !isSelf
+  const onImpersonate = async () => {
+    setImpersonating(true)
+    try {
+      await startImpersonation(row.user_id, row.full_name || row.email || '')
+      // Ved succes genindlæser startImpersonation appen som målbrugeren.
+    } catch (e) {
+      setImpersonating(false)
+      const code = e instanceof Error ? e.message : 'impersonate_failed'
+      const key = `impersonate.error.${code}`
+      const msg = t(key)
+      toast.error(msg === key ? t('impersonate.error.impersonate_failed') : msg)
+    }
+  }
 
   const initialRoles = rolesOf(row)
   const rolesKey = (set: Iterable<AppRole>) => [...set].sort().join(',')
@@ -201,19 +341,41 @@ function UserDetailPane({
   }
 
   const remove = async () => {
-    const { data, error } = await supabase
-      .from('app_users')
-      .delete()
-      .eq('user_id', row.user_id)
-      .select('user_id')
-    if (error) throw error
-    if (!data?.length) {
-      toast.error(t('common.noPermission'))
-      throw new Error('RLS afviste fjernelse')
-    }
+    await deleteUsers([row.user_id], t)
     toast.success(t('userDetail.removedToast', { name: row.full_name || row.email }))
     onRemoved()
     refresh()
+  }
+
+  // Platform-admin uden app_users-række: intet at redigere/slette her (roller og
+  // virksomhed findes ikke, og kontoen administreres bevidst i Supabase). Vis en
+  // skrivebeskyttet detaljevisning i stedet for det redigerbare panel.
+  if (row.adminOnly) {
+    return (
+      <DetailTabs
+        tabs={[{ key: 'details', label: t('detail.tabDetails') }]}
+        active="details"
+        onChange={() => {}}
+        onClose={onClose}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            {t('userDetail.platformAdminNote')}
+          </div>
+          <Field label="ID">
+            <div className="relative">
+              <Input value={row.user_id} disabled className="pr-10 font-mono text-xs" />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                <CopyButton value={row.user_id} label={t('detail.copyId')} />
+              </div>
+            </div>
+          </Field>
+          <Field label={t('userDetail.email')}>
+            <Input value={row.email ?? '—'} disabled />
+          </Field>
+        </div>
+      </DetailTabs>
+    )
   }
 
   const tabs = [
@@ -251,6 +413,25 @@ function UserDetailPane({
         )}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
+            {canImpersonate && (
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="text-[13px] font-[450]">{t('impersonate.title')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('impersonate.cardHint')}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={impersonating}
+                  onClick={onImpersonate}
+                >
+                  <UserCog className="size-3.5" />
+                  {impersonating ? t('common.loading') : t('impersonate.action')}
+                </Button>
+              </div>
+            )}
             <div className="flex items-center justify-between rounded-md border p-4">
               <div>
                 <p className="text-[13px] font-[450]">{t('changePassword.title')}</p>
@@ -403,7 +584,12 @@ function InviteUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-lg"
+        showCloseButton={false}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{t('userDetail.inviteTitle')}</DialogTitle>
         </DialogHeader>
@@ -550,18 +736,15 @@ function UsersPage() {
       toast.error(t('userDetail.selfHint'))
       throw new Error('Kan ikke fjerne egen adgang')
     }
-    const { data: deleted, error } = await supabase
-      .from('app_users')
-      .delete()
-      .in('user_id', ids)
-      .select('user_id')
-    if (error) throw error
-    if ((deleted?.length ?? 0) !== ids.length) {
-      toast.error(t('common.noPermission'))
-      throw new Error('RLS afviste (delvist) fjernelse')
+    try {
+      await deleteUsers(ids, t)
+    } finally {
+      // Delvis succes er mulig (fx en platform-admin blandt de valgte, som
+      // funktionen afviser) — genindlæs altid, så de faktisk slettede rækker
+      // forsvinder fra tabellen i stedet for at stå som spøgelsesrækker.
+      if (activeId && ids.includes(activeId)) setActiveId(null)
+      await refresh()
     }
-    if (activeId && ids.includes(activeId)) setActiveId(null)
-    await refresh()
   }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
@@ -599,6 +782,49 @@ function UsersPage() {
       key: 'roles',
       header: t('usersPage.roles'),
       render: (r) => <RoleBadges roles={rolesOf(r)} />,
+    },
+    {
+      key: 'superuser',
+      header: t('usersPage.superuser'),
+      sortable: true,
+      sortValue: (r) => (r.isPlatformAdmin ? 1 : 0),
+      render: (r) =>
+        r.isPlatformAdmin ? (
+          <Badge variant="secondary" className="font-normal">
+            <ShieldCheck className="size-3" /> {t('usersPage.superuserYes')}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'verified',
+      header: t('usersPage.verified'),
+      sortable: true,
+      sortValue: (r) => (r.verified ? 1 : 0),
+      render: (r) =>
+        r.verified ? (
+          <Badge variant="secondary" className="font-normal">
+            <Check className="size-3" /> {t('usersPage.verifiedYes')}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="font-normal text-muted-foreground">
+            {t('usersPage.verifiedNo')}
+          </Badge>
+        ),
+    },
+    {
+      key: 'last_login',
+      header: t('usersPage.lastLogin'),
+      sortable: true,
+      // Sortér på tidsstempel; aldrig-loggede-ind sidst (0 = ældst).
+      sortValue: (r) => (r.lastLogin ? new Date(r.lastLogin).getTime() : 0),
+      render: (r) =>
+        r.lastLogin ? (
+          dateTimeFormat.format(new Date(r.lastLogin))
+        ) : (
+          <span className="text-muted-foreground">{t('usersPage.lastLoginNever')}</span>
+        ),
     },
     {
       key: 'created_at',

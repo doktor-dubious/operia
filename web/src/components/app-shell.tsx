@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/sidebar'
 import { CompanySwitcher } from '@/components/company-switcher'
 import { FeedbackPopover } from '@/components/feedback-popover'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -520,23 +521,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (navMode === 'modern') {
     return (
-      <div className="flex h-svh w-full overflow-hidden">
-        <ModernRail />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <PageHeader />
-          <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
+      <div className="flex h-svh w-full flex-col overflow-hidden">
+        <ImpersonationBanner />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <ModernRail />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <PageHeader />
+            <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <SidebarProvider style={{ '--sidebar-width': '240px' } as React.CSSProperties}>
-      <ClassicSidebar />
-      <SidebarInset>
-        <PageHeader />
-        <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex h-svh w-full flex-col overflow-hidden">
+      <ImpersonationBanner />
+      <SidebarProvider
+        className="min-h-0 flex-1"
+        style={{ '--sidebar-width': '240px' } as React.CSSProperties}
+      >
+        <ClassicSidebar />
+        <SidebarInset>
+          <PageHeader />
+          <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   )
 }

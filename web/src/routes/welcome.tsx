@@ -27,15 +27,31 @@ function SetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Vent på at sessionen fra invitations-linket bliver etableret.
+  const [expired, setExpired] = useState(false)
+
+  // Vent på at sessionen fra invitations-linket bliver etableret. Afviser
+  // GoTrue linket (udløbet/allerede brugt), redirecter den hertil med fejlen i
+  // URL-fragmentet (#error_code=otp_expired…) — men tjek FØRST om der allerede
+  // er en gyldig session (fx fra et tidligere klik på samme link): så kan
+  // adgangskoden stadig sættes, og fejlen skal ikke vises.
   useEffect(() => {
     let settled = false
     const ready = () => {
       settled = true
       setStatus('ok')
     }
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const hashError = hashParams.get('error')
     supabase.auth.getSession().then(({ data }) => {
-      if (!settled && data.session) ready()
+      if (settled) return
+      if (data.session) {
+        ready()
+      } else if (hashError) {
+        // Ingen session at falde tilbage på — vis linkfejlen med det samme
+        // frem for at vente på timeouten.
+        setExpired(hashParams.get('error_code') === 'otp_expired')
+        setStatus('invalid')
+      }
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) ready()
@@ -71,7 +87,11 @@ function SetPasswordPage() {
             {t('setPassword.title')}
           </CardTitle>
           <CardDescription>
-            {status === 'invalid' ? t('setPassword.invalidBody') : t('setPassword.subtitle')}
+            {status === 'invalid'
+              ? expired
+                ? t('setPassword.expiredBody')
+                : t('setPassword.invalidBody')
+              : t('setPassword.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
