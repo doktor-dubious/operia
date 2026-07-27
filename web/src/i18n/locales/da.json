@@ -146,7 +146,6 @@
     "operiaGeneral": "Generelt",
     "operiaCarriers": "Fragtfirmaer",
     "operiaBilling": "Fakturering",
-    "operiaApiKeys": "API-nøgler",
     "operiaIntegrations": "Integrationer",
     "operiaMaps": "Kort & ruter",
     "operiaDataTransfer": "Dataoverførsel",
@@ -202,9 +201,12 @@
   "operiaConfig": {
     "title": "Operia-konfiguration",
     "subtitle": "Platformindstillinger for DCA Logic",
-    "sectionConfig": "Konfiguration",
-    "sectionBilling": "Fakturering",
-    "sectionLogs": "Logs"
+    "sectionTenants": "Kunder & brugere",
+    "sectionProducts": "Produkter",
+    "sectionAppearance": "Udseende & beskeder",
+    "sectionData": "Data & integrationer",
+    "sectionPlatform": "Platform",
+    "sectionMonitoring": "Overvågning"
   },
   "logsPage": {
     "searchPlaceholder": "Filtrér efter type, virksomhed, bruger, besked…",
@@ -264,7 +266,8 @@
       "reasonEmailNotConfigured": "E-mail er ikke konfigureret",
       "reasonSmsNotConfigured": "SMS er ikke konfigureret",
       "reasonEmailError": "E-mailen kunne ikke sendes",
-      "reasonSmsError": "SMS'en kunne ikke sendes"
+      "reasonSmsError": "SMS'en kunne ikke sendes",
+      "loginUnknownEmail": "Ukendt konto"
     },
     "rawJson": "Rå JSON",
     "copyJson": "Kopiér JSON",
@@ -351,7 +354,12 @@
     "gap": "Afstand",
     "themeSection": "Tema",
     "theme_metro": "Metro",
-    "theme_muted": "Dæmpet",
+    "theme_ocean": "Ocean",
+    "theme_sunset": "Solnedgang",
+    "theme_handheld": "Håndterminal",
+    "theme_forest": "Skov",
+    "theme_berry": "Bær",
+    "theme_slate": "Skifer",
     "tilesSection": "Fliser",
     "tilesHint": "Træk for at flytte; de øvrige fliser flyder på plads. Brug ikonet på en flise for at skifte mellem 1×1 og 2×2.",
     "contentSection": "Velkomstindhold",
@@ -398,6 +406,13 @@
     "logoHint": "Transparent PNG, liggende, ca. 480×120 px (maks. 4:1). Vises i fuld højde uden beskæring.",
     "hero": "Hero-billede",
     "heroHint": "JPG på ca. 1600×600 px. Beskæres for at udfylde – hold det vigtige centreret.",
+    "themeSection": "Farvetema",
+    "theme_midnight": "Midnat",
+    "theme_graphite": "Grafit",
+    "theme_forest": "Skov",
+    "theme_plum": "Blomme",
+    "theme_ember": "Glød",
+    "themeHint": "Enhedens farveskema (baggrund, paneler og tekst) vist i forhåndsvisningen. Midnat er håndterminalens oprindelige udseende.",
     "iconThemeSection": "Ikon-tema",
     "iconTheme_happy": "Happy",
     "iconTheme_desktop": "Skrivebord",
@@ -859,6 +874,7 @@
     "receiverPlaceholder": "Søg på navn eller initialer…",
     "noReceiverMatch": "Ingen match",
     "unassignedHint": "Ingen modtager valgt — pakken registreres som 'uden modtager'.",
+    "noContactWarning": "Modtageren kan ikke få besked om pakken: der mangler en gyldig e-mail eller et gyldigt mobilnummer for de aktiverede notifikationskanaler.",
     "department": "Afdeling",
     "carrier": "Fragtfirma",
     "handling": "Håndtering",
@@ -1122,7 +1138,6 @@
   },
   "customerDetail": {
     "tabProducts": "Produkter",
-    "tabBilling": "Fakturering",
     "tabLogo": "Logo",
     "tabLocalization": "Lokalisering",
     "tabAppearance": "Udseende",
@@ -1335,6 +1350,10 @@
   },
   "configureConfig": {
     "title": "Konfiguration",
+    "sectionAccount": "Konto",
+    "sectionAppearance": "Udseende",
+    "sectionMessaging": "Beskeder",
+    "sectionData": "Data & integrationer",
     "localizationSubtitle": "Virksomhedens sprog, valuta og tidszone.",
     "logoSubtitle": "Virksomhedens logo — vises bl.a. i notifikationer og på labels.",
     "templatesSubtitle": "Virksomhedens skabeloner — pakkelabel og pakke-notifikationer.",
@@ -1406,6 +1425,8 @@
     "general": "Generelt",
     "type": "Notifikationstype",
     "typeParcelFlow": "Pakkeflow",
+    "arrival": "Besked ved ankomst",
+    "arrivalHint": "Modtageren får besked (e-mail/SMS efter kanalvalget), når pakken registreres ved modtagelsen.",
     "reminder1": "Påmindelse 1",
     "reminder2": "Påmindelse 2",
     "sendAfterDays": "Send påmindelse efter (dage)",
@@ -1441,7 +1462,8 @@
     "noExpiry": "Intet udløb",
     "clearExpiry": "Fjern udløb",
     "readOnly": "Produkter og funktioner administreres af DCA Logic. Kontakt DCA for ændringer.",
-    "expiresAt": "Udløber {{date}}"
+    "expiresAt": "Udløber {{date}}",
+    "noneGranted": "Der er endnu ikke aktiveret nogen produkter for din virksomhed. Kontakt DCA Logic for at tilføje produkter."
   },
   "carrierAgreements": {
     "subtitle": "Fragtfirma-/aggregator-aftaler bruges af marginmodellen. Nøgler opbevares sikkert og kan kun udskiftes eller fjernes.",

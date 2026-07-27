@@ -146,7 +146,6 @@
     "operiaGeneral": "General",
     "operiaCarriers": "Carriers",
     "operiaBilling": "Billing",
-    "operiaApiKeys": "API keys",
     "operiaIntegrations": "Integrations",
     "operiaMaps": "Maps & routes",
     "operiaDataTransfer": "Data transfer",
@@ -202,9 +201,12 @@
   "operiaConfig": {
     "title": "Operia configuration",
     "subtitle": "Platform settings for DCA Logic",
-    "sectionConfig": "Configuration",
-    "sectionBilling": "Billing",
-    "sectionLogs": "Logs"
+    "sectionTenants": "Customers & users",
+    "sectionProducts": "Products",
+    "sectionAppearance": "Appearance & messaging",
+    "sectionData": "Data & integrations",
+    "sectionPlatform": "Platform",
+    "sectionMonitoring": "Monitoring"
   },
   "logsPage": {
     "searchPlaceholder": "Filter by type, company, user, message…",
@@ -264,7 +266,8 @@
       "reasonEmailNotConfigured": "Email is not configured",
       "reasonSmsNotConfigured": "SMS is not configured",
       "reasonEmailError": "The email could not be sent",
-      "reasonSmsError": "The SMS could not be sent"
+      "reasonSmsError": "The SMS could not be sent",
+      "loginUnknownEmail": "Unknown account"
     },
     "rawJson": "Raw JSON",
     "copyJson": "Copy JSON",
@@ -351,7 +354,12 @@
     "gap": "Gap",
     "themeSection": "Theme",
     "theme_metro": "Metro",
-    "theme_muted": "Muted",
+    "theme_ocean": "Ocean",
+    "theme_sunset": "Sunset",
+    "theme_handheld": "Handheld",
+    "theme_forest": "Forest",
+    "theme_berry": "Berry",
+    "theme_slate": "Slate",
     "tilesSection": "Tiles",
     "tilesHint": "Drag to reposition; the other tiles flow around them. Use the icon on a tile to switch it between 1×1 and 2×2.",
     "contentSection": "Welcome content",
@@ -398,6 +406,13 @@
     "logoHint": "Transparent PNG, landscape, about 480×120 px (max 4:1 ratio). Shown at full height without cropping.",
     "hero": "Hero image",
     "heroHint": "JPG about 1600×600 px. Cropped to fill, so keep the key content centred.",
+    "themeSection": "Color theme",
+    "theme_midnight": "Midnight",
+    "theme_graphite": "Graphite",
+    "theme_forest": "Forest",
+    "theme_plum": "Plum",
+    "theme_ember": "Ember",
+    "themeHint": "The device's color scheme (background, panels and text) shown in the preview. Midnight is the handheld's original look.",
     "iconThemeSection": "Icon theme",
     "iconTheme_happy": "Happy",
     "iconTheme_desktop": "Desktop",
@@ -859,6 +874,7 @@
     "receiverPlaceholder": "Search by name or initials…",
     "noReceiverMatch": "No match",
     "unassignedHint": "No receiver selected — the parcel will be registered as 'unassigned'.",
+    "noContactWarning": "The receiver cannot be notified about this parcel: no valid email address or mobile number for the enabled notification channels.",
     "department": "Department",
     "carrier": "Carrier",
     "handling": "Handling",
@@ -1122,7 +1138,6 @@
   },
   "customerDetail": {
     "tabProducts": "Products",
-    "tabBilling": "Billing",
     "tabLogo": "Logo",
     "tabLocalization": "Localization",
     "tabAppearance": "Appearance",
@@ -1335,6 +1350,10 @@
   },
   "configureConfig": {
     "title": "Configuration",
+    "sectionAccount": "Account",
+    "sectionAppearance": "Appearance",
+    "sectionMessaging": "Messaging",
+    "sectionData": "Data & integrations",
     "localizationSubtitle": "The company's languages, currency and timezone.",
     "logoSubtitle": "The company's logo — shown in notifications and on labels.",
     "templatesSubtitle": "The company's templates — package label and parcel notifications.",
@@ -1406,6 +1425,8 @@
     "general": "General",
     "type": "Notification type",
     "typeParcelFlow": "Parcel flow",
+    "arrival": "Arrival notification",
+    "arrivalHint": "The receiver is notified (email/SMS per the channel selection) when the parcel is registered at intake.",
     "reminder1": "Reminder 1",
     "reminder2": "Reminder 2",
     "sendAfterDays": "Send reminder after (days)",
@@ -1441,7 +1462,8 @@
     "noExpiry": "No expiry",
     "clearExpiry": "Clear expiry",
     "readOnly": "Products and features are managed by DCA Logic. Contact DCA for changes.",
-    "expiresAt": "Expires {{date}}"
+    "expiresAt": "Expires {{date}}",
+    "noneGranted": "No products are enabled for your company yet. Contact DCA Logic to add products."
   },
   "carrierAgreements": {
     "subtitle": "Carrier / aggregator agreements are used by the margin model. Keys are stored securely and can only be replaced or removed.",

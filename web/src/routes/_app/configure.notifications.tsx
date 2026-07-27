@@ -29,6 +29,7 @@ import {
   ParcelFlowFields,
   QuietHoursField,
   type ParcelFlowValue,
+  type ParcelNotifyValue,
 } from '@/components/company-config-fields'
 import { Field } from '@/components/detail-field'
 import { useAccess } from '@/hooks/use-access'
@@ -52,7 +53,7 @@ function useCompanyNotifications(companyId: string | null) {
       const { data, error } = await supabase
         .from('companies')
         .select(
-          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
+          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
         )
         .eq('id', companyId!)
         .single()
@@ -67,7 +68,7 @@ type Values = {
   quietEnd: string
   emailEnabled: boolean
   smsEnabled: boolean
-  parcel: ParcelFlowValue
+  parcel: ParcelNotifyValue
   asset: ParcelFlowValue
 }
 
@@ -92,6 +93,7 @@ function NotificationsPage() {
     emailEnabled: row.notify_email_enabled ?? p.notify_email_enabled,
     smsEnabled: row.notify_sms_enabled ?? p.notify_sms_enabled,
     parcel: {
+      arrivalEnabled: row.parcel_arrival_enabled ?? p.parcel_arrival_enabled,
       r1Enabled: row.parcel_reminder_1_enabled ?? p.parcel_reminder_1_enabled,
       r2Enabled: row.parcel_reminder_2_enabled ?? p.parcel_reminder_2_enabled,
       reminder1: row.parcel_reminder_1_days ?? p.parcel_reminder_1_days,
@@ -120,7 +122,8 @@ function NotificationsPage() {
       data.parcel_reminder_2_days != null ||
       data.parcel_reminder_max != null ||
       data.parcel_reminder_1_enabled != null ||
-      data.parcel_reminder_2_enabled != null)
+      data.parcel_reminder_2_enabled != null ||
+      data.parcel_arrival_enabled != null)
   const assetOverridden =
     !!data &&
     (data.asset_reminder_1_days != null ||
@@ -171,6 +174,7 @@ function NotificationsPage() {
               parcel_reminder_max: Math.max(0, Math.round(p.maxReminders)),
               parcel_reminder_1_enabled: p.r1Enabled,
               parcel_reminder_2_enabled: p.r1Enabled && p.r2Enabled,
+              parcel_arrival_enabled: p.arrivalEnabled,
             }
           : {}),
         ...(assetDirty || assetOverridden
@@ -216,6 +220,7 @@ function NotificationsPage() {
             parcel_reminder_max: null,
             parcel_reminder_1_enabled: null,
             parcel_reminder_2_enabled: null,
+            parcel_arrival_enabled: null,
           }
     const { data: saved, error } = await supabase
       .from('companies')

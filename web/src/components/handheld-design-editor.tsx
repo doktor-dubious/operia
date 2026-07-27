@@ -26,8 +26,10 @@ import { DetailTabs } from '@/components/detail-tabs'
 import {
   applyDesignTokens,
   DEFAULT_HANDHELD_DESIGN,
+  handheldPalette,
   HANDHELD_ICONS,
   HANDHELD_ICON_THEMES,
+  HANDHELD_THEMES,
   HANDHELD_TILE_BY_KEY,
   mergeVisibleOrder,
   timeGreetingKey,
@@ -37,6 +39,8 @@ import {
   tileTitleShown,
   type HandheldDesign,
   type HandheldIconTheme,
+  type HandheldPalette,
+  type HandheldTheme,
   type HandheldTile,
   type HandheldTileItem,
 } from '@/lib/handheld-tiles'
@@ -49,16 +53,9 @@ import { cn } from '@/lib/utils'
 // er et fast, feature-gatet katalog — der kan hverken tilføjes eller flyttes
 // fliser, kun ændres udseende.
 
-// Håndterminalens egne farver (android/…/ui/Theme.kt) — mock-up'en skal ligne
-// enheden, ikke webappens tema, så de er hardcodede her med vilje. Ændres de i
-// appen, skal de også ændres her.
-const HH = {
-  bg: '#0B1220',
-  panel: '#16213A',
-  line: '#293752',
-  txt: '#EEF3FC',
-  muted: '#8FA2C4',
-}
+// Enhedens farver kommer nu fra det valgte farvetema (design.theme →
+// handheldPalette). 'midnight' er android/…/ui/Theme.kt's oprindelige farver;
+// mock-up'en tegnes med den valgte palet (variablen `hh` i komponenterne).
 
 // Funktionserklæringer (ikke arrow-const) så sameTile/sameTiles kan referere
 // hinanden — gruppe-fliser sammenlignes rekursivt på deres børneliste.
@@ -133,11 +130,13 @@ function TileIcon({
   item,
   tile,
   theme,
+  hh,
   size,
 }: {
   item: HandheldTileItem
   tile: HandheldTile
   theme: HandheldIconTheme
+  hh: HandheldPalette
   size: number
 }) {
   const chosen = tileIcon(item, tile)
@@ -151,7 +150,7 @@ function TileIcon({
     )
   }
 
-  const color = theme === 'mono' ? accent || HH.muted : accent || HH.txt
+  const color = theme === 'mono' ? accent || hh.muted : accent || hh.txt
 
   // Skrivebordets egne ikoner: lucide, tegnet direkte af komponenten.
   if (theme === 'desktop') {
@@ -163,9 +162,9 @@ function TileIcon({
     return (
       <span
         className="flex items-center justify-center rounded-[10px]"
-        style={{ width: size, height: size, background: accent || HH.line }}
+        style={{ width: size, height: size, background: accent || hh.line }}
       >
-        <MaterialGlyph iconKey={chosen.key} variant="filled" size={size * 0.58} color={HH.txt} />
+        <MaterialGlyph iconKey={chosen.key} variant="filled" size={size * 0.58} color={hh.txt} />
       </span>
     )
   }
@@ -379,6 +378,7 @@ function TileGrid({
   onOpen?: (key: string) => void
 }) {
   const { t } = useTranslation()
+  const hh = handheldPalette(design.theme)
   const containerRef = useRef<HTMLDivElement>(null)
   const tilesRef = useRef<HandheldTileItem[]>(tiles)
   const dragRef = useRef<{ key: string; offsetX: number; offsetY: number } | null>(null)
@@ -483,8 +483,8 @@ function TileGrid({
               left: 0,
               width: TILE_W,
               height: TILE_H,
-              borderColor: HH.line,
-              background: item.background?.trim() || HH.panel,
+              borderColor: hh.line,
+              background: item.background?.trim() || hh.panel,
             }}
             className={cn(
               'flex touch-none flex-col justify-center rounded-2xl border p-3.5',
@@ -492,9 +492,10 @@ function TileGrid({
             )}
           >
             {/* Handlingsknapper (åbn?/konfigurér/fjern) samlet øverst til højre;
-                stopper træk så et klik ikke starter en flytning. */}
+                stopper træk så et klik ikke starter en flytning. Mørk scrim bag
+                ikonerne, så de kan ses på lyse flise-baggrunde. */}
             <div
-              className="absolute right-1.5 top-1.5 flex gap-0.5"
+              className="absolute right-1.5 top-1.5 flex gap-0.5 rounded-md bg-black/35 backdrop-blur-[2px]"
               onPointerDown={(e) => e.stopPropagation()}
             >
               {isGroup && onOpen && (
@@ -527,11 +528,11 @@ function TileGrid({
                 <X size={14} />
               </button>
             </div>
-            <TileIcon item={item} tile={tile} theme={design.iconTheme} size={32} />
+            <TileIcon item={item} tile={tile} theme={design.iconTheme} hh={hh} size={32} />
             {tileTitleShown(item) && (
               <span
                 className="mt-2 text-[14px] font-extrabold leading-tight"
-                style={{ color: HH.txt }}
+                style={{ color: hh.txt }}
               >
                 {title}
               </span>
@@ -539,7 +540,7 @@ function TileGrid({
             {tileSubtitleShown(item) && (
               <span
                 className="mt-0.5 text-[11px] font-semibold leading-tight"
-                style={{ color: HH.muted }}
+                style={{ color: hh.muted }}
               >
                 {sub}
               </span>
@@ -571,6 +572,7 @@ function HandheldPreview({
   onOpen: (key: string) => void
 }) {
   const { t } = useTranslation()
+  const hh = handheldPalette(design.theme)
   // Eksempeldata til forhåndsvisning af skabelon-koderne (rigtige værdier
   // udfyldes på enheden af den indloggede bruger + klokkeslættet).
   const previewTokens = {
@@ -582,13 +584,13 @@ function HandheldPreview({
   return (
     <div
       className="w-[340px] shrink-0 overflow-hidden rounded-[28px] border-[6px] shadow-xl"
-      style={{ borderColor: '#0a0a0a', background: HH.bg }}
+      style={{ borderColor: '#0a0a0a', background: hh.bg }}
     >
       {/* Statuslinje + brandbjælke */}
-      <div style={{ background: HH.panel, borderBottom: `1px solid ${HH.line}` }}>
+      <div style={{ background: hh.panel, borderBottom: `1px solid ${hh.line}` }}>
         <div
           className="flex items-center justify-between px-4 pb-1 pt-2 text-[10px]"
-          style={{ color: HH.muted }}
+          style={{ color: hh.muted }}
         >
           <span>2:18</span>
           <span className="size-2.5 rounded-full" style={{ background: '#0a0a0a' }} />
@@ -598,7 +600,7 @@ function HandheldPreview({
           {design.logoEnabled && design.logoUrl && (
             <img src={design.logoUrl} alt="" className="max-h-5 max-w-[80px] object-contain" />
           )}
-          <span className="text-[15px] font-extrabold" style={{ color: HH.txt }}>
+          <span className="text-[15px] font-extrabold" style={{ color: hh.txt }}>
             {t('handheldDesignPage.previewBrand')}
           </span>
         </div>
@@ -617,13 +619,13 @@ function HandheldPreview({
         {design.greetingOrder.map((gk) =>
           gk === 'subtitle'
             ? design.subtitleEnabled && (
-                <p key="subtitle" className="text-[12px]" style={{ color: HH.muted }}>
+                <p key="subtitle" className="text-[12px]" style={{ color: hh.muted }}>
                   {applyDesignTokens(design.subtitle, previewTokens).trim() ||
                     t('handheldDesignPage.previewGreeting')}
                 </p>
               )
             : design.welcomeTitleEnabled && (
-                <p key="title" className="text-[19px] font-extrabold" style={{ color: HH.txt }}>
+                <p key="title" className="text-[19px] font-extrabold" style={{ color: hh.txt }}>
                   {applyDesignTokens(design.welcomeTitle, previewTokens).trim() ||
                     t('handheldDesignPage.previewName')}
                 </p>
@@ -643,7 +645,7 @@ function HandheldPreview({
 
         <div
           className="mt-4 rounded-xl border py-2.5 text-center text-[13px] font-bold"
-          style={{ borderColor: HH.line, color: HH.txt }}
+          style={{ borderColor: hh.line, color: hh.txt }}
         >
           {t('handheldDesignPage.previewSignOut')}
         </div>
@@ -897,6 +899,46 @@ export function HandheldDesignEditor({
                       />
                     </ToggleSection>
                   </div>
+                </section>
+
+                {/* Farvetema (enhedens look) */}
+                <section className="flex flex-col gap-3">
+                  <SectionTitle>{t('handheldDesignPage.themeSection')}</SectionTitle>
+                  <RadioGroup
+                    value={design.theme}
+                    onValueChange={(v) =>
+                      patchDesign({
+                        theme: HANDHELD_THEMES.includes(v as HandheldTheme)
+                          ? (v as HandheldTheme)
+                          : 'midnight',
+                      })
+                    }
+                    className="flex flex-wrap gap-3"
+                  >
+                    {HANDHELD_THEMES.map((th) => {
+                      const pal = handheldPalette(th)
+                      return (
+                        <label
+                          key={th}
+                          htmlFor={`hh-theme-${th}`}
+                          className="flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent/40"
+                        >
+                          <RadioGroupItem value={th} id={`hh-theme-${th}`} />
+                          {/* Lille prøve: panelfarve på enhedsbaggrunden. */}
+                          <span
+                            className="size-4 rounded-sm border"
+                            style={{ background: pal.panel, borderColor: pal.line }}
+                          />
+                          <span className="text-[13px] font-[450]">
+                            {t(`handheldDesignPage.theme_${th}`)}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground">
+                    {t('handheldDesignPage.themeHint')}
+                  </p>
                 </section>
 
                 {/* Ikon-tema */}

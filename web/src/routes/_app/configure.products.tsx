@@ -88,6 +88,10 @@ function ProductsPage() {
 
   if (isPending || !data || !companyId) return <Skeleton className="h-40 w-full" />
 
+  // Vis kun de produkter virksomheden er tildelt (aktiveret) — ikke hele
+  // platformens katalog.
+  const grantedProducts = data.products.filter((p) => data.granted.has(p.key))
+
   return (
     <div className="flex min-h-full flex-col">
       <div className="mx-auto w-full max-w-3xl py-6">
@@ -102,13 +106,18 @@ function ProductsPage() {
           {t('productsPage.readOnly')}
         </p>
 
+        {grantedProducts.length === 0 ? (
+          <p className="rounded-md border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">
+            {t('productsPage.noneGranted')}
+          </p>
+        ) : (
         <div className="flex flex-col gap-3">
-          {data.products.map((p) => {
-            const productFeatures = data.features.filter((f) => f.product_key === p.key)
-            const granted = data.granted.has(p.key)
-            const enabledCount = productFeatures.filter((f) =>
-              data.grantedFeatures.has(f.key),
-            ).length
+          {grantedProducts.map((p) => {
+            // Kun tildelte funktioner vises — siden lister udelukkende det,
+            // virksomheden faktisk har adgang til.
+            const productFeatures = data.features.filter(
+              (f) => f.product_key === p.key && data.grantedFeatures.has(f.key),
+            )
             const open = expanded.has(p.key)
             return (
               <div key={p.key} className="rounded-md border">
@@ -122,8 +131,8 @@ function ProductsPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <ExpiryText validUntil={granted ? data.granted.get(p.key) : null} />
-                    <Switch checked={granted} disabled />
+                    <ExpiryText validUntil={data.granted.get(p.key)} />
+                    <Switch checked disabled />
                     {productFeatures.length > 0 && (
                       <Button
                         size="sm"
@@ -131,7 +140,7 @@ function ProductsPage() {
                         className="h-7 text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => toggleExpanded(p.key)}
                       >
-                        {t('productsPage.features')} ({enabledCount}/{productFeatures.length})
+                        {t('productsPage.features')} ({productFeatures.length})
                         <ChevronRight
                           className={cn('size-3.5 transition-transform', open && 'rotate-90')}
                         />
@@ -172,6 +181,7 @@ function ProductsPage() {
             )
           })}
         </div>
+        )}
       </div>
     </div>
   )

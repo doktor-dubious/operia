@@ -51,7 +51,7 @@ object Repository {
 
     suspend fun employees(companyId: String): List<Employee> =
         supabase.from("employees")
-            .select(Columns.list("id", "full_name", "initials", "email", "department_id")) {
+            .select(Columns.list("id", "full_name", "initials", "email", "phone", "department_id")) {
                 filter {
                     eq("company_id", companyId)
                     eq("is_active", true)
@@ -87,6 +87,27 @@ object Repository {
                 filter { eq("company_id", companyId) }
                 order("name", Order.ASCENDING)
             }.decodeList()
+
+    /** Virksomhedens notifikations-override (kanaler + ankomstbesked). */
+    suspend fun companyNotifySettings(companyId: String): CompanyNotifyRow? =
+        supabase.from("companies")
+            .select(
+                Columns.list("notify_email_enabled", "notify_sms_enabled", "parcel_arrival_enabled"),
+            ) {
+                filter { eq("id", companyId) }
+                limit(1)
+            }.decodeList<CompanyNotifyRow>().firstOrNull()
+
+    /** Platformens notifikations-standarder + hovedafbryder (RLS: using(true)). */
+    suspend fun platformNotifySettings(): PlatformNotifyRow? =
+        supabase.from("platform_settings")
+            .select(
+                Columns.list(
+                    "notify_email_enabled", "notify_sms_enabled",
+                    "parcel_notifications_enabled", "parcel_arrival_enabled",
+                ),
+            ) { limit(1) }
+            .decodeList<PlatformNotifyRow>().firstOrNull()
 
     /** Alle feature-rækker for virksomheden — gyldighed (valid_until) afgøres af kalderen. */
     suspend fun featureRows(companyId: String): List<CompanyFeature> =

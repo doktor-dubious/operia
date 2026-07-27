@@ -14,12 +14,21 @@ import com.dcalogic.operia.data.HandheldConfig
 import com.dcalogic.operia.data.LocalStore
 import com.dcalogic.operia.data.supabase
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
+import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.exceptions.HttpRequestException
+import io.github.jan.supabase.exceptions.RestException
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import com.dcalogic.operia.data.Repository
+import java.io.IOException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Session + bootstrap-tilstand for hele appen. Skærmene læser stamdata
@@ -43,6 +52,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Platformens handheld-design (Operia → Handheld-design). Tom = appens
      *  standardudseende, så skærmen virker før/uden konfiguration. */
     var handheld by mutableStateOf(HandheldConfig()); private set
+    /** Effektive ankomstbesked-indstillinger — driver intake-advarslen
+     *  "modtageren kan ikke få besked". null = ukendt (hentning fejlede) →
+     *  ingen advarsel frem for en falsk. */
+    var notifyPrefs by mutableStateOf<com.dcalogic.operia.data.NotifyPrefs?>(null); private set
     var pendingCount by mutableStateOf(0); private set
     var bootstrapError by mutableStateOf<String?>(null); private set
 
@@ -116,6 +129,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val featureD = async { runCatching { Repository.featureRows(cid) }.getOrNull() }
                 val handheldD = async { runCatching { Repository.handheldConfig(cid) }.getOrNull() }
                 val appearanceD = async { runCatching { Repository.appearance(cid) }.getOrNull() }
+                val coNotifyD = async { runCatching { Repository.companyNotifySettings(cid) }.getOrNull() }
+                val pfNotifyD = async { runCatching { Repository.platformNotifySettings() }.getOrNull() }
 
                 roles = rolesD.await()
                 departments = deptD.await()
@@ -125,13 +140,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 carriers = carrierD.await()
                 handlingClasses = handlingD.await()
 
-                featureD.await()?.let { rows ->
-                    val now = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString()
+                // valid_until er en Postgres DATE ('2026-07-26') — sammenlign dato mod
+                // dato (>= i dag), som web og dispatcheren; mod et fuldt tidsstempel
+                // ville sidste gyldighedsdag fejlagtigt tælle som udløbet.
+                val today = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+                val featureRows = featureD.await()
+                featureRows?.let { rows ->
                     handheldConfigured = rows.any { it.feature_key.startsWith("hh_") }
                     validFeatures = rows
-                        .filter { it.valid_until == null || it.valid_until > now }
+                        .filter { it.valid_until == null || it.valid_until >= today }
                         .map { it.feature_key }
                         .toSet()
+                }
+
+                // Effektive ankomstbesked-indstillinger (samme regler som
+                // dispatch-parcel-notifications): virksomheds-override ?? platform,
+                // SMS-kanalen kræver desuden sms_notifications-tilvalget. Bruges
+                // kun til intake-advarslen — featureRows (ikke has()) fordi has()
+                // er default-open før hh_*-opsætning.
+                val coNotify = coNotifyD.await()
+                val pfNotify = pfNotifyD.await()
+                if (coNotify != null && pfNotify != null) {
+                    val hasSmsFeature = featureRows.orEmpty().any {
+                        it.feature_key == "sms_notifications" &&
+                            (it.valid_until == null || it.valid_until >= today)
+                    }
+                    notifyPrefs = com.dcalogic.operia.data.NotifyPrefs(
+                        arrivalActive = pfNotify.parcel_notifications_enabled &&
+                            (coNotify.parcel_arrival_enabled ?: pfNotify.parcel_arrival_enabled),
+                        emailOn = coNotify.notify_email_enabled ?: pfNotify.notify_email_enabled,
+                        smsOn = (coNotify.notify_sms_enabled ?: pfNotify.notify_sms_enabled) &&
+                            hasSmsFeature,
+                    )
                 }
 
                 // Handheld-designet er platform-globalt (ikke pr. virksomhed) —
@@ -171,14 +211,49 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return r
     }
 
-    suspend fun login(email: String, password: String): String? = try {
+    /** Skelner mellem forkert login, manglende forbindelse og øvrige fejl, så
+     *  login-skærmen kan vise en brugbar besked (og ikke "forkert adgangskode"
+     *  ved fx netværksudfald). */
+    suspend fun login(email: String, password: String): LoginError? = try {
         supabase.auth.signInWith(Email) {
             this.email = email.trim()
             this.password = password
         }
         null
+    } catch (e: AuthRestException) {
+        // GoTrue svarede. Ældre gateways udelader error_code — fald tilbage på teksten.
+        if (e.errorCode == AuthErrorCode.InvalidCredentials ||
+            e.message?.contains("invalid login credentials", ignoreCase = true) == true
+        ) {
+            // GoTrue returnerer samme fejl for forkert kode og ukendt email. Server-
+            // funktionen logger kun sidstnævnte (eksisterende konti dækkes af hook'en).
+            reportFailedLogin(email)
+            LoginError.WrongCredentials
+        } else LoginError.Other(e.errorDescription)
+    } catch (e: RestException) {
+        LoginError.Other(e.message ?: "Login fejlede")
+    } catch (e: HttpRequestException) {
+        LoginError.Network
+    } catch (e: IOException) {
+        LoginError.Network
     } catch (e: Exception) {
-        e.message ?: "Login fejlede"
+        LoginError.Other(e.message ?: "Login fejlede")
+    }
+
+    /** Rapportér et fejlet login til revisionsloggen (fire-and-forget). Kaldet er
+     *  anonymt — ingen session endnu — og enhver fejl sluges, så et logningsudfald
+     *  aldrig påvirker login-flowet. */
+    private fun reportFailedLogin(email: String) {
+        val e = email.trim()
+        if (e.isEmpty()) return
+        viewModelScope.launch {
+            runCatching {
+                supabase.postgrest.rpc(
+                    "log_failed_login_attempt",
+                    buildJsonObject { put("p_email", e) },
+                )
+            }
+        }
     }
 
     fun logout() {
@@ -191,4 +266,11 @@ sealed interface SessionState {
     data object LoggedOut : SessionState
     data object Loading : SessionState
     data object Ready : SessionState
+}
+
+/** Klassificeret login-fejl til LoginScreen. */
+sealed interface LoginError {
+    data object WrongCredentials : LoginError
+    data object Network : LoginError
+    data class Other(val message: String) : LoginError
 }

@@ -29,6 +29,7 @@ import { DetailTabs } from '@/components/detail-tabs'
 import {
   DEFAULT_HOME_DESIGN,
   DEFAULT_TILE_RADIUS,
+  HOME_THEMES,
   MAX_COLS,
   MAX_GAP,
   MAX_ROWS,
@@ -38,12 +39,14 @@ import {
   MIN_ROWS,
   packTiles,
   sizeToWH,
+  TILE_SIZES,
   tileBackground,
   tileIconShown,
   tileRadius,
   tileTitleShown,
   TILE_BY_PRODUCT,
   type HomeDesign,
+  type HomeTheme,
   type ProductTile,
   type TileLayoutItem,
   type TileSize,
@@ -177,17 +180,17 @@ function TileConfigDialog({
             <Label className="text-label">{t('homeDesignPage.tileSize')}</Label>
             <RadioGroup
               value={item.size}
-              onValueChange={(v) => onPatch({ size: (v === '2x2' ? '2x2' : '1x1') as TileSize })}
-              className="flex gap-3"
+              onValueChange={(v) => onPatch({ size: v as TileSize })}
+              className="flex flex-wrap gap-2"
             >
-              {(['1x1', '2x2'] as const).map((s) => (
+              {TILE_SIZES.map((s) => (
                 <label
                   key={s}
                   htmlFor={`tile-size-${s}`}
                   className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent/40"
                 >
                   <RadioGroupItem value={s} id={`tile-size-${s}`} />
-                  <span className="text-[13px] font-[450]">{s === '2x2' ? '2×2' : '1×1'}</span>
+                  <span className="text-[13px] font-[450]">{s.replace('x', '×')}</span>
                 </label>
               ))}
             </RadioGroup>
@@ -307,9 +310,15 @@ export function HomeDesignEditor({
 
   const [configId, setConfigId] = useState<string | null>(null)
 
+  // Hurtig-knap (forstør/formindsk) på flisen: enhver flerfeltsflise skrumper
+  // til 1×1, en 1×1 vokser til 2×2. Popup'en giver adgang til alle størrelser.
   const toggleSize = (id: string) => {
     setOrder((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, size: o.size === '2x2' ? '1x1' : '2x2' } : o)),
+      prev.map((o) => {
+        if (o.id !== id) return o
+        const [w, h] = sizeToWH(o.size)
+        return { ...o, size: w * h > 1 ? '1x1' : '2x2' }
+      }),
     )
   }
 
@@ -483,10 +492,12 @@ export function HomeDesignEditor({
             <SectionTitle>{t('homeDesignPage.themeSection')}</SectionTitle>
             <RadioGroup
               value={design.theme}
-              onValueChange={(v) => patchDesign({ theme: v === 'muted' ? 'muted' : 'metro' })}
-              className="flex gap-3"
+              onValueChange={(v) =>
+                patchDesign({ theme: HOME_THEMES.includes(v as HomeTheme) ? (v as HomeTheme) : 'metro' })
+              }
+              className="flex flex-wrap gap-3"
             >
-              {(['metro', 'muted'] as const).map((th) => (
+              {HOME_THEMES.map((th) => (
                 <label
                   key={th}
                   htmlFor={`theme-${th}`}
@@ -535,15 +546,17 @@ export function HomeDesignEditor({
                 const width = p.w * CELL + (p.w - 1) * GAP
                 const height = p.h * CELL + (p.h - 1) * GAP
                 const pos = isDragging && dragPos ? dragPos : { x: p.x * STEP, y: p.y * STEP }
-                const large = p.size === '2x2'
+                const large = p.w >= 2 && p.h >= 2
                 const bg = productTile
                   ? tileBackground(p, productTile, design.theme)
                   : p.color?.trim() || (isEmpty ? 'transparent' : '#334155')
                 const titleText =
                   p.title?.trim() || (productTile ? t(`nav.${productTile.labelKey}`) : '')
+                // Mørk scrim bag ikonerne, så de kan ses uanset flisens
+                // baggrund (hvidt billede / lys brugerfarve).
                 const overlayBtn = isEmpty
                   ? 'text-foreground/60 hover:bg-foreground/10 hover:text-foreground'
-                  : 'text-white/90 hover:bg-white/20 hover:text-white'
+                  : 'bg-black/35 text-white/90 backdrop-blur-[2px] hover:bg-black/55 hover:text-white'
                 return (
                   <motion.div
                     key={p.id}
@@ -614,7 +627,13 @@ export function HomeDesignEditor({
                       </span>
                     )}
                     {!isEmpty && tileTitleShown(p) && titleText && (
-                      <span className={cn('font-medium leading-tight', large ? 'text-sm' : 'text-xs')}>
+                      <span
+                        className={cn(
+                          'font-medium leading-tight',
+                          large ? 'text-sm' : 'text-xs',
+                          p.kind === 'image' && '[text-shadow:0_1px_3px_rgb(0_0_0/0.6)]',
+                        )}
+                      >
                         {titleText}
                       </span>
                     )}

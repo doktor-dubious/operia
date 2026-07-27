@@ -31,8 +31,11 @@ import { Route as AppImportIndexRouteImport } from './routes/_app/import.index'
 import { Route as AppAssetsIndexRouteImport } from './routes/_app/assets.index'
 import { Route as AppProductsRoutesRouteImport } from './routes/_app/products.routes'
 import { Route as AppProductsProductKeyRouteImport } from './routes/_app/products.$productKey'
+import { Route as AppParcelsStatsRouteImport } from './routes/_app/parcels.stats'
 import { Route as AppParcelsSearchRouteImport } from './routes/_app/parcels.search'
+import { Route as AppParcelsReportsRouteImport } from './routes/_app/parcels.reports'
 import { Route as AppParcelsReceiveRouteImport } from './routes/_app/parcels.receive'
+import { Route as AppParcelsOverviewRouteImport } from './routes/_app/parcels.overview'
 import { Route as AppParcelsMoveRouteImport } from './routes/_app/parcels.move'
 import { Route as AppParcelsHandoutRouteImport } from './routes/_app/parcels.handout'
 import { Route as AppParcelsDashboardRouteImport } from './routes/_app/parcels.dashboard'
@@ -57,7 +60,6 @@ import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.cus
 import { Route as AppOperiaCarriersRouteImport } from './routes/_app/operia.carriers'
 import { Route as AppOperiaBillingRouteImport } from './routes/_app/operia.billing'
 import { Route as AppOperiaAssetsRouteImport } from './routes/_app/operia.assets'
-import { Route as AppOperiaApikeysRouteImport } from './routes/_app/operia.apikeys'
 import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
 import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 import { Route as AppImportExportRouteImport } from './routes/_app/import.export'
@@ -196,14 +198,29 @@ const AppProductsProductKeyRoute = AppProductsProductKeyRouteImport.update({
   path: '/products/$productKey',
   getParentRoute: () => AppRoute,
 } as any)
+const AppParcelsStatsRoute = AppParcelsStatsRouteImport.update({
+  id: '/parcels/stats',
+  path: '/parcels/stats',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppParcelsSearchRoute = AppParcelsSearchRouteImport.update({
   id: '/parcels/search',
   path: '/parcels/search',
   getParentRoute: () => AppRoute,
 } as any)
+const AppParcelsReportsRoute = AppParcelsReportsRouteImport.update({
+  id: '/parcels/reports',
+  path: '/parcels/reports',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppParcelsReceiveRoute = AppParcelsReceiveRouteImport.update({
   id: '/parcels/receive',
   path: '/parcels/receive',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppParcelsOverviewRoute = AppParcelsOverviewRouteImport.update({
+  id: '/parcels/overview',
+  path: '/parcels/overview',
   getParentRoute: () => AppRoute,
 } as any)
 const AppParcelsMoveRoute = AppParcelsMoveRouteImport.update({
@@ -324,11 +341,6 @@ const AppOperiaBillingRoute = AppOperiaBillingRouteImport.update({
 const AppOperiaAssetsRoute = AppOperiaAssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
-  getParentRoute: () => AppOperiaRoute,
-} as any)
-const AppOperiaApikeysRoute = AppOperiaApikeysRouteImport.update({
-  id: '/apikeys',
-  path: '/apikeys',
   getParentRoute: () => AppOperiaRoute,
 } as any)
 const AppImportLogRoute = AppImportLogRouteImport.update({
@@ -514,7 +526,6 @@ export interface FileRoutesByFullPath {
   '/import/export': typeof AppImportExportRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
-  '/operia/apikeys': typeof AppOperiaApikeysRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
@@ -539,8 +550,11 @@ export interface FileRoutesByFullPath {
   '/parcels/dashboard': typeof AppParcelsDashboardRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/move': typeof AppParcelsMoveRoute
+  '/parcels/overview': typeof AppParcelsOverviewRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
+  '/parcels/reports': typeof AppParcelsReportsRoute
   '/parcels/search': typeof AppParcelsSearchRoute
+  '/parcels/stats': typeof AppParcelsStatsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/products/routes': typeof AppProductsRoutesRoute
   '/assets/': typeof AppAssetsIndexRoute
@@ -591,7 +605,6 @@ export interface FileRoutesByTo {
   '/import/export': typeof AppImportExportRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
-  '/operia/apikeys': typeof AppOperiaApikeysRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
@@ -616,8 +629,11 @@ export interface FileRoutesByTo {
   '/parcels/dashboard': typeof AppParcelsDashboardRoute
   '/parcels/handout': typeof AppParcelsHandoutRoute
   '/parcels/move': typeof AppParcelsMoveRoute
+  '/parcels/overview': typeof AppParcelsOverviewRoute
   '/parcels/receive': typeof AppParcelsReceiveRoute
+  '/parcels/reports': typeof AppParcelsReportsRoute
   '/parcels/search': typeof AppParcelsSearchRoute
+  '/parcels/stats': typeof AppParcelsStatsRoute
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/products/routes': typeof AppProductsRoutesRoute
   '/assets': typeof AppAssetsIndexRoute
@@ -671,7 +687,6 @@ export interface FileRoutesById {
   '/_app/import/export': typeof AppImportExportRoute
   '/_app/import/local': typeof AppImportLocalRoute
   '/_app/import/log': typeof AppImportLogRoute
-  '/_app/operia/apikeys': typeof AppOperiaApikeysRoute
   '/_app/operia/assets': typeof AppOperiaAssetsRoute
   '/_app/operia/billing': typeof AppOperiaBillingRoute
   '/_app/operia/carriers': typeof AppOperiaCarriersRoute
@@ -696,8 +711,11 @@ export interface FileRoutesById {
   '/_app/parcels/dashboard': typeof AppParcelsDashboardRoute
   '/_app/parcels/handout': typeof AppParcelsHandoutRoute
   '/_app/parcels/move': typeof AppParcelsMoveRoute
+  '/_app/parcels/overview': typeof AppParcelsOverviewRoute
   '/_app/parcels/receive': typeof AppParcelsReceiveRoute
+  '/_app/parcels/reports': typeof AppParcelsReportsRoute
   '/_app/parcels/search': typeof AppParcelsSearchRoute
+  '/_app/parcels/stats': typeof AppParcelsStatsRoute
   '/_app/products/$productKey': typeof AppProductsProductKeyRoute
   '/_app/products/routes': typeof AppProductsRoutesRoute
   '/_app/assets/': typeof AppAssetsIndexRoute
@@ -751,7 +769,6 @@ export interface FileRouteTypes {
     | '/import/export'
     | '/import/local'
     | '/import/log'
-    | '/operia/apikeys'
     | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
@@ -776,8 +793,11 @@ export interface FileRouteTypes {
     | '/parcels/dashboard'
     | '/parcels/handout'
     | '/parcels/move'
+    | '/parcels/overview'
     | '/parcels/receive'
+    | '/parcels/reports'
     | '/parcels/search'
+    | '/parcels/stats'
     | '/products/$productKey'
     | '/products/routes'
     | '/assets/'
@@ -828,7 +848,6 @@ export interface FileRouteTypes {
     | '/import/export'
     | '/import/local'
     | '/import/log'
-    | '/operia/apikeys'
     | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
@@ -853,8 +872,11 @@ export interface FileRouteTypes {
     | '/parcels/dashboard'
     | '/parcels/handout'
     | '/parcels/move'
+    | '/parcels/overview'
     | '/parcels/receive'
+    | '/parcels/reports'
     | '/parcels/search'
+    | '/parcels/stats'
     | '/products/$productKey'
     | '/products/routes'
     | '/assets'
@@ -907,7 +929,6 @@ export interface FileRouteTypes {
     | '/_app/import/export'
     | '/_app/import/local'
     | '/_app/import/log'
-    | '/_app/operia/apikeys'
     | '/_app/operia/assets'
     | '/_app/operia/billing'
     | '/_app/operia/carriers'
@@ -932,8 +953,11 @@ export interface FileRouteTypes {
     | '/_app/parcels/dashboard'
     | '/_app/parcels/handout'
     | '/_app/parcels/move'
+    | '/_app/parcels/overview'
     | '/_app/parcels/receive'
+    | '/_app/parcels/reports'
     | '/_app/parcels/search'
+    | '/_app/parcels/stats'
     | '/_app/products/$productKey'
     | '/_app/products/routes'
     | '/_app/assets/'
@@ -1113,6 +1137,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsProductKeyRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/parcels/stats': {
+      id: '/_app/parcels/stats'
+      path: '/parcels/stats'
+      fullPath: '/parcels/stats'
+      preLoaderRoute: typeof AppParcelsStatsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/parcels/search': {
       id: '/_app/parcels/search'
       path: '/parcels/search'
@@ -1120,11 +1151,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppParcelsSearchRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/parcels/reports': {
+      id: '/_app/parcels/reports'
+      path: '/parcels/reports'
+      fullPath: '/parcels/reports'
+      preLoaderRoute: typeof AppParcelsReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/parcels/receive': {
       id: '/_app/parcels/receive'
       path: '/parcels/receive'
       fullPath: '/parcels/receive'
       preLoaderRoute: typeof AppParcelsReceiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/parcels/overview': {
+      id: '/_app/parcels/overview'
+      path: '/parcels/overview'
+      fullPath: '/parcels/overview'
+      preLoaderRoute: typeof AppParcelsOverviewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/parcels/move': {
@@ -1293,13 +1338,6 @@ declare module '@tanstack/react-router' {
       path: '/assets'
       fullPath: '/operia/assets'
       preLoaderRoute: typeof AppOperiaAssetsRouteImport
-      parentRoute: typeof AppOperiaRoute
-    }
-    '/_app/operia/apikeys': {
-      id: '/_app/operia/apikeys'
-      path: '/apikeys'
-      fullPath: '/operia/apikeys'
-      preLoaderRoute: typeof AppOperiaApikeysRouteImport
       parentRoute: typeof AppOperiaRoute
     }
     '/_app/import/log': {
@@ -1540,7 +1578,6 @@ const AppConfigureRouteWithChildren = AppConfigureRoute._addFileChildren(
 )
 
 interface AppOperiaRouteChildren {
-  AppOperiaApikeysRoute: typeof AppOperiaApikeysRoute
   AppOperiaAssetsRoute: typeof AppOperiaAssetsRoute
   AppOperiaBillingRoute: typeof AppOperiaBillingRoute
   AppOperiaCarriersRoute: typeof AppOperiaCarriersRoute
@@ -1564,7 +1601,6 @@ interface AppOperiaRouteChildren {
 }
 
 const AppOperiaRouteChildren: AppOperiaRouteChildren = {
-  AppOperiaApikeysRoute: AppOperiaApikeysRoute,
   AppOperiaAssetsRoute: AppOperiaAssetsRoute,
   AppOperiaBillingRoute: AppOperiaBillingRoute,
   AppOperiaCarriersRoute: AppOperiaCarriersRoute,
@@ -1615,8 +1651,11 @@ interface AppRouteChildren {
   AppParcelsDashboardRoute: typeof AppParcelsDashboardRoute
   AppParcelsHandoutRoute: typeof AppParcelsHandoutRoute
   AppParcelsMoveRoute: typeof AppParcelsMoveRoute
+  AppParcelsOverviewRoute: typeof AppParcelsOverviewRoute
   AppParcelsReceiveRoute: typeof AppParcelsReceiveRoute
+  AppParcelsReportsRoute: typeof AppParcelsReportsRoute
   AppParcelsSearchRoute: typeof AppParcelsSearchRoute
+  AppParcelsStatsRoute: typeof AppParcelsStatsRoute
   AppProductsProductKeyRoute: typeof AppProductsProductKeyRoute
   AppProductsRoutesRoute: typeof AppProductsRoutesRoute
   AppAssetsIndexRoute: typeof AppAssetsIndexRoute
@@ -1657,8 +1696,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppParcelsDashboardRoute: AppParcelsDashboardRoute,
   AppParcelsHandoutRoute: AppParcelsHandoutRoute,
   AppParcelsMoveRoute: AppParcelsMoveRoute,
+  AppParcelsOverviewRoute: AppParcelsOverviewRoute,
   AppParcelsReceiveRoute: AppParcelsReceiveRoute,
+  AppParcelsReportsRoute: AppParcelsReportsRoute,
   AppParcelsSearchRoute: AppParcelsSearchRoute,
+  AppParcelsStatsRoute: AppParcelsStatsRoute,
   AppProductsProductKeyRoute: AppProductsProductKeyRoute,
   AppProductsRoutesRoute: AppProductsRoutesRoute,
   AppAssetsIndexRoute: AppAssetsIndexRoute,

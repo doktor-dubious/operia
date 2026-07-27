@@ -27,6 +27,8 @@ import { PhotoCapture } from '@/components/photo-capture'
 import { ScannerIndicator } from '@/components/scanner-indicator'
 import type { ParcelStatus } from '@/components/parcel-status-badge'
 import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { usePlatformSettings } from '@/hooks/use-platform-settings'
+import { hasValidEmail, hasValidMsisdn } from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 
 // Modtag pakke (spec Flow 1): stregkode → modtager-autocomplete (afdeling
@@ -82,6 +84,41 @@ function useMasterData(companyId: string | null) {
   })
 }
 
+// Virksomhedens kanal-/ankomstindstillinger + SMS-tilvalget — bruges til at
+// advare ved modtagelsen, hvis den valgte modtager slet ikke kan få besked
+// (ingen gyldig kontakt for de aktiverede kanaler). Kun en advarsel: pakken
+// kan stadig registreres.
+function useArrivalNotifyConfig(companyId: string | null) {
+  return useQuery({
+    queryKey: ['arrival-notify-config', companyId],
+    enabled: !!companyId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const [company, features] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('notify_email_enabled, notify_sms_enabled, parcel_arrival_enabled')
+          .eq('id', companyId!)
+          .single(),
+        supabase
+          .from('company_features')
+          .select('feature_key, valid_until')
+          .eq('company_id', companyId!)
+          .eq('feature_key', 'sms_notifications'),
+      ])
+      if (company.error) throw company.error
+      // Kast også ved feature-fejl: et slugt svar ville ellers blive tolket
+      // som "intet SMS-tilvalg" og give en falsk (eller manglende) advarsel.
+      if (features.error) throw features.error
+      const today = new Date().toISOString().slice(0, 10)
+      const hasSms = (features.data ?? []).some(
+        (f) => f.valid_until == null || f.valid_until >= today,
+      )
+      return { company: company.data, hasSms }
+    },
+  })
+}
+
 export function ParcelReceiveForm({
   companyId,
   onReceived,
@@ -94,6 +131,8 @@ export function ParcelReceiveForm({
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: master } = useMasterData(companyId)
+  const { data: platform } = usePlatformSettings()
+  const { data: notifyCfg } = useArrivalNotifyConfig(companyId)
 
   const [barcode, setBarcode] = useState('')
   const [duplicate, setDuplicate] = useState(false)
@@ -112,6 +151,25 @@ export function ParcelReceiveForm({
   // sammen med formularen — ellers står et forældet navn tilbage i feltet.
   const [formKey, setFormKey] = useState(0)
   const barcodeRef = useRef<HTMLInputElement>(null)
+
+  // Punkt 3 i notifikationskravet: kan den valgte modtager slet ikke nås på
+  // nogen af de aktiverede kanaler, meldes det ved modtagelsen — samme
+  // effektive regler (override ?? platform, SMS kræver tilvalget) som
+  // dispatch-parcel-notifications. Mangler konfigurationen (endnu ikke hentet),
+  // vises ingen advarsel frem for en falsk.
+  const receiverUnreachable = (() => {
+    if (!receiver || !platform || !notifyCfg) return false
+    if (!platform.parcel_notifications_enabled) return false
+    const co = notifyCfg.company
+    if (!(co.parcel_arrival_enabled ?? platform.parcel_arrival_enabled)) return false
+    const emailOn = co.notify_email_enabled ?? platform.notify_email_enabled
+    const smsOn = (co.notify_sms_enabled ?? platform.notify_sms_enabled) && notifyCfg.hasSms
+    if (!emailOn && !smsOn) return false
+    return !(
+      (emailOn && hasValidEmail(receiver.email)) ||
+      (smsOn && hasValidMsisdn(receiver.phone))
+    )
+  })()
 
   // Modtagervalg auto-udfylder afdeling (spec Flow 1)
   const pickReceiver = (employee: PickedEmployee | null) => {
@@ -264,6 +322,11 @@ export function ParcelReceiveForm({
           value={receiver}
           onChange={pickReceiver}
         />
+        {receiverUnreachable && (
+          <p className="text-xs text-status-neutral-to-bad">
+            {t('receive.noContactWarning')}
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">

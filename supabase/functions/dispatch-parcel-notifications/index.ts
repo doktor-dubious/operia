@@ -87,6 +87,7 @@ type CompanyRow = {
   parcel_reminder_max: number | null
   parcel_reminder_1_enabled: boolean | null
   parcel_reminder_2_enabled: boolean | null
+  parcel_arrival_enabled: boolean | null
   notify_email_enabled: boolean | null
   notify_sms_enabled: boolean | null
 }
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
   const { data: platform } = await admin
     .from('platform_settings')
     .select(
-      'quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, notify_email_enabled, notify_sms_enabled, parcel_notifications_enabled',
+      'quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, notify_email_enabled, notify_sms_enabled, parcel_notifications_enabled',
     )
     .limit(1)
     .maybeSingle()
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
        receiver:employees!inner (id, full_name, email, phone, language, is_active),
        company:companies!inner (id, name, default_language, quiet_hours_start, quiet_hours_end,
          parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max,
-         parcel_reminder_1_enabled, parcel_reminder_2_enabled,
+         parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled,
          notify_email_enabled, notify_sms_enabled)`,
     )
     .in('status', OPEN_STATUSES)
@@ -212,6 +213,7 @@ Deno.serve(async (req) => {
     // Effektive indstillinger: virksomhedens override, ellers platformens.
     const emailOn = co.notify_email_enabled ?? platform.notify_email_enabled
     const smsOn = (co.notify_sms_enabled ?? platform.notify_sms_enabled) && hasSms
+    const arrivalOn = co.parcel_arrival_enabled ?? platform.parcel_arrival_enabled
     const r1on = co.parcel_reminder_1_enabled ?? platform.parcel_reminder_1_enabled
     const r2on = (co.parcel_reminder_2_enabled ?? platform.parcel_reminder_2_enabled) && r1on
     const r1days = co.parcel_reminder_1_days ?? platform.parcel_reminder_1_days ?? 3
@@ -235,7 +237,7 @@ Deno.serve(async (req) => {
     const ageDays = (nowMs - Date.parse(p.registered_at)) / DAY
 
     const candidates: Kind[] = []
-    if (ageDays <= ARRIVAL_MAX_AGE_DAYS) candidates.push('arrival')
+    if (arrivalOn && ageDays <= ARRIVAL_MAX_AGE_DAYS) candidates.push('arrival')
     if (hasReminders && r1on && ageDays >= r1days) candidates.push('reminder_1')
     if (hasReminders && r2on && ageDays >= r2days) candidates.push('reminder_2')
     if (candidates.length === 0) continue

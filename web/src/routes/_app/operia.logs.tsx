@@ -239,6 +239,7 @@ function categoryOf(action: string): string {
     case 'locker':
       return 'lockers'
     case 'user':
+    case 'auth':
       return 'access'
     case 'product':
     case 'feature':
@@ -300,6 +301,11 @@ function message(r: LogRow, t: TFn) {
       table: (d.table as string) ?? '—',
       days: String(d.retention_days ?? '—'),
     })
+  }
+  // Fejlet login på en email uden konto (anden sti, klient-rapporteret): markér
+  // eksplicit som ukendt konto — der er ingen aktør/virksomhed at vise.
+  if (r.action === 'auth.login_failed' && d.unknown_email === true) {
+    return [r.summary, t('logsPage.msg.loginUnknownEmail')].filter(Boolean).join('   ·   ')
   }
   if (r.action === 'retention.changed') {
     const days = (v: unknown) => (v == null ? '∞' : String(v))

@@ -11,6 +11,8 @@ export type PickedEmployee = {
   id: string
   full_name: string
   initials: string | null
+  email: string | null
+  phone: string | null
   department_id: string | null
   department_name: string | null
 }
@@ -49,13 +51,15 @@ export function EmployeePicker({
       return
     }
     debounce.current = setTimeout(async () => {
-      const term = text.trim()
+      // PostgREST-tegn (komma/parentes) i søgeordet ville ellers blive læst
+      // som filter-syntaks i .or() — citér værdien og escape \ og " i den.
+      const term = text.trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"')
       const { data, error } = await supabase
         .from('employees')
-        .select('id, full_name, initials, department_id, department:departments (name)')
+        .select('id, full_name, initials, email, phone, department_id, department:departments (name)')
         .eq('company_id', companyId)
         .eq('is_active', true)
-        .or(`full_name.ilike.%${term}%,initials.ilike.%${term}%`)
+        .or(`full_name.ilike."%${term}%",initials.ilike."%${term}%"`)
         .order('full_name')
         .limit(8)
       if (error) {
@@ -67,6 +71,8 @@ export function EmployeePicker({
           id: e.id,
           full_name: e.full_name,
           initials: e.initials,
+          email: e.email,
+          phone: e.phone,
           department_id: e.department_id,
           department_name: e.department?.name ?? null,
         })),

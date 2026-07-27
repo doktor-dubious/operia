@@ -43,8 +43,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            OperiaTheme {
-                OperiaApp()
+            // Samme vm-instans (aktivitets-scoped) til både tema og app, så
+            // enhedens farvetema følger det hentede handheld-design live.
+            val vm: AppViewModel = viewModel()
+            OperiaTheme(themeKey = vm.handheld.design.theme) {
+                OperiaApp(vm)
             }
         }
     }

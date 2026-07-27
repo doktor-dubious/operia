@@ -120,7 +120,7 @@ function HomePage() {
         style={{ width: boardWidth, height: boardHeight }}
       >
         {placed.map((p) => {
-          const large = p.size === '2x2'
+          const large = p.w >= 2 && p.h >= 2
           const width = p.w * CELL + (p.w - 1) * GAP
           const height = p.h * CELL + (p.h - 1) * GAP
           const box = {
@@ -157,7 +157,12 @@ function HomePage() {
                 className="flex flex-col justify-end overflow-hidden p-3 text-white shadow-sm"
               >
                 {tileTitleShown(p) && p.title?.trim() && (
-                  <span className={cn('font-medium leading-tight', large ? 'text-base' : 'text-[13px]')}>
+                  <span
+                    className={cn(
+                      'font-medium leading-tight [text-shadow:0_1px_3px_rgb(0_0_0/0.6)]',
+                      large ? 'text-base' : 'text-[13px]',
+                    )}
+                  >
                     {p.title}
                   </span>
                 )}

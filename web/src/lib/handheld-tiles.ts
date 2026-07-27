@@ -179,10 +179,42 @@ export function tileIcon(item: HandheldTileItem, tile: HandheldTile): HandheldIc
   return ICON_BY_KEY[item.icon ?? ''] ?? ICON_BY_KEY[tile.icon] ?? HANDHELD_ICONS[0]
 }
 
+// Enhedens farvepalet: baggrund, panel (fliser/bjælker), streger, tekst og
+// dæmpet tekst. Modstykket til home-tiles' flisefarvetema, men her farves hele
+// enheds-look'et (mock-up'en), ikke den enkelte flise.
+export type HandheldPalette = {
+  bg: string
+  panel: string
+  line: string
+  txt: string
+  muted: string
+}
+
+// Farvetemaer for håndterminalen. 'midnight' er enhedens OPRINDELIGE farver
+// (android/…/ui/Theme.kt) og står som første/standardtema. De øvrige er mørke
+// varianter i andre kulører. Rækkefølgen her er den viste i vælgeren.
+export type HandheldTheme = 'midnight' | 'graphite' | 'forest' | 'plum' | 'ember'
+
+export const HANDHELD_THEMES: HandheldTheme[] = ['midnight', 'graphite', 'forest', 'plum', 'ember']
+
+export const HANDHELD_PALETTES: Record<HandheldTheme, HandheldPalette> = {
+  midnight: { bg: '#0B1220', panel: '#16213A', line: '#293752', txt: '#EEF3FC', muted: '#8FA2C4' },
+  graphite: { bg: '#0E0F12', panel: '#1B1D22', line: '#2E3138', txt: '#F2F3F5', muted: '#9AA1AD' },
+  forest: { bg: '#0B1410', panel: '#14241C', line: '#24382E', txt: '#ECF5EF', muted: '#8CB4A0' },
+  plum: { bg: '#140E1C', panel: '#241A33', line: '#382B4C', txt: '#F3EEFA', muted: '#A996C4' },
+  ember: { bg: '#16100C', panel: '#291A14', line: '#422C22', txt: '#F7EFEA', muted: '#C4A594' },
+}
+
+export function handheldPalette(theme: HandheldTheme): HandheldPalette {
+  return HANDHELD_PALETTES[theme] ?? HANDHELD_PALETTES.midnight
+}
+
 // Handheld-startskærmens indholdselementer + ikon-tema. Hvert tekst-/billed-
 // element har et *Enabled-flag; er det slået fra, udelades elementet.
 export type HandheldDesign = {
   iconTheme: HandheldIconTheme
+  // Enhedens farvetema (baggrund/panel/tekst) — vist i mock-up'en.
+  theme: HandheldTheme
   welcomeTitle: string
   welcomeTitleEnabled: boolean
   subtitle: string
@@ -201,6 +233,7 @@ export const GREETING_KEYS = ['subtitle', 'title'] as const
 
 export const DEFAULT_HANDHELD_DESIGN: HandheldDesign = {
   iconTheme: 'happy',
+  theme: 'midnight',
   welcomeTitle: '',
   // Tændt som standard: med tom welcomeTitle falder titlen tilbage til brugerens
   // fornavn, så en uændret opsætning stadig viser den personlige hilsen på
@@ -262,9 +295,11 @@ const bool = (v: unknown, fallback: boolean) => (typeof v === 'boolean' ? v : fa
 
 export function normalizeHandheldDesign(raw: unknown): HandheldDesign {
   const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  const theme = HANDHELD_ICON_THEMES.find((t) => t === d.iconTheme)
+  const iconTheme = HANDHELD_ICON_THEMES.find((t) => t === d.iconTheme)
+  const theme = HANDHELD_THEMES.find((t) => t === d.theme)
   return {
-    iconTheme: theme ?? DEFAULT_HANDHELD_DESIGN.iconTheme,
+    iconTheme: iconTheme ?? DEFAULT_HANDHELD_DESIGN.iconTheme,
+    theme: theme ?? DEFAULT_HANDHELD_DESIGN.theme,
     welcomeTitle: str(d.welcomeTitle),
     welcomeTitleEnabled: bool(d.welcomeTitleEnabled, DEFAULT_HANDHELD_DESIGN.welcomeTitleEnabled),
     subtitle: str(d.subtitle),

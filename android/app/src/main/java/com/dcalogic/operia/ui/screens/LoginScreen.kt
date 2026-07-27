@@ -46,6 +46,8 @@ fun LoginScreen(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val fillBoth = stringResource(R.string.login_fill_both)
     val wrongCreds = stringResource(R.string.login_wrong)
+    val network = stringResource(R.string.login_network)
+    val failedPrefix = stringResource(R.string.login_failed)
 
     fun submit() {
         if (email.isBlank() || password.isEmpty()) {
@@ -57,7 +59,12 @@ fun LoginScreen(vm: AppViewModel) {
         scope.launch {
             val err = vm.login(email, password)
             busy = false
-            if (err != null) error = wrongCreds
+            error = when (err) {
+                null -> null
+                is com.dcalogic.operia.LoginError.WrongCredentials -> wrongCreds
+                is com.dcalogic.operia.LoginError.Network -> network
+                is com.dcalogic.operia.LoginError.Other -> failedPrefix.format(err.message)
+            }
         }
     }
 

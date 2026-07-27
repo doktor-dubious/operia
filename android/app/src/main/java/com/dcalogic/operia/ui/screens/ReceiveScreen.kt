@@ -51,6 +51,21 @@ private data class ScannedItem(
     val label: String,
 )
 
+// Spejler webbens notify-contact-regler (web/src/lib/notify-contact.ts), som
+// igen spejler toMsisdn i dispatcheren: 8 cifre antages dansk, ellers kræves
+// landekode (9–15 cifre i alt).
+private fun hasValidEmail(email: String?): Boolean {
+    val e = email?.trim() ?: return false
+    return e.contains('@') && !e.startsWith("@") && !e.endsWith("@")
+}
+
+private fun hasValidMsisdn(phone: String?): Boolean {
+    if (phone.isNullOrBlank()) return false
+    var digits = phone.filter { it.isDigit() }
+    if (digits.startsWith("00")) digits = digits.substring(2)
+    return digits.length == 8 || digits.length in 9..15
+}
+
 /**
  * Flow 1 — Modtag pakker: vælg modtager, scan én eller flere pakker, gem.
  * Uden net gemmes modtagelserne lokalt og synkroniseres senere.
@@ -194,6 +209,25 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 selectedId = empId,
                 onSelect = { empId = it; focusStamp = System.currentTimeMillis() },
             )
+            // Ville ankomstbeskeden blive sendt, men modtageren kan ikke nås på
+            // nogen aktiveret kanal (mangler gyldig e-mail/mobil)? Meldes her
+            // ved modtagelsen — pakken kan stadig registreres.
+            val notify = vm.notifyPrefs
+            val selEmp = vm.employees.firstOrNull { it.id == empId }
+            val unreachable = notify != null && notify.arrivalActive &&
+                (notify.emailOn || notify.smsOn) && selEmp != null &&
+                !(
+                    (notify.emailOn && hasValidEmail(selEmp.email)) ||
+                        (notify.smsOn && hasValidMsisdn(selEmp.phone))
+                    )
+            if (unreachable) {
+                Text(
+                    stringResource(R.string.receive_no_contact_warning),
+                    color = C.red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                )
+            }
         }
         if (showDept) {
             // Afdeling er valgfri når der også er en modtager (som på webben) og

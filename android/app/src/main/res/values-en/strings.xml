@@ -12,6 +12,8 @@
     <string name="password">Password</string>
     <string name="login_fill_both">Enter email and password.</string>
     <string name="login_wrong">Wrong email or password.</string>
+    <string name="login_network">Could not reach the server.\nCheck the terminal\'s internet connection and try again.</string>
+    <string name="login_failed">Sign-in failed: %1$s</string>
     <string name="err_no_company">Your user is not linked to a company.\nThe handheld terminal is for company parcel staff — contact your administrator.</string>
 
     <!-- home -->
@@ -96,6 +98,7 @@
     <string name="receive_queued">%1$d parcel(s) saved locally — will sync when you are online</string>
     <string name="receive_save_failed">Could not save</string>
     <string name="receive_saved_confirm">✓ %1$d parcel(s) saved</string>
+    <string name="receive_no_contact_warning">The receiver cannot be notified about this parcel — no valid email address or mobile number for the enabled notification channels.</string>
 
     <!-- handout -->
     <string name="handout_title">Handover</string>

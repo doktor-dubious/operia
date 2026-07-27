@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -64,11 +66,19 @@ fun Screen(
     Box(Modifier.fillMaxSize().background(C.bg)) {
         Column(Modifier.fillMaxSize()) {
             TopBar(title, onBack)
+            // Appen tegner edge-to-edge (enableEdgeToEdge i MainActivity), så uden
+            // bund-insets ligger det sidste element — typisk gem-knappen — bag
+            // systemets navigations-/gesturebjælke og kan ikke engang scrolles
+            // frem. Insets skal på EFTER scroll-modifieren, så de virker som
+            // indre padding i scroll-indholdet; imePadding løfter desuden
+            // indholdet fri af tastaturet (fx notefeltet på Modtag).
             Column(
                 Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .let { if (scrollable) it.verticalScroll(rememberScrollState()) else it }
+                    .navigationBarsPadding()
+                    .imePadding()
                     .padding(16.dp),
                 content = content,
             )

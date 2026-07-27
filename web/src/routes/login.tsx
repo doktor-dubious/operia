@@ -27,6 +27,15 @@ function LoginPage() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
     if (signInError) {
+      // Rapportér forsøget så login-fejl på en UKENDT email også havner i loggen
+      // (GoTrue's hook fanger kun eksisterende konti). Fire-and-forget: en fejl
+      // her må aldrig påvirke login-UX. Typerne kendes først efter gen:types.
+      void Promise.resolve(
+        (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<unknown>)(
+          'log_failed_login_attempt',
+          { p_email: email },
+        ),
+      ).catch(() => {})
       setError(true)
       return
     }

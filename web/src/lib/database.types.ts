@@ -505,6 +505,7 @@ export type Database = {
           name: string
           notify_email_enabled: boolean | null
           notify_sms_enabled: boolean | null
+          parcel_arrival_enabled: boolean | null
           parcel_reminder_1_days: number | null
           parcel_reminder_1_enabled: boolean | null
           parcel_reminder_2_days: number | null
@@ -539,6 +540,7 @@ export type Database = {
           name: string
           notify_email_enabled?: boolean | null
           notify_sms_enabled?: boolean | null
+          parcel_arrival_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
           parcel_reminder_2_days?: number | null
@@ -573,6 +575,7 @@ export type Database = {
           name?: string
           notify_email_enabled?: boolean | null
           notify_sms_enabled?: boolean | null
+          parcel_arrival_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
           parcel_reminder_2_days?: number | null
@@ -1945,6 +1948,7 @@ export type Database = {
           maps_provider: string
           notify_email_enabled: boolean
           notify_sms_enabled: boolean
+          parcel_arrival_enabled: boolean
           parcel_files_retention_days: number | null
           parcel_notifications_enabled: boolean
           parcel_reminder_1_days: number
@@ -1996,6 +2000,7 @@ export type Database = {
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
+          parcel_arrival_enabled?: boolean
           parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number
@@ -2047,6 +2052,7 @@ export type Database = {
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
+          parcel_arrival_enabled?: boolean
           parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
           parcel_reminder_1_days?: number

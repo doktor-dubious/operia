@@ -15,6 +15,8 @@
     <string name="password">Adgangskode</string>
     <string name="login_fill_both">Udfyld e-mail og adgangskode.</string>
     <string name="login_wrong">Forkert e-mail eller adgangskode.</string>
+    <string name="login_network">Kunne ikke få forbindelse til serveren.\nTjek terminalens internetforbindelse og prøv igen.</string>
+    <string name="login_failed">Login fejlede: %1$s</string>
     <string name="err_no_company">Din bruger er ikke knyttet til en virksomhed.\nHåndterminalen er til virksomhedens pakkepersonale — kontakt din administrator.</string>
 
     <!-- hjem -->
@@ -99,6 +101,7 @@
     <string name="receive_queued">%1$d pakke(r) gemt lokalt — synkroniseres når du er online</string>
     <string name="receive_save_failed">Kunne ikke gemme</string>
     <string name="receive_saved_confirm">✓ %1$d pakke(r) gemt</string>
+    <string name="receive_no_contact_warning">Modtageren kan ikke få besked om pakken — der mangler en gyldig e-mail eller et gyldigt mobilnummer til de aktiverede notifikationskanaler.</string>
 
     <!-- udlever -->
     <string name="handout_title">Udlever / afvis</string>

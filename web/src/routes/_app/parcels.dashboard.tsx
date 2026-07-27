@@ -307,7 +307,7 @@ function DashboardPage() {
 
   const viewAll = (
     <Link
-      to="/parcels"
+      to="/parcels/overview"
       className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
     >
       {t('dashboard.viewAll')}

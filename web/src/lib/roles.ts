@@ -157,8 +157,6 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/parcels/move', roles: ['parcel_handler', 'parcel_manager'] },
   { prefix: '/parcels/search', roles: ['parcel_handler', 'parcel_manager'] },
   { prefix: '/parcels', roles: ['parcel_manager'] },
-  { prefix: '/reports', roles: ['parcel_manager'] },
-  { prefix: '/stats', roles: ['parcel_manager'] },
   { prefix: '/employees', roles: ['data_manager'] },
   { prefix: '/departments', roles: ['data_manager'] },
   { prefix: '/lockers', roles: ['data_manager'] },
@@ -213,7 +211,11 @@ const SECTION_ROLES: Record<string, AppRole[]> = {
 // ikke må se — så forsidens primære flise fører til "ingen adgang".
 export function productTileHref(href: string, access: AccessInfo): string {
   if (canAccessPath(href, access)) return href
-  const sub = PAGE_ACCESS.filter((e) => e.prefix.startsWith(href + '/')).find((e) =>
+  // Søg undersider ud fra produktets ROD (første stisegment), ikke href'et
+  // selv — flisen kan pege på en underside (fx /parcels/overview), og søsterne
+  // (/parcels/receive, …) ligger under roden, ikke under href'et.
+  const root = '/' + (href.split('/')[1] ?? '')
+  const sub = PAGE_ACCESS.filter((e) => e.prefix.startsWith(root + '/')).find((e) =>
     canAccessPath(e.prefix, access),
   )
   return sub?.prefix ?? href

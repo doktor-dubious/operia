@@ -568,7 +568,6 @@ function CustomerDetailPane({
   const tabs = [
     { key: 'details', label: t('detail.tabDetails') },
     { key: 'products', label: t('customerDetail.tabProducts') },
-    { key: 'billing', label: t('customerDetail.tabBilling') },
     { key: 'shipping', label: t('shippingBilling.tabLabel') },
     { key: 'logo', label: t('customerDetail.tabLogo') },
     { key: 'localization', label: t('customerDetail.tabLocalization') },
@@ -597,6 +596,19 @@ function CustomerDetailPane({
             <Field label={t('customerDetail.registrationNo')}>
               <Input value={regNo} onChange={(e) => setRegNo(e.target.value)} />
             </Field>
+            <Field
+              label={`${t('customerDetail.purchasingEmail')} (${t('customerDetail.optional')})`}
+            >
+              <Input
+                type="email"
+                value={purchEmail}
+                placeholder="indkoeb@firma.dk"
+                onChange={(e) => setPurchEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('customerDetail.purchasingEmailHint')}
+              </p>
+            </Field>
           </div>
         )}
         {tab === 'products' && (
@@ -617,23 +629,6 @@ function CustomerDetailPane({
                 setFeatureExpiry(new Map(featureExpiry).set(key, expiry))
               }
             />
-          </div>
-        )}
-        {tab === 'billing' && (
-          <div className="flex flex-col gap-5">
-            <Field
-              label={`${t('customerDetail.purchasingEmail')} (${t('customerDetail.optional')})`}
-            >
-              <Input
-                type="email"
-                value={purchEmail}
-                placeholder="indkoeb@firma.dk"
-                onChange={(e) => setPurchEmail(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('customerDetail.purchasingEmailHint')}
-              </p>
-            </Field>
           </div>
         )}
         {tab === 'shipping' && shipping && (

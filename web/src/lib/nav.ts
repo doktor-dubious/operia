@@ -57,14 +57,14 @@ export const navGroups: NavGroup[] = [
     items: [
       { labelKey: 'parcelBoard', href: '/parcels/board', icon: Boxes },
       { labelKey: 'dashboard', href: '/parcels/dashboard', icon: LayoutDashboard },
-      { labelKey: 'parcels', href: '/parcels', icon: Package },
+      { labelKey: 'parcels', href: '/parcels/overview', icon: Package },
       { labelKey: 'receive', href: '/parcels/receive', icon: PackagePlus },
       { labelKey: 'handout', href: '/parcels/handout', icon: PackageCheck },
       { labelKey: 'move', href: '/parcels/move', icon: Truck },
       { labelKey: 'condition', href: '/parcels/condition', icon: Camera },
       { labelKey: 'search', href: '/parcels/search', icon: Search },
-      { labelKey: 'reports', href: '/reports', icon: FileText },
-      { labelKey: 'stats', href: '/stats', icon: Layers },
+      { labelKey: 'reports', href: '/parcels/reports', icon: FileText },
+      { labelKey: 'stats', href: '/parcels/stats', icon: Layers },
     ],
   },
   {
@@ -173,22 +173,55 @@ export const configureNav: NavItem = {
   icon: SlidersHorizontal,
 }
 
-export const configureConfigNav: { labelKey: string; href: string }[] = [
-  { labelKey: 'configureUsers', href: '/configure/users' },
-  { labelKey: 'configureProducts', href: '/configure/products' },
-  { labelKey: 'configureTemplates', href: '/configure/templates' },
-  { labelKey: 'configureLocalization', href: '/configure/localization' },
-  { labelKey: 'configureNotifications', href: '/configure/notifications' },
-  { labelKey: 'configureBilling', href: '/configure/billing' },
-  { labelKey: 'configureShipping', href: '/configure/shipping' },
-  { labelKey: 'configureLogo', href: '/configure/logo' },
-  { labelKey: 'configureAppearance', href: '/configure/appearance' },
-  { labelKey: 'configureHomeDesign', href: '/configure/home-design' },
-  { labelKey: 'configureHandheldDesign', href: '/configure/handheld-design' },
-  { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
-  { labelKey: 'configureIntegrations', href: '/configure/integrations' },
-  { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
+// En sektion i en sekundærmenu (Operia/Konfigurér): en overskrift + dens punkter.
+// `labelKey` peger på sektionsoverskriften; menuernes egne i18n-namespaces
+// (operiaConfig.* / configureConfig.*) holder overskrifterne.
+export type ConfigNavSection = {
+  labelKey: string
+  items: { labelKey: string; href: string }[]
+}
+
+// Konfigurér-sekundærmenuen (kundefladen, reduceret sæt) grupperet i fire
+// sektioner: konto/aftale, udseende, beskeder og data/integrationer.
+export const configureConfigSections: ConfigNavSection[] = [
+  {
+    labelKey: 'sectionAccount',
+    items: [
+      { labelKey: 'configureUsers', href: '/configure/users' },
+      { labelKey: 'configureProducts', href: '/configure/products' },
+      { labelKey: 'configureBilling', href: '/configure/billing' },
+      { labelKey: 'configureShipping', href: '/configure/shipping' },
+    ],
+  },
+  {
+    labelKey: 'sectionAppearance',
+    items: [
+      { labelKey: 'configureLogo', href: '/configure/logo' },
+      { labelKey: 'configureAppearance', href: '/configure/appearance' },
+      { labelKey: 'configureHomeDesign', href: '/configure/home-design' },
+      { labelKey: 'configureHandheldDesign', href: '/configure/handheld-design' },
+      { labelKey: 'configureLocalization', href: '/configure/localization' },
+    ],
+  },
+  {
+    labelKey: 'sectionMessaging',
+    items: [
+      { labelKey: 'configureTemplates', href: '/configure/templates' },
+      { labelKey: 'configureNotifications', href: '/configure/notifications' },
+    ],
+  },
+  {
+    labelKey: 'sectionData',
+    items: [
+      { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
+      { labelKey: 'configureIntegrations', href: '/configure/integrations' },
+      { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
+    ],
+  },
 ]
+
+// Flad liste (rækkefølge = sektionernes) — bruges af allNavItems m.fl.
+export const configureConfigNav = configureConfigSections.flatMap((s) => s.items)
 
 // Operia-konfiguration (kun platform-admins) — nederst i sidemenuen. Åbner en
 // Supabase-settings-lignende side med egen venstremenu (operiaConfigNav).
@@ -198,42 +231,84 @@ export const operiaNav: NavItem = {
   icon: Cog,
 }
 
-export const operiaConfigNav: { labelKey: string; href: string }[] = [
-  { labelKey: 'operiaCustomers', href: '/operia/customers' },
-  { labelKey: 'operiaUsers', href: '/operia/users' },
-  { labelKey: 'operiaFeedback', href: '/operia/feedback' },
-  { labelKey: 'operiaGeneral', href: '/operia/general' },
-  { labelKey: 'operiaProducts', href: '/operia/products' },
-  { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
-  { labelKey: 'operiaHandheldDesign', href: '/operia/handheld-design' },
-  { labelKey: 'operiaCarriers', href: '/operia/carriers' },
-  { labelKey: 'operiaShipping', href: '/operia/shipping' },
-  { labelKey: 'operiaAssets', href: '/operia/assets' },
-  { labelKey: 'operiaMaps', href: '/operia/maps' },
-  { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
-  { labelKey: 'operiaBilling', href: '/operia/billing' },
-  { labelKey: 'operiaApiKeys', href: '/operia/apikeys' },
-  { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
-  { labelKey: 'operiaTemplates', href: '/operia/templates' },
-  { labelKey: 'operiaLocalization', href: '/operia/localization' },
-  { labelKey: 'operiaNotifications', href: '/operia/notifications' },
-  { labelKey: 'operiaLogs', href: '/operia/logs' },
-  { labelKey: 'operiaLogDrains', href: '/operia/log-drains' },
+// Operia-sekundærmenuen (kun platform-admins) grupperet i seks sektioner, så
+// den før så overfyldte "Konfiguration"-liste er delt op efter domæne.
+export const operiaConfigSections: ConfigNavSection[] = [
+  {
+    labelKey: 'sectionTenants',
+    items: [
+      { labelKey: 'operiaCustomers', href: '/operia/customers' },
+      { labelKey: 'operiaUsers', href: '/operia/users' },
+      { labelKey: 'operiaFeedback', href: '/operia/feedback' },
+    ],
+  },
+  {
+    labelKey: 'sectionProducts',
+    items: [
+      { labelKey: 'operiaProducts', href: '/operia/products' },
+      { labelKey: 'operiaCarriers', href: '/operia/carriers' },
+      { labelKey: 'operiaShipping', href: '/operia/shipping' },
+      { labelKey: 'operiaAssets', href: '/operia/assets' },
+      { labelKey: 'operiaMaps', href: '/operia/maps' },
+    ],
+  },
+  {
+    labelKey: 'sectionAppearance',
+    items: [
+      { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
+      { labelKey: 'operiaHandheldDesign', href: '/operia/handheld-design' },
+      { labelKey: 'operiaLocalization', href: '/operia/localization' },
+      { labelKey: 'operiaTemplates', href: '/operia/templates' },
+      { labelKey: 'operiaNotifications', href: '/operia/notifications' },
+    ],
+  },
+  {
+    labelKey: 'sectionData',
+    items: [
+      { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
+      { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
+    ],
+  },
+  {
+    labelKey: 'sectionPlatform',
+    items: [
+      { labelKey: 'operiaGeneral', href: '/operia/general' },
+      { labelKey: 'operiaBilling', href: '/operia/billing' },
+    ],
+  },
+  {
+    labelKey: 'sectionMonitoring',
+    items: [
+      { labelKey: 'operiaLogs', href: '/operia/logs' },
+      { labelKey: 'operiaLogDrains', href: '/operia/log-drains' },
+    ],
+  },
 ]
+
+// Flad liste (rækkefølge = sektionernes) — bruges af allNavItems m.fl.
+export const operiaConfigNav = operiaConfigSections.flatMap((s) => s.items)
 
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
 // ikke hentet) vises ingen grupper — så punkter ikke blinker frem og
 // forsvinder igen. Home/Indstillinger står uden for grupperne og er åbne.
-// Forenklet navigation ('modern'): kun de fem daglige pakkehandlinger — samme
-// sæt som håndterminalens fliser. Tænkt til ikke-IT-vante brugere, der får store
-// knapper i stedet for hele menutræet. Rækkefølgen her er den viste.
+// Forenklet navigation ('modern'): hele pakkemodulet som store knapper i
+// startmenuen — de daglige handlinger (modtag/udlever/flyt/tilstand/søg) samt
+// overbliks- og rapportsiderne (tavle/dashboard/oversigt/rapporter/statistik),
+// så intet i pakkegruppen er uden for rækkevidde i moderne tilstand. Resten af
+// menutræet ligger i bund-dropdownen, som netop udelader pakkegruppen. Adgang
+// filtreres pr. punkt (canAccessPath), så fx dashboard/rapporter kun vises for
+// managers. Rækkefølgen her er den viste og følger pakkegruppens orden.
 export const SIMPLE_NAV_HREFS = [
   '/parcels/board',
+  '/parcels/dashboard',
+  '/parcels/overview',
   '/parcels/receive',
   '/parcels/handout',
   '/parcels/move',
   '/parcels/condition',
   '/parcels/search',
+  '/parcels/reports',
+  '/parcels/stats',
 ]
 
 export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {

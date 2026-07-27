@@ -27,6 +27,8 @@ android/.kotlin/
 *.keystore
 *.jks
 android/keystore.properties
+# Byggede APK'er (distribueres via Storage / publish-apk.sh, aldrig git)
+*.apk
 
 # IDE / OS
 .idea/

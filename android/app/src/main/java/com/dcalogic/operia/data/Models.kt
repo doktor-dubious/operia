@@ -24,7 +24,34 @@ data class Employee(
     val full_name: String,
     val initials: String? = null,
     val email: String? = null,
+    val phone: String? = null,
     val department_id: String? = null,
+)
+
+/** Virksomhedens notifikations-override (null = arv platformens standard). */
+@Serializable
+data class CompanyNotifyRow(
+    val notify_email_enabled: Boolean? = null,
+    val notify_sms_enabled: Boolean? = null,
+    val parcel_arrival_enabled: Boolean? = null,
+)
+
+/** Platformens notifikations-standarder (singleton-rækken i platform_settings). */
+@Serializable
+data class PlatformNotifyRow(
+    val notify_email_enabled: Boolean = true,
+    val notify_sms_enabled: Boolean = false,
+    val parcel_notifications_enabled: Boolean = false,
+    val parcel_arrival_enabled: Boolean = true,
+)
+
+/** Effektive ankomstbesked-indstillinger (override ?? platform, SMS kræver
+ *  sms_notifications-tilvalget) — bruges kun til intake-advarslen "modtageren
+ *  kan ikke få besked". Selve afsendelsen afgøres server-side af dispatcheren. */
+data class NotifyPrefs(
+    val arrivalActive: Boolean,
+    val emailOn: Boolean,
+    val smsOn: Boolean,
 )
 
 @Serializable
@@ -139,6 +166,10 @@ data class HandheldTileCfg(
 @Serializable
 data class HandheldDesignCfg(
     val iconTheme: String = "happy",
+    /** Enhedens farvetema (baggrund/panel/tekst). Spejler HANDHELD_PALETTES i
+     *  web/src/lib/handheld-tiles.ts og Theme.kt. Tom/ukendt = "midnight" (enhedens
+     *  oprindelige farver). */
+    val theme: String = "midnight",
     val welcomeTitle: String = "",
     // Titel-linjen er tændt som standard: med tom welcomeTitle falder den tilbage
     // til brugerens fornavn, så en virksomhed der aldrig har rørt handheld-

@@ -98,6 +98,10 @@ export type ParcelFlowValue = {
   maxReminders: number
 }
 
+// Pakkeflowet har derudover ankomstbeskeden (sendes når pakken registreres) —
+// aktiv-varianten har ingen ankomst og bruger ParcelFlowValue alene.
+export type ParcelNotifyValue = ParcelFlowValue & { arrivalEnabled: boolean }
+
 // Tekster der adskiller pakke- fra aktiv-varianten (kun hint/labels; selve
 // felterne og reglerne er ens).
 type ReminderTexts = {
@@ -207,21 +211,46 @@ function ReminderFlowFields({
   )
 }
 
-export function ParcelFlowFields(props: {
-  value: ParcelFlowValue
-  onChange: (patch: Partial<ParcelFlowValue>) => void
+export function ParcelFlowFields({
+  value,
+  onChange,
+}: {
+  value: ParcelNotifyValue
+  onChange: (patch: Partial<ParcelNotifyValue>) => void
 }) {
   const { t } = useTranslation()
   return (
-    <ReminderFlowFields
-      {...props}
-      idPrefix="pf"
-      texts={{
-        sendAfter: t('notificationsPage.sendAfterDays'),
-        hint: t('notificationsPage.reminderHint'),
-        maxHint: t('notificationsPage.maxRemindersHint'),
-      }}
-    />
+    <div className="flex flex-col gap-4">
+      <div
+        className={cn(
+          'flex flex-col gap-3 rounded-lg border p-2.5',
+          value.arrivalEnabled &&
+            'border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/10',
+        )}
+      >
+        <FieldLabel htmlFor="pf-arrival" className="font-normal">
+          <Checkbox
+            id="pf-arrival"
+            checked={value.arrivalEnabled}
+            onCheckedChange={(v) => onChange({ arrivalEnabled: v === true })}
+          />
+          <FieldTitle>{t('notificationsPage.arrival')}</FieldTitle>
+        </FieldLabel>
+        <p className="pl-6 text-xs text-muted-foreground">
+          {t('notificationsPage.arrivalHint')}
+        </p>
+      </div>
+      <ReminderFlowFields
+        value={value}
+        onChange={onChange}
+        idPrefix="pf"
+        texts={{
+          sendAfter: t('notificationsPage.sendAfterDays'),
+          hint: t('notificationsPage.reminderHint'),
+          maxHint: t('notificationsPage.maxRemindersHint'),
+        }}
+      />
+    </div>
   )
 }
 
