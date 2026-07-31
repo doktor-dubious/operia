@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,19 +26,24 @@ function LoginPage() {
     setError(false)
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
-    if (signInError) {
-      // Rapportér forsøget så login-fejl på en UKENDT email også havner i loggen
-      // (GoTrue's hook fanger kun eksisterende konti). Fire-and-forget: en fejl
-      // her må aldrig påvirke login-UX. Typerne kendes først efter gen:types.
+    // Login-audit er klient-drevet, da GoTrue-hook'en ikke er tilgængelig på
+    // planen. Fire-and-forget: en fejl her må aldrig påvirke login-UX. Typerne
+    // kendes først efter gen:types, så kaldet castes.
+    const logAudit = (fn: string, args: Record<string, unknown>) =>
       void Promise.resolve(
         (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<unknown>)(
-          'log_failed_login_attempt',
-          { p_email: email },
+          fn,
+          args,
         ),
       ).catch(() => {})
+    if (signInError) {
+      // Rapportér forsøget så fejlede logins (også på en ukendt email) logges.
+      logAudit('log_failed_login_attempt', { p_email: email })
       setError(true)
       return
     }
+    // Log det vellykkede login (som den netop indloggede bruger).
+    logAudit('log_login_success', {})
     navigate({ to: '/' })
   }
 
@@ -66,7 +71,15 @@ function LoginPage() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">{t('auth.password')}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">{t('auth.password')}</Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {t('auth.forgotPassword')}
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"

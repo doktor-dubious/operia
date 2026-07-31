@@ -18,11 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  CompanyLocalizationFields,
-  CompanyLogoFields,
-  cleanupLogos,
-} from '@/components/company-config-fields'
+import { CompanyLocalizationFields } from '@/components/company-config-fields'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { ExpiryDatePicker } from '@/components/expiry-date-picker'
 import {
@@ -31,8 +27,8 @@ import {
   type ShippingBillingValue,
 } from '@/components/shipping-billing-fields'
 import { CopyButton } from '@/components/copy-button'
-import { ProductAppearanceList } from '@/components/product-appearance-fields'
 import { CompanyDataTransferFields } from '@/components/company-data-transfer-fields'
+import { CompanyUsage } from '@/components/company-usage'
 import { LogDrainsManager } from '@/components/log-drains/log-drains-manager'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -41,6 +37,7 @@ import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { readEdgeError } from '@/lib/edge'
 import { CURRENCY_OPTIONS } from '@/lib/currencies'
 import { LANG_OPTIONS, catalogDescription, catalogName } from '@/lib/languages'
+import { cleanupCompanyFiles } from '@/lib/company-files'
 import { supabase } from '@/lib/supabase'
 import { isValidEmail } from '@/lib/validation'
 
@@ -102,7 +99,7 @@ function useRows() {
         .select(
           // Én sammenhængende literal — sammensatte strenge mister literal-
           // typen, og så kan supabase-js ikke udlede rækketypen.
-          'id, name, registration_no, is_active, created_at, purchasing_email, logo_url, default_language, timezone, supported_languages, supported_currencies, default_currency, shipping_model, shipping_margin_percent, shipping_margin_fixed, shipping_byoc_subscription, shipping_byoc_fee, company_products (product_key, valid_until), company_features (feature_key, valid_until)',
+          'id, name, registration_no, is_active, created_at, purchasing_email, default_language, timezone, supported_languages, supported_currencies, default_currency, shipping_model, shipping_margin_percent, shipping_margin_fixed, shipping_byoc_subscription, shipping_byoc_fee, company_products (product_key, valid_until), company_features (feature_key, valid_until)',
         )
         .order('name')
       if (error) throw error
@@ -256,7 +253,6 @@ const toForm = (row: Row) => ({
   name: row.name,
   regNo: row.registration_no ?? '',
   purchEmail: row.purchasing_email ?? '',
-  logoUrl: row.logo_url ?? '',
   defaultLang: row.default_language,
   timezone: row.timezone,
   supportedLangs: new Set(row.supported_languages),
@@ -313,7 +309,6 @@ function CustomerDetailPane({
     new Map(initialFeatureExpiry),
   )
   const [purchEmail, setPurchEmail] = useState(form.purchEmail)
-  const [logoUrl, setLogoUrl] = useState(form.logoUrl)
   const [defaultLang, setDefaultLang] = useState(form.defaultLang)
   const [timezone, setTimezone] = useState(form.timezone)
   const [supportedLangs, setSupportedLangs] = useState<Set<string>>(
@@ -358,7 +353,6 @@ function CustomerDetailPane({
     name !== form.name ||
     regNo !== form.regNo ||
     purchEmail !== form.purchEmail ||
-    logoUrl !== form.logoUrl ||
     defaultLang !== form.defaultLang ||
     timezone !== form.timezone ||
     setKey(supportedLangs) !== setKey(form.supportedLangs) ||
@@ -417,7 +411,6 @@ function CustomerDetailPane({
           name: trimmedName,
           registration_no: trimmedReg || null,
           purchasing_email: trimmedEmail || null,
-          logo_url: logoUrl.trim() || null,
           default_language: defaultLang,
           timezone: timezone.trim() || 'Europe/Copenhagen',
           // Stabil rækkefølge (som LANG_OPTIONS) uanset klikrækkefølgen;
@@ -441,8 +434,6 @@ function CustomerDetailPane({
         toast.error(error ? describeError(error, t) : t('common.noPermission'))
         return
       }
-      // Nu er det gemte logo sandheden — udskiftede uploads kan fjernes.
-      void cleanupLogos(row.id, logoUrl.trim() || null)
     }
 
     // Produkter
@@ -508,7 +499,6 @@ function CustomerDetailPane({
     setName(trimmedName)
     setRegNo(trimmedReg)
     setPurchEmail(trimmedEmail)
-    setLogoUrl(logoUrl.trim())
     setTimezone(timezone.trim() || 'Europe/Copenhagen')
     setFeatures(new Set(effective))
     toast.success(t('settings.saved'))
@@ -525,7 +515,6 @@ function CustomerDetailPane({
     setName(form.name)
     setRegNo(form.regNo)
     setPurchEmail(form.purchEmail)
-    setLogoUrl(form.logoUrl)
     setDefaultLang(form.defaultLang)
     setTimezone(form.timezone)
     setSupportedLangs(new Set(form.supportedLangs))
@@ -559,7 +548,8 @@ function CustomerDetailPane({
       toast.error(t('common.noPermission'))
       throw new Error('RLS afviste sletning')
     }
-    void cleanupLogos(row.id, null)
+    // Kundens filer i den offentlige bucket må ikke overleve kunden (GDPR).
+    void cleanupCompanyFiles(row.id)
     toast.success(t('customerDetail.deletedToast', { name: row.name }))
     onDeleted()
     refresh()
@@ -569,11 +559,10 @@ function CustomerDetailPane({
     { key: 'details', label: t('detail.tabDetails') },
     { key: 'products', label: t('customerDetail.tabProducts') },
     { key: 'shipping', label: t('shippingBilling.tabLabel') },
-    { key: 'logo', label: t('customerDetail.tabLogo') },
     { key: 'localization', label: t('customerDetail.tabLocalization') },
-    { key: 'appearance', label: t('customerDetail.tabAppearance') },
     { key: 'datatransfer', label: t('customerDetail.tabDataTransfer') },
     { key: 'logdrains', label: t('customerDetail.tabLogDrains') },
+    { key: 'usage', label: t('usage.tabLabel') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -648,9 +637,6 @@ function CustomerDetailPane({
             )}
           </div>
         )}
-        {tab === 'logo' && (
-          <CompanyLogoFields companyId={row.id} logoUrl={logoUrl} onLogoUrlChange={setLogoUrl} />
-        )}
         {tab === 'localization' && (
           <CompanyLocalizationFields
             idPrefix="cust"
@@ -665,9 +651,9 @@ function CustomerDetailPane({
             }}
           />
         )}
-        {tab === 'appearance' && <ProductAppearanceList companyId={row.id} />}
         {tab === 'datatransfer' && <CompanyDataTransferFields companyId={row.id} admin />}
         {tab === 'logdrains' && <LogDrainsManager scope="company" companyId={row.id} />}
+        {tab === 'usage' && <CompanyUsage companyId={row.id} />}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
             <div className="flex items-center justify-between rounded-md border p-4">
@@ -916,7 +902,7 @@ function CustomersPage() {
       toast.error(t('common.noPermission'))
       throw new Error('RLS afviste (delvist) sletning')
     }
-    ids.forEach((id) => void cleanupLogos(id, null))
+    ids.forEach((id) => void cleanupCompanyFiles(id))
     if (activeId && ids.includes(activeId)) setActiveId(null)
     await refresh()
   }

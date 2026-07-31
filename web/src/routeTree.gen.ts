@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppStatsRouteImport } from './routes/_app/stats'
@@ -69,7 +70,6 @@ import { Route as AppConfigureTemplatesRouteImport } from './routes/_app/configu
 import { Route as AppConfigureShippingRouteImport } from './routes/_app/configure.shipping'
 import { Route as AppConfigureProductsRouteImport } from './routes/_app/configure.products'
 import { Route as AppConfigureNotificationsRouteImport } from './routes/_app/configure.notifications'
-import { Route as AppConfigureLogoRouteImport } from './routes/_app/configure.logo'
 import { Route as AppConfigureLogDrainsRouteImport } from './routes/_app/configure.log-drains'
 import { Route as AppConfigureLocalizationRouteImport } from './routes/_app/configure.localization'
 import { Route as AppConfigureIntegrationsRouteImport } from './routes/_app/configure.integrations'
@@ -77,7 +77,6 @@ import { Route as AppConfigureHomeDesignRouteImport } from './routes/_app/config
 import { Route as AppConfigureHandheldDesignRouteImport } from './routes/_app/configure.handheld-design'
 import { Route as AppConfigureDataTransferRouteImport } from './routes/_app/configure.data-transfer'
 import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
-import { Route as AppConfigureAppearanceRouteImport } from './routes/_app/configure.appearance'
 import { Route as AppAssetsLocationsRouteImport } from './routes/_app/assets.locations'
 import { Route as AppAssetsCategoriesRouteImport } from './routes/_app/assets.categories'
 import { Route as AppInventoryImportLogRouteImport } from './routes/_app/inventory.import.log'
@@ -97,6 +96,11 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -389,11 +393,6 @@ const AppConfigureNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppConfigureRoute,
   } as any)
-const AppConfigureLogoRoute = AppConfigureLogoRouteImport.update({
-  id: '/logo',
-  path: '/logo',
-  getParentRoute: () => AppConfigureRoute,
-} as any)
 const AppConfigureLogDrainsRoute = AppConfigureLogDrainsRouteImport.update({
   id: '/log-drains',
   path: '/log-drains',
@@ -431,11 +430,6 @@ const AppConfigureDataTransferRoute =
 const AppConfigureBillingRoute = AppConfigureBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
-  getParentRoute: () => AppConfigureRoute,
-} as any)
-const AppConfigureAppearanceRoute = AppConfigureAppearanceRouteImport.update({
-  id: '/appearance',
-  path: '/appearance',
   getParentRoute: () => AppConfigureRoute,
 } as any)
 const AppAssetsLocationsRoute = AppAssetsLocationsRouteImport.update({
@@ -493,6 +487,7 @@ const AppAssetsImportConfigRoute = AppAssetsImportConfigRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
@@ -508,7 +503,6 @@ export interface FileRoutesByFullPath {
   '/stats': typeof AppStatsRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
-  '/configure/appearance': typeof AppConfigureAppearanceRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -516,7 +510,6 @@ export interface FileRoutesByFullPath {
   '/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/configure/localization': typeof AppConfigureLocalizationRoute
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
-  '/configure/logo': typeof AppConfigureLogoRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
@@ -572,6 +565,7 @@ export interface FileRoutesByFullPath {
   '/inventory/import/log': typeof AppInventoryImportLogRoute
 }
 export interface FileRoutesByTo {
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/carriers': typeof AppCarriersRoute
@@ -587,7 +581,6 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
-  '/configure/appearance': typeof AppConfigureAppearanceRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -595,7 +588,6 @@ export interface FileRoutesByTo {
   '/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/configure/localization': typeof AppConfigureLocalizationRoute
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
-  '/configure/logo': typeof AppConfigureLogoRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
@@ -653,6 +645,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/_app/carriers': typeof AppCarriersRoute
@@ -669,7 +662,6 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/assets/categories': typeof AppAssetsCategoriesRoute
   '/_app/assets/locations': typeof AppAssetsLocationsRoute
-  '/_app/configure/appearance': typeof AppConfigureAppearanceRoute
   '/_app/configure/billing': typeof AppConfigureBillingRoute
   '/_app/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/_app/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -677,7 +669,6 @@ export interface FileRoutesById {
   '/_app/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/_app/configure/localization': typeof AppConfigureLocalizationRoute
   '/_app/configure/log-drains': typeof AppConfigureLogDrainsRoute
-  '/_app/configure/logo': typeof AppConfigureLogoRoute
   '/_app/configure/notifications': typeof AppConfigureNotificationsRoute
   '/_app/configure/products': typeof AppConfigureProductsRoute
   '/_app/configure/shipping': typeof AppConfigureShippingRoute
@@ -736,6 +727,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
     | '/login'
     | '/welcome'
     | '/carriers'
@@ -751,7 +743,6 @@ export interface FileRouteTypes {
     | '/stats'
     | '/assets/categories'
     | '/assets/locations'
-    | '/configure/appearance'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -759,7 +750,6 @@ export interface FileRouteTypes {
     | '/configure/integrations'
     | '/configure/localization'
     | '/configure/log-drains'
-    | '/configure/logo'
     | '/configure/notifications'
     | '/configure/products'
     | '/configure/shipping'
@@ -815,6 +805,7 @@ export interface FileRouteTypes {
     | '/inventory/import/log'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/forgot-password'
     | '/login'
     | '/welcome'
     | '/carriers'
@@ -830,7 +821,6 @@ export interface FileRouteTypes {
     | '/'
     | '/assets/categories'
     | '/assets/locations'
-    | '/configure/appearance'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -838,7 +828,6 @@ export interface FileRouteTypes {
     | '/configure/integrations'
     | '/configure/localization'
     | '/configure/log-drains'
-    | '/configure/logo'
     | '/configure/notifications'
     | '/configure/products'
     | '/configure/shipping'
@@ -895,6 +884,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/forgot-password'
     | '/login'
     | '/welcome'
     | '/_app/carriers'
@@ -911,7 +901,6 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/assets/categories'
     | '/_app/assets/locations'
-    | '/_app/configure/appearance'
     | '/_app/configure/billing'
     | '/_app/configure/data-transfer'
     | '/_app/configure/handheld-design'
@@ -919,7 +908,6 @@ export interface FileRouteTypes {
     | '/_app/configure/integrations'
     | '/_app/configure/localization'
     | '/_app/configure/log-drains'
-    | '/_app/configure/logo'
     | '/_app/configure/notifications'
     | '/_app/configure/products'
     | '/_app/configure/shipping'
@@ -977,6 +965,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   WelcomeRoute: typeof WelcomeRoute
 }
@@ -995,6 +984,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -1403,13 +1399,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigureNotificationsRouteImport
       parentRoute: typeof AppConfigureRoute
     }
-    '/_app/configure/logo': {
-      id: '/_app/configure/logo'
-      path: '/logo'
-      fullPath: '/configure/logo'
-      preLoaderRoute: typeof AppConfigureLogoRouteImport
-      parentRoute: typeof AppConfigureRoute
-    }
     '/_app/configure/log-drains': {
       id: '/_app/configure/log-drains'
       path: '/log-drains'
@@ -1457,13 +1446,6 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/configure/billing'
       preLoaderRoute: typeof AppConfigureBillingRouteImport
-      parentRoute: typeof AppConfigureRoute
-    }
-    '/_app/configure/appearance': {
-      id: '/_app/configure/appearance'
-      path: '/appearance'
-      fullPath: '/configure/appearance'
-      preLoaderRoute: typeof AppConfigureAppearanceRouteImport
       parentRoute: typeof AppConfigureRoute
     }
     '/_app/assets/locations': {
@@ -1540,7 +1522,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppConfigureRouteChildren {
-  AppConfigureAppearanceRoute: typeof AppConfigureAppearanceRoute
   AppConfigureBillingRoute: typeof AppConfigureBillingRoute
   AppConfigureDataTransferRoute: typeof AppConfigureDataTransferRoute
   AppConfigureHandheldDesignRoute: typeof AppConfigureHandheldDesignRoute
@@ -1548,7 +1529,6 @@ interface AppConfigureRouteChildren {
   AppConfigureIntegrationsRoute: typeof AppConfigureIntegrationsRoute
   AppConfigureLocalizationRoute: typeof AppConfigureLocalizationRoute
   AppConfigureLogDrainsRoute: typeof AppConfigureLogDrainsRoute
-  AppConfigureLogoRoute: typeof AppConfigureLogoRoute
   AppConfigureNotificationsRoute: typeof AppConfigureNotificationsRoute
   AppConfigureProductsRoute: typeof AppConfigureProductsRoute
   AppConfigureShippingRoute: typeof AppConfigureShippingRoute
@@ -1557,7 +1537,6 @@ interface AppConfigureRouteChildren {
 }
 
 const AppConfigureRouteChildren: AppConfigureRouteChildren = {
-  AppConfigureAppearanceRoute: AppConfigureAppearanceRoute,
   AppConfigureBillingRoute: AppConfigureBillingRoute,
   AppConfigureDataTransferRoute: AppConfigureDataTransferRoute,
   AppConfigureHandheldDesignRoute: AppConfigureHandheldDesignRoute,
@@ -1565,7 +1544,6 @@ const AppConfigureRouteChildren: AppConfigureRouteChildren = {
   AppConfigureIntegrationsRoute: AppConfigureIntegrationsRoute,
   AppConfigureLocalizationRoute: AppConfigureLocalizationRoute,
   AppConfigureLogDrainsRoute: AppConfigureLogDrainsRoute,
-  AppConfigureLogoRoute: AppConfigureLogoRoute,
   AppConfigureNotificationsRoute: AppConfigureNotificationsRoute,
   AppConfigureProductsRoute: AppConfigureProductsRoute,
   AppConfigureShippingRoute: AppConfigureShippingRoute,
@@ -1721,6 +1699,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   WelcomeRoute: WelcomeRoute,
 }

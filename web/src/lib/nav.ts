@@ -7,7 +7,6 @@ import {
   Cog,
   FileText,
   Handshake,
-  LayoutDashboard,
   LayoutGrid,
   Layers,
   Lock,
@@ -56,7 +55,6 @@ export const navGroups: NavGroup[] = [
     labelKey: 'groupParcels',
     items: [
       { labelKey: 'parcelBoard', href: '/parcels/board', icon: Boxes },
-      { labelKey: 'dashboard', href: '/parcels/dashboard', icon: LayoutDashboard },
       { labelKey: 'parcels', href: '/parcels/overview', icon: Package },
       { labelKey: 'receive', href: '/parcels/receive', icon: PackagePlus },
       { labelKey: 'handout', href: '/parcels/handout', icon: PackageCheck },
@@ -196,8 +194,6 @@ export const configureConfigSections: ConfigNavSection[] = [
   {
     labelKey: 'sectionAppearance',
     items: [
-      { labelKey: 'configureLogo', href: '/configure/logo' },
-      { labelKey: 'configureAppearance', href: '/configure/appearance' },
       { labelKey: 'configureHomeDesign', href: '/configure/home-design' },
       { labelKey: 'configureHandheldDesign', href: '/configure/handheld-design' },
       { labelKey: 'configureLocalization', href: '/configure/localization' },
@@ -291,24 +287,20 @@ export const operiaConfigNav = operiaConfigSections.flatMap((s) => s.items)
 // Filtrér grupper/punkter efter brugerens adgang. Uden adgangsinfo (endnu
 // ikke hentet) vises ingen grupper — så punkter ikke blinker frem og
 // forsvinder igen. Home/Indstillinger står uden for grupperne og er åbne.
-// Forenklet navigation ('modern'): hele pakkemodulet som store knapper i
-// startmenuen — de daglige handlinger (modtag/udlever/flyt/tilstand/søg) samt
-// overbliks- og rapportsiderne (tavle/dashboard/oversigt/rapporter/statistik),
-// så intet i pakkegruppen er uden for rækkevidde i moderne tilstand. Resten af
-// menutræet ligger i bund-dropdownen, som netop udelader pakkegruppen. Adgang
-// filtreres pr. punkt (canAccessPath), så fx dashboard/rapporter kun vises for
-// managers. Rækkefølgen her er den viste og følger pakkegruppens orden.
+// Forenklet navigation ('modern'): de store knapper i sidemenuen er det
+// daglige arbejde — tavle/overblik plus modtag/udlever/flyt/tilstand/søg.
+// Listesiderne (oversigt, rapporter, statistik) hører ikke til det daglige
+// klik-flow og ligger i stedet i bund-dropdownen sammen med resten af
+// menutræet, jf. modernMenuNavGroups. Adgang filtreres pr. punkt
+// (canAccessPath), så fx statistik kun vises for managers. Rækkefølgen her er
+// den viste og følger pakkegruppens orden.
 export const SIMPLE_NAV_HREFS = [
   '/parcels/board',
-  '/parcels/dashboard',
-  '/parcels/overview',
   '/parcels/receive',
   '/parcels/handout',
   '/parcels/move',
   '/parcels/condition',
   '/parcels/search',
-  '/parcels/reports',
-  '/parcels/stats',
 ]
 
 export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
@@ -320,6 +312,17 @@ export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
       (!item.productKey || access.isPlatformAdmin || access.products.has(item.productKey)) &&
       canAccessPath(item.href, access),
   )
+}
+
+// Bund-dropdownen i moderne tilstand ("startmenuen"): hele menutræet minus de
+// punkter der allerede står som store knapper i sidemenuen. Pakkegruppen
+// forsvinder derfor ikke længere helt — oversigt/rapporter/statistik bliver
+// tilbage her, så alt i modulet kan nås ét sted fra.
+export function modernMenuNavGroups(access: AccessInfo | undefined): NavGroup[] {
+  const inRail = new Set(SIMPLE_NAV_HREFS)
+  return visibleNavGroups(access)
+    .map((group) => ({ ...group, items: group.items.filter((item) => !inRail.has(item.href)) }))
+    .filter((group) => group.items.length > 0)
 }
 
 export function visibleNavGroups(access: AccessInfo | undefined): NavGroup[] {

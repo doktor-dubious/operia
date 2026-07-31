@@ -12,35 +12,61 @@ import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { supabase } from '@/lib/supabase'
 
 // Operia → Generelt: platformens generelle indstillinger (platform_settings,
-// singleton-række). Foreløbig kun auto-refresh-intervallet — hvor ofte
-// klienterne automatisk genhenter data fra databasen (0 = slået fra).
+// singleton-række). Auto-refresh-intervallet + stykpriser for udsendte
+// notifikationer (grundlaget for at fakturere kunder pr. e-mail/SMS — forbruget
+// vises på Platform → Kunder → Forbrug).
 export const Route = createFileRoute('/_app/operia/general')({
   component: GeneralPage,
 })
 
 const MAX_SECONDS = 3600
 
+// Priser indtastes med dansk decimalkomma eller punktum; numeric(10,4) i basen.
+function parseCost(raw: string): number | null {
+  const v = Number.parseFloat(raw.trim().replace(',', '.'))
+  return Number.isFinite(v) && v >= 0 ? v : null
+}
+
 function GeneralPage() {
   const { t } = useTranslation()
   const { data, isPending } = usePlatformSettings()
   const queryClient = useQueryClient()
   const [interval, setIntervalValue] = useState('')
+  const [emailCost, setEmailCost] = useState('')
+  const [smsCost, setSmsCost] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (data) setIntervalValue(String(data.refresh_interval_seconds))
+    if (data) {
+      setIntervalValue(String(data.refresh_interval_seconds))
+      setEmailCost(String(data.cost_per_email))
+      setSmsCost(String(data.cost_per_sms))
+    }
   }, [data])
 
   const parsed = Number.parseInt(interval, 10)
   const valid = Number.isFinite(parsed) && parsed >= 0 && parsed <= MAX_SECONDS
-  const dirty = !!data && valid && parsed !== data.refresh_interval_seconds
+  const parsedEmailCost = parseCost(emailCost)
+  const parsedSmsCost = parseCost(smsCost)
+  const costsValid = parsedEmailCost != null && parsedSmsCost != null
+  const dirty =
+    !!data &&
+    valid &&
+    costsValid &&
+    (parsed !== data.refresh_interval_seconds ||
+      parsedEmailCost !== data.cost_per_email ||
+      parsedSmsCost !== data.cost_per_sms)
 
   const save = async () => {
-    if (!valid) return
+    if (!valid || !costsValid) return
     setSaving(true)
     const { data: saved, error } = await supabase
       .from('platform_settings')
-      .update({ refresh_interval_seconds: parsed })
+      .update({
+        refresh_interval_seconds: parsed,
+        cost_per_email: parsedEmailCost!,
+        cost_per_sms: parsedSmsCost!,
+      })
       .eq('id', true)
       .select('id')
     setSaving(false)
@@ -54,7 +80,11 @@ function GeneralPage() {
   }
 
   const cancel = () => {
-    if (data) setIntervalValue(String(data.refresh_interval_seconds))
+    if (data) {
+      setIntervalValue(String(data.refresh_interval_seconds))
+      setEmailCost(String(data.cost_per_email))
+      setSmsCost(String(data.cost_per_sms))
+    }
   }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
@@ -94,6 +124,53 @@ function GeneralPage() {
               : t('operiaGeneralPage.rangeHint', { max: MAX_SECONDS })}
           </p>
         </div>
+
+        {/* Stykpriser for notifikationer — driver beløbene på kundernes
+            Forbrug-fane. 0 = der faktureres ikke for kanalen. */}
+        <div className="mt-6 max-w-xl rounded-md border p-4">
+          <p className="text-[13px] font-[450]">{t('operiaGeneralPage.notifyCosts')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('operiaGeneralPage.notifyCostsHint')}
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="cost-email" className="text-[13px] font-[450]">
+                {t('operiaGeneralPage.costPerEmail')}
+              </Label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <Input
+                  id="cost-email"
+                  inputMode="decimal"
+                  value={emailCost}
+                  onChange={(e) => setEmailCost(e.target.value)}
+                  className="w-28"
+                  aria-invalid={parsedEmailCost == null}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {t('operiaGeneralPage.costUnit')}
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="cost-sms" className="text-[13px] font-[450]">
+                {t('operiaGeneralPage.costPerSms')}
+              </Label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <Input
+                  id="cost-sms"
+                  inputMode="decimal"
+                  value={smsCost}
+                  onChange={(e) => setSmsCost(e.target.value)}
+                  className="w-28"
+                  aria-invalid={parsedSmsCost == null}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {t('operiaGeneralPage.costUnit')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {dirty && (
@@ -101,7 +178,7 @@ function GeneralPage() {
           <Button variant="outline" size="sm" onClick={cancel} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button size="sm" onClick={save} disabled={saving || !valid}>
+          <Button size="sm" onClick={save} disabled={saving || !valid || !costsValid}>
             {saving ? t('common.loading') : t('common.saveChanges')}
           </Button>
         </div>

@@ -465,35 +465,49 @@ fun LookupPicker(
     items: List<Pair<String, String>>, // id → visningsnavn
     selectedId: String?,
     onSelect: (String?) -> Unit,
-    showLabel: Boolean = true, // slås fra når vælgeren sidder i en FoldSection (som selv har label)
+    // Sidder vælgeren i en FoldSection, har DEN allerede både label og
+    // udfoldning. Så skal vælgeren hverken gentage labelen eller lægge endnu et
+    // sammenklappet lag ovenpå — listen vises direkte, når sektionen åbnes.
+    embedded: Boolean = false,
 ) {
     var open by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val selected = items.firstOrNull { it.first == selectedId }
 
-    Column(Modifier.padding(bottom = if (showLabel) 12.dp else 0.dp)) {
-        if (showLabel) FieldLabel(title)
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .border(1.5.dp, if (open) C.blue else C.line, RoundedCornerShape(14.dp))
-                .background(C.panel, RoundedCornerShape(14.dp))
-                .clickable { open = !open }
-                .padding(horizontal = 14.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Text(
-                selected?.second ?: "",
-                color = if (selected != null) C.txt else C.muted,
-                fontSize = 18.sp,
-            )
+    Column(Modifier.padding(bottom = if (embedded) 0.dp else 12.dp)) {
+        if (!embedded) {
+            FieldLabel(title)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .border(1.5.dp, if (open) C.blue else C.line, RoundedCornerShape(14.dp))
+                    .background(C.panel, RoundedCornerShape(14.dp))
+                    .clickable { open = !open }
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // Uden pladsholder + pil ligner en tom vælger et tomt
+                    // tekstfelt — ikke en lukket liste man kan trykke på.
+                    Text(
+                        selected?.second
+                            ?: stringResource(
+                                if (items.isEmpty()) R.string.picker_empty else R.string.picker_none,
+                            ),
+                        color = if (selected != null) C.txt else C.muted,
+                        fontSize = 18.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(if (open) "▾" else "▸", color = C.muted, fontSize = 15.sp)
+                }
+            }
         }
-        if (open) {
+        if (embedded || open) {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = if (embedded) 0.dp else 8.dp)
                     .border(1.dp, C.line, RoundedCornerShape(14.dp))
                     .background(C.panel2, RoundedCornerShape(14.dp))
                     .padding(10.dp),

@@ -89,7 +89,7 @@ function MovePage() {
       .from('parcels')
       .select(
         `id, barcode, status, storage_location_id,
-         receiver:employees (full_name),
+         receiver:employees!parcels_receiver_employee_id_fkey (full_name),
          location:storage_locations (name)`,
       )
       .eq('company_id', companyId)

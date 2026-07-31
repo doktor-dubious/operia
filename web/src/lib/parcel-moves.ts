@@ -21,6 +21,8 @@ const MOVE_TARGETS: Record<ParcelStatus, MoveStatus[]> = {
   rejected: ['in_storage'],
   delivered: [],
   returned: [],
+  // 'removed' er terminal: en annulleret fejlregistrering flyttes ikke.
+  removed: [],
 }
 
 export function moveTargets(status: ParcelStatus): MoveStatus[] {

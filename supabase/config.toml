@@ -313,13 +313,15 @@ max_frequency = "5s"
 # enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
-# NIS2-revisionslog: registrér vellykkede og fejlede logins i public.audit_log.
-# GoTrue kalder hook'en ved hvert password-tjek (valid=true/false); funktionen
-# skriver 'auth.login' / 'auth.login_failed', sluger enhver fejl og returnerer
-# altid {"decision":"continue"} — logning må aldrig blokere et login.
-# Definition: migration 20260724140000_auth_login_audit.sql.
+# NIS2-revisionslog: password-verification-hook'en (auth.login/auth.login_failed).
+# DEAKTIVERET: denne Postgres-auth-hook understøttes ikke på projektets nuværende
+# plan (Dashboard → Auth → Hooks er tom), så den kan ikke aktiveres. Fejlede
+# logins logges i stedet klient-drevet via public.log_failed_login_attempt
+# (migration 20260727130000). Hook-funktionen findes stadig i databasen
+# (20260724140000) og er harmløs; sæt enabled = true igen HVIS I skifter til en
+# plan der understøtter hook'en (så deduplikerer klient-loftet automatisk).
 [auth.hook.password_verification_attempt]
-enabled = true
+enabled = false
 uri = "pg-functions://postgres/public/hook_password_verification_attempt"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.

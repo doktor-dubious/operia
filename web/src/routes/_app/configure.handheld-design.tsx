@@ -13,6 +13,7 @@ import {
   type HandheldDesign,
   type HandheldTileItem,
 } from '@/lib/handheld-tiles'
+import { cleanupDesignImages } from '@/lib/company-files'
 import { supabase } from '@/lib/supabase'
 
 // Konfigurér → Handheld-design: kundens egen opsætning af håndterminalens
@@ -74,6 +75,8 @@ function ConfigureHandheldDesignPage() {
       return
     }
     toast.success(t('settings.saved'))
+    // Udskiftede/fjernede billeder slettes fra den offentlige bucket (GDPR).
+    void cleanupDesignImages(companyId, 'handheld-design-', { tiles, design })
     queryClient.invalidateQueries({ queryKey: ['company-handheld-config-edit', companyId] })
   }
 

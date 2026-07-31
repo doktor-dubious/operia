@@ -38,6 +38,17 @@ GDPR data segregation between customers and NIS2 access control in one mechanism
   immutability treatment; `record_audit()` is execute-revoked from client roles so
   logging can be neither skipped nor forged. GDPR detail: `employee.anonymized`
   events reference only `employee_no`/`id`, never the erased personal data.
+- `20260730100000_receiver_override.sql` — manager override of the receiver writes
+  its own `receiver_overridden` row (actor + intended/actual receiver ids + reason)
+  into `parcel_events`, so a deviation from the intended chain of custody is part of
+  the append-only trail; `audit_parcel_events()` mirrors it to `audit_log` as
+  `parcel.receiver_overridden`, classified `warning` by `audit_level()`.
+- `20260730120100_parcel_removal.sql` — a mis-registered parcel is **voided, never
+  deleted**: status `removed` plus a `removed` row in `parcel_events` (actor, reason)
+  and `parcel.removed` in `audit_log`, classified **`error`** by `audit_level()` — the
+  hardest event in the parcel flow, since a registration is being withdrawn. Only
+  manager/parcel_manager (or platform admin) can call `remove_parcel()`, a reason is
+  mandatory, and closed parcels (delivered/returned) cannot be voided.
 - `20260710134424_employee_import.sql` — `import_runs` append-only by policy;
   doubles as the manager alert surface for malformed imports (spec Flow 0).
 - `20260715110000_retention_policy.sql` — `block_mutation()` admits DELETE only
@@ -109,6 +120,9 @@ personal data is removed instead.
   mid-batch failure can't leave an unknowable mix of erased and intact rows. Until
   2026-07-20 this dialog wrote its own column list and silently left first_name,
   last_name, nfc_card_id and role behind — keep erasure logic in the RPC, not the client.
+- `20260730120100_parcel_removal.sql` — `employee_has_open_parcels()` and
+  `anonymize_on_parcel_closed()` count `removed` as closed, so voiding a mis-registered
+  parcel releases a pending erasure instead of blocking it forever.
 - Retirement lifecycle (AD): employees who leave the directory with parcels still open
   are deactivated and prefixed `EX-` so managers can sort the remainder out, then
   anonymized automatically when the last parcel reaches a terminal status
@@ -167,11 +181,14 @@ personal data is removed instead.
   inspection. `supabase/functions/imports-cleanup/index.ts` (daily, scheduled in
   `20260716090000_data_transfer_hardening.sql`) purges `imports` bucket objects older
   than 30 days for stragglers.
-- `web/src/components/company-config-fields.tsx` (`cleanupLogos`) — removes all
-  files in a company's public `company-logos` folder except the current logo
-  (replaced logos must not stay publicly reachable); called on logo save
-  (`configure.logo.tsx`) and customer delete (`operia.customers.tsx`). Storage
-  grants: `20260712013427`, `20260712043603`.
+- `web/src/lib/company-files.ts` (`cleanupCompanyFiles`) — removes everything in a
+  company's folder in the public `company-logos` bucket (Home-/Handheld-design
+  images) when the customer is deleted, so nothing stays publicly reachable after
+  the tenant is gone; called from `operia.customers.tsx` (single + bulk delete).
+  Storage grants: `20260712013427`, `20260712043603`. Replaced the older
+  `cleanupLogos` when the per-company logo/appearance editors were removed
+  (2026-07-28) — there is no longer a "keep the current logo" case, and files are
+  only purged on delete, not on every save.
 
 ## 7. Secrets & credential handling (N)
 
@@ -218,6 +235,14 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
   company-scoped storage RLS (condition photos = chain-of-custody evidence).
 - `20260711020755_employee_extended_fields.sql` — `nfc_card_id` (personal
   identifier used at handover), unique per company.
+- `20260730100000_receiver_override.sql` — `parcels.delivered_employee_id` (FK to the
+  actual receiver) plus `receiver_override_reason` (manager free text, may name a
+  third party), `receiver_override_by`/`_at`. Only manager/parcel_manager (or a
+  platform admin) can write them, via `override_parcel_receiver()`. The reason shares
+  the open question below with `delivered_to`/`delivered_note`: it is not scrubbed by
+  any anonymization path today.
+- `20260730120100_parcel_removal.sql` — `parcels.removed_reason` (manager free text),
+  `removed_by`/`_at`; same un-scrubbed free-text caveat as the row below.
 - Android (scaffold): `allowBackup="false"`; no local personal-data storage;
   only the public anon key is embedded — RLS is the access control.
 
@@ -241,8 +266,9 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
 | `gateway/.env` file permissions | **Fixed on the current box** (600, 2026-07-16) + README instruction; re-check on any new deployment. |
 | `parcel-photos` / `signatures` lifecycle | **Fixed 2026-07-20** (§6) — DELETE policies + daily orphan/retention purge. Retention window still defaults to NULL (keep forever) and has no UI. |
 | `imports-cleanup` edge function | **Done** — implemented; 30-day purge of the `imports` bucket. |
-| Anonymization of free text | **Open** — `parcels.delivered_to` / `delivered_note` hold the free-text name of whoever collected a parcel (often a proxy, i.e. a third party) and are not cleared by any anonymization path. The signature image is now purgeable but the name beside it is not. Decide: scrub on anonymize, or document the retention as chain-of-custody evidence. |
-| Personal data already in `audit_log` | **Open** — new writes are minimized (§6), but rows written before 2026-07-20 still contain employee names, `EX-<name>` retirement entries, invitee emails and unmasked recipients. The table is UPDATE/DELETE-blocked, so only the global age-based purge can remove them — and `audit_retention_days` defaults to NULL. Copies already delivered to log drains are beyond reach. |
+| Anonymization of free text | **Open** — `parcels.delivered_to` / `delivered_note` / `receiver_override_reason` / `removed_reason` (the last two added 2026-07-30) hold the free-text name of whoever collected a parcel (often a proxy, i.e. a third party) and are not cleared by any anonymization path. The signature image is now purgeable but the name beside it is not. Decide: scrub on anonymize, or document the retention as chain-of-custody evidence. |
+| Personal data in `audit_log` | **Partly by design since 2026-07-30** — `parcel.receiver_overridden` and `parcel.removed` now copy the manager's free-text reason into `detail` (`20260730140000_audit_parcel_reason.sql`), because the reason *is* the audit trail for an exception; it may name a person. Every other event type stays minimized. |
+| Personal data already in `audit_log` | **Open** — new writes are otherwise minimized (§6), but rows written before 2026-07-20 still contain employee names, `EX-<name>` retirement entries, invitee emails and unmasked recipients. The table is UPDATE/DELETE-blocked, so only the global age-based purge can remove them — and `audit_retention_days` defaults to NULL. Copies already delivered to log drains are beyond reach. |
 | Notification recipient logs | **Open** — `parcel_notifications.recipient` and `asset_loan_notifications.recipient` store the literal email/MSISDN of every message sent. Loan recipients are now cleared on return (§5); parcel ones are not, and neither table has a retention window. |
 | Right of access (Art. 15) | **Open** — no per-employee data export. `import.export.tsx` is bulk masterdata for active employees only, so it cannot answer a subject access request. DCA is a processor and owes controllers assistance here (Art. 28(3)(e)). |
 | Consent / legal basis / opt-out | **Open** — no consent column, no legal-basis record, no per-employee notification preference or opt-out. Notification toggles exist only at platform and company level; the data subject has no control. |

@@ -1,0 +1,14 @@
+-- Ny slutstatus 'removed': pakken blev registreret ved en fejl og findes ikke
+-- fysisk — den kan derfor hverken udleveres, afvises eller sendes retur. Uden
+-- den ville fejlregistreringer stå som "venter i receptionen" for evigt (og
+-- blokere GDPR-anonymisering af en fratrådt modtager).
+--
+-- Rækken slettes IKKE: sporet (parcel_events) og revisionsloggen skal kunne
+-- forklare hvad der skete, og en slettet række kan ikke forklare noget. Statussen
+-- er derfor en annullering, ikke en sletning.
+--
+-- Enum-værdien står alene i denne migration: en ny enum-værdi kan ikke bruges i
+-- samme transaktion som den tilføjes (samme mønster som notification_kind
+-- 'status' i 20260729120000 og app_role i 20260719090000). Alt der REFERERER
+-- 'removed' ligger i 20260730120100.
+alter type public.parcel_status add value if not exists 'removed';

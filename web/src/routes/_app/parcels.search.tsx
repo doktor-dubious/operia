@@ -35,6 +35,11 @@ type Hit = {
   receiverName: string | null
   departmentName: string | null
   locationName: string | null
+  overrideReason: string | null
+  overrideAt: string | null
+  deliveredEmployeeName: string | null
+  removedReason: string | null
+  removedAt: string | null
 }
 
 function SearchPage() {
@@ -53,7 +58,9 @@ function SearchPage() {
       .from('parcels')
       .select(
         `id, barcode, status, registered_at, delivered_to, condition_note, condition_photo_path,
-         receiver:employees (full_name),
+         receiver_override_reason, receiver_override_at, removed_reason, removed_at,
+         receiver:employees!parcels_receiver_employee_id_fkey (full_name),
+         delivered_employee:employees!parcels_delivered_employee_id_fkey (full_name),
          department:departments (name),
          location:storage_locations (name)`,
       )
@@ -78,6 +85,11 @@ function SearchPage() {
         receiverName: d.receiver?.full_name ?? null,
         departmentName: d.department?.name ?? null,
         locationName: d.location?.name ?? null,
+        overrideReason: d.receiver_override_reason,
+        overrideAt: d.receiver_override_at,
+        removedReason: d.removed_reason,
+        removedAt: d.removed_at,
+        deliveredEmployeeName: d.delivered_employee?.full_name ?? null,
       })),
     )
   }

@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   AssetFlowFields,
   ChannelToggles,
+  DEFAULT_STATUS_TIME,
   ParcelFlowFields,
   QuietHoursField,
   type ParcelFlowValue,
@@ -63,6 +64,8 @@ function NotificationsPage() {
     smsEnabled: row.notify_sms_enabled,
     parcel: {
       arrivalEnabled: row.parcel_arrival_enabled,
+      statusEnabled: row.parcel_status_enabled,
+      statusTime: row.parcel_status_time?.slice(0, 5) ?? DEFAULT_STATUS_TIME,
       r1Enabled: row.parcel_reminder_1_enabled,
       r2Enabled: row.parcel_reminder_2_enabled,
       reminder1: row.parcel_reminder_1_days,
@@ -111,6 +114,8 @@ function NotificationsPage() {
         parcel_reminder_1_enabled: p.r1Enabled,
         parcel_reminder_2_enabled: p.r1Enabled && p.r2Enabled,
         parcel_arrival_enabled: p.arrivalEnabled,
+        parcel_status_enabled: p.statusEnabled,
+        parcel_status_time: p.statusTime || DEFAULT_STATUS_TIME,
         asset_reminder_1_days: ar1,
         asset_reminder_2_days: ar2,
         asset_reminder_max: Math.max(0, Math.round(a.maxReminders)),

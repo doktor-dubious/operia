@@ -13,6 +13,7 @@ import {
   type HandheldDesign,
   type HandheldTileItem,
 } from '@/lib/handheld-tiles'
+import { cleanupDesignImages } from '@/lib/company-files'
 import { supabase } from '@/lib/supabase'
 
 // Operia → Handheld-design: platformens standardopsætning af Android-håndter-
@@ -59,6 +60,9 @@ function HandheldDesignPage() {
       return
     }
     toast.success(t('settings.saved'))
+    // Platform-standardens billeder ligger i mappen 'handheld-design' (uden
+    // company-segment) — udskiftede slettes fra den offentlige bucket (GDPR).
+    void cleanupDesignImages('handheld-design', '', { tiles, design })
     queryClient.invalidateQueries({ queryKey: ['platform-handheld-config'] })
   }
 

@@ -3,10 +3,12 @@ package com.dcalogic.operia.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -81,12 +83,17 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     var locationId by remember { mutableStateOf<String?>(null) }
     var carrierId by remember { mutableStateOf<String?>(null) }
     var handlingId by remember { mutableStateOf<String?>(null) }
+    var sender by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<ScannedItem>>(emptyList()) }
     var confirmUnassignedOpen by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var lastCount by remember { mutableStateOf(0) }
     var focusStamp by remember { mutableStateOf(0L) }
+    // Batch-tilstand: samme modtager for alle scannede pakker → én besked. Kræver
+    // forbindelse (batch_id skal kendes før indsæt); offline falder vi tilbage til
+    // den normale kø uden gruppering.
+    var batchMode by remember { mutableStateOf(false) }
 
     val multidept = vm.has("hh_multidept")
     var showDept = vm.has("hh_to_department")
@@ -108,6 +115,9 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     val msgSaved = stringResource(R.string.receive_saved)
     val msgQueued = stringResource(R.string.receive_queued)
     val msgSaveFailed = stringResource(R.string.receive_save_failed)
+    val msgBatchSaved = stringResource(R.string.receive_batch_saved)
+    val msgBatchOffline = stringResource(R.string.receive_batch_offline)
+    val msgBatchReceiver = stringResource(R.string.receive_batch_receiver_required)
 
     fun addScan(code: String) {
         if (items.any { it.barcode == code }) {
@@ -128,27 +138,37 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         toast.show("ok", "$msgAdded: $code")
     }
 
-    fun doSave() {
-        confirmUnassignedOpen = false
-        val companyId = vm.companyId ?: return
+    // Byg insert-rækkerne. Med batchId sat er modtageren batchens (enmodtager),
+    // og parcels_guard tvinger den alligevel; ellers gælder den normale
+    // (multidept-)logik.
+    fun rowsFor(batchId: String?): List<ParcelInsert> {
+        val companyId = vm.companyId ?: return emptyList()
         val uid = supabase.auth.currentUserOrNull()?.id
-        val rows = items.map { item ->
+        return items.map { item ->
             ParcelInsert(
                 company_id = companyId,
                 barcode = item.barcode,
-                department_id = if (multidept) item.departmentId else deptId.takeIf { showDept },
-                receiver_employee_id = if (multidept) item.employeeId else empId.takeIf { showEmp },
+                department_id = if (batchId != null) deptId else if (multidept) item.departmentId else deptId.takeIf { showDept },
+                receiver_employee_id = if (batchId != null) empId else if (multidept) item.employeeId else empId.takeIf { showEmp },
                 storage_location_id = locationId,
                 carrier_id = carrierId,
                 handling_class_id = handlingId,
+                sender = sender.trim().ifBlank { null },
                 condition_note = note.trim().ifBlank { null },
                 registered_by = uid,
                 // Idempotens-nøgle: har serveren allerede committet (svar tabt),
                 // afvises gensendingen fra offline-køen som dublet i stedet for
                 // at oprette pakken igen.
                 client_key = java.util.UUID.randomUUID().toString(),
+                batch_id = batchId,
             )
         }
+    }
+
+    fun doSave() {
+        confirmUnassignedOpen = false
+        val rows = rowsFor(null)
+        if (rows.isEmpty()) return
         busy = true
         scope.launch {
             try {
@@ -156,6 +176,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 lastCount = rows.size
                 toast.show("ok", msgSaved.format(rows.size))
                 items = emptyList()
+                sender = ""
                 note = ""
             } catch (e: RestException) {
                 toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
@@ -169,6 +190,53 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 lastCount = rows.size
                 toast.show("info", msgQueued.format(rows.size))
                 items = emptyList()
+                sender = ""
+                note = ""
+            }
+            busy = false
+            focusStamp = System.currentTimeMillis()
+        }
+    }
+
+    // Afslut batch: opret batchen (server genererer batch_code), indsæt alle
+    // pakker med batch_id → én notifikation. Uden forbindelse kan batchen ikke
+    // grupperes (batch_id ukendt) → læg pakkerne i den normale kø uden gruppe.
+    fun doSaveBatch() {
+        val companyId = vm.companyId ?: return
+        val receiver = empId ?: return
+        busy = true
+        scope.launch {
+            val batch = try {
+                Repository.createParcelBatch(companyId, receiver, deptId)
+            } catch (e: RestException) {
+                toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
+                busy = false
+                return@launch
+            } catch (e: Exception) {
+                null // offline — falder tilbage til ugrupperet kø nedenfor
+            }
+            val rows = rowsFor(batch?.id)
+            try {
+                if (batch == null) throw IllegalStateException("offline")
+                Repository.insertParcels(rows)
+                lastCount = rows.size
+                toast.show("ok", msgBatchSaved.format(rows.size, batch.batch_code))
+                items = emptyList()
+                sender = ""
+                note = ""
+            } catch (e: RestException) {
+                toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
+            } catch (e: Exception) {
+                // Kø PRÆCIS de forsøgte rækker: client_key skal genbruges, så et
+                // svar-tab efter server-commit bliver en dublet-no-op ved synk
+                // (samme princip som doSave). Er batchen nået at blive oprettet,
+                // beholder rækkerne også batch_id → grupperingen overlever.
+                LocalStore.queue(ctx, rows)
+                vm.refreshPending()
+                lastCount = rows.size
+                toast.show("info", msgBatchOffline.format(rows.size))
+                items = emptyList()
+                sender = ""
                 note = ""
             }
             busy = false
@@ -179,6 +247,15 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     fun save() {
         if (items.isEmpty()) {
             toast.show("err", msgScanOne)
+            return
+        }
+        // Batch kræver netop én modtager (det er hele pointen — én besked).
+        if (batchMode) {
+            if (empId == null) {
+                toast.show("err", msgBatchReceiver)
+                return
+            }
+            doSaveBatch()
             return
         }
         // Uden modtager bliver pakkerne 'unassigned' (DB-guarden). Gyldigt, men
@@ -197,6 +274,46 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 
     Screen(title = stringResource(R.string.receive_title), onBack = onBack, toast = toast) {
+        // Kunne stamdata ikke hentes, er vælgerne tomme af en grund brugeren
+        // ellers ikke kan se — vis den frem for at lade skærmen se "forkert
+        // opsat" ud.
+        vm.masterDataError?.let { msg ->
+            Text(
+                msg,
+                color = C.red,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            )
+        }
+
+        // Batch-tilstand til/fra: flere pakker til samme modtager → én besked.
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+                .border(1.dp, if (batchMode) C.green else C.line, RoundedCornerShape(12.dp))
+                .background(C.panel, RoundedCornerShape(12.dp))
+                .clickable { batchMode = !batchMode; focusStamp = System.currentTimeMillis() }
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.receive_batch_mode), color = C.txt, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    stringResource(R.string.receive_batch_hint),
+                    color = C.muted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            Text(
+                if (batchMode) "☑" else "☐",
+                color = if (batchMode) C.green else C.muted,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp,
+            )
+        }
+
         // Rækkefølge som webbens modtag-formular: Modtager, Afdeling, Fragtfirma,
         // Håndtering, Placering. Modtageren er altid synlig; de valgfrie felter
         // foldes ud efter behov, så skærmen er kompakt og scan-fokuseret.
@@ -240,7 +357,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                         items = vm.departments.map { it.id to it.name },
                         selectedId = deptId,
                         onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
-                        showLabel = false,
+                        embedded = true,
                     )
                 }
             } else {
@@ -250,6 +367,50 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     selectedId = deptId,
                     onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
                 )
+            }
+        }
+        // Afsender (spec Flow 1: valgfri) — fri tekst med forslag fra
+        // virksomhedens tidligere afsendere (hyppigste først). Tryk på et
+        // forslag udfylder feltet; der kan stadig skrives frit.
+        FoldSection(
+            title = stringResource(R.string.sender),
+            summary = sender.trim().ifBlank { null },
+        ) {
+            OutlinedTextField(
+                value = sender,
+                onValueChange = { sender = it },
+                placeholder = { Text(stringResource(R.string.receive_sender_placeholder)) },
+                singleLine = true,
+                colors = operiaFieldColors(),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            val query = sender.trim()
+            val suggestions = vm.senderSuggestions
+                .filter { query.isBlank() || it.contains(query, ignoreCase = true) }
+                .filterNot { it.equals(query, ignoreCase = true) }
+                .take(8)
+            if (suggestions.isNotEmpty()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .horizontalScroll(rememberScrollState()),
+                ) {
+                    suggestions.forEach { s ->
+                        Text(
+                            s,
+                            color = C.txt,
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .border(1.dp, C.line, RoundedCornerShape(999.dp))
+                                .background(C.panel, RoundedCornerShape(999.dp))
+                                .clickable { sender = s; focusStamp = System.currentTimeMillis() }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
+                    }
+                }
             }
         }
         if (vm.carriers.isNotEmpty()) {
@@ -262,7 +423,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     items = vm.carriers.map { it.id to it.name },
                     selectedId = carrierId,
                     onSelect = { carrierId = it; focusStamp = System.currentTimeMillis() },
-                    showLabel = false,
+                    embedded = true,
                 )
             }
         }
@@ -276,7 +437,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     items = vm.handlingClasses.map { it.id to it.name },
                     selectedId = handlingId,
                     onSelect = { handlingId = it; focusStamp = System.currentTimeMillis() },
-                    showLabel = false,
+                    embedded = true,
                 )
             }
         }
@@ -290,7 +451,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     items = vm.storageLocations.map { it.id to it.name },
                     selectedId = locationId,
                     onSelect = { locationId = it; focusStamp = System.currentTimeMillis() },
-                    showLabel = false,
+                    embedded = true,
                 )
             }
         }
@@ -366,7 +527,11 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
 
         BigButton(
-            stringResource(R.string.receive_save_button, items.size),
+            if (batchMode) {
+                stringResource(R.string.receive_batch_finish, items.size)
+            } else {
+                stringResource(R.string.receive_save_button, items.size)
+            },
             color = C.green,
             contentColor = C.greenInk,
             busy = busy,

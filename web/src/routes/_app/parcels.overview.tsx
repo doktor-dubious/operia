@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { PackagePlus } from 'lucide-react'
+import { PackagePlus, ShieldAlert, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,6 +27,7 @@ import { ParcelReceiveForm } from '@/components/parcel-receive-form'
 import { ParcelHandoverDialog } from '@/components/parcel-handover-dialog'
 import { ParcelRelocateDialog } from '@/components/parcel-relocate-dialog'
 import { ParcelConditionTab } from '@/components/parcel-condition'
+import { ParcelRemoveDialog, useCanRemoveParcel } from '@/components/parcel-remove-dialog'
 import { moveTargets } from '@/lib/parcel-moves'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
@@ -59,7 +60,10 @@ function useRows() {
         .select(
           `id, barcode, status, registered_at, sender, parcel_type, is_private, storage_location_id,
            delivered_to, delivered_note, delivered_at, condition_preset, condition_note, condition_photo_path,
-           receiver:employees (full_name),
+           receiver_override_reason, receiver_override_at, receiver_override_by,
+           removed_reason, removed_at, removed_by,
+           receiver:employees!parcels_receiver_employee_id_fkey (full_name),
+           delivered_employee:employees!parcels_delivered_employee_id_fkey (full_name),
            department:departments (name),
            location:storage_locations (name),
            carrier:carriers (name),
@@ -94,8 +98,40 @@ function ParcelDetailPane({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [handoverOpen, setHandoverOpen] = useState(false)
   const [relocateOpen, setRelocateOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const canRemove = useCanRemoveParcel()
+
+  // Godkenderen står som bruger-id på pakken (ingen FK til app_users, så ingen
+  // embed) — navnet slås op når panelet faktisk viser en overstyring.
+  const { data: overrideBy } = useQuery({
+    queryKey: ['app-user-name', row.receiver_override_by],
+    enabled: !!row.receiver_override_reason && !!row.receiver_override_by,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_users')
+        .select('full_name')
+        .eq('user_id', row.receiver_override_by!)
+        .maybeSingle()
+      return data?.full_name ?? null
+    },
+  })
+
+  const { data: removedBy } = useQuery({
+    queryKey: ['app-user-name', row.removed_by],
+    enabled: row.status === 'removed' && !!row.removed_by,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_users')
+        .select('full_name')
+        .eq('user_id', row.removed_by!)
+        .maybeSingle()
+      return data?.full_name ?? null
+    },
+  })
 
   const canReject = REJECTABLE_STATUSES.includes(row.status)
+  // En afsluttet pakke kan ikke annulleres — den skete faktisk.
+  const canRemoveStatus = !['delivered', 'returned', 'removed'].includes(row.status)
   const canHandover = DELIVERABLE_STATUSES.includes(row.status)
   const canRelocate = moveTargets(row.status).length > 0
 
@@ -155,9 +191,45 @@ function ParcelDetailPane({
                 <ParcelStatusBadge status={row.status} />
               </div>
             </Field>
-            <Field label={t('parcels.receiver')}>
+            {/* Annulleret fejlregistrering: begrundelse + hvem/hvornår. */}
+            {row.status === 'removed' && (
+              <div className="flex flex-col gap-4 rounded-md border border-destructive/40 bg-destructive/5 p-4">
+                <span className="flex items-center gap-1.5 text-[13px] font-medium text-destructive">
+                  <Trash2 className="size-3.5" />
+                  {t('removeParcel.removedBadge')}
+                </span>
+                <Field label={t('removeParcel.reason')}>
+                  <span className="whitespace-pre-wrap text-[13px]">
+                    {value(row.removed_reason)}
+                  </span>
+                </Field>
+                <Field label={t('removeParcel.removedAt')}>
+                  <span className="text-[13px]">
+                    {row.removed_at ? dateFormat.format(new Date(row.removed_at)) : '—'}
+                  </span>
+                </Field>
+                <Field label={t('removeParcel.removedBy')}>
+                  <span className="text-[13px]">{removedBy ?? '—'}</span>
+                </Field>
+              </div>
+            )}
+            <Field
+              label={
+                row.receiver_override_reason ? t('override.intendedReceiver') : t('parcels.receiver')
+              }
+            >
               <span className="text-[13px]">{value(row.receiver?.full_name)}</span>
             </Field>
+            {/* Manager-override: den faktiske modtager står lige under den
+                tilsigtede, så begge navne læses i samme blik. */}
+            {row.receiver_override_reason && (
+              <Field label={t('override.actualReceiver')}>
+                <span className="flex items-center gap-1.5 text-[13px]">
+                  <ShieldAlert className="size-3.5 shrink-0 text-status-neutral" />
+                  {value(row.delivered_employee?.full_name ?? row.delivered_to)}
+                </span>
+              </Field>
+            )}
             <Field label={t('parcels.department')}>
               <span className="text-[13px]">{value(row.department?.name)}</span>
             </Field>
@@ -205,6 +277,37 @@ function ParcelDetailPane({
             <Field label={t('parcelDetail.deliveredNote')}>
               <span className="whitespace-pre-wrap text-[13px]">{value(row.delivered_note)}</span>
             </Field>
+            {row.receiver_override_reason && (
+              <div className="flex flex-col gap-4 rounded-md border border-status-neutral/40 bg-status-neutral/5 p-4">
+                <span className="flex items-center gap-1.5 text-[13px] font-medium text-status-neutral-to-bad">
+                  <ShieldAlert className="size-3.5" />
+                  {t('override.badge')}
+                </span>
+                <Field label={t('override.intendedReceiver')}>
+                  <span className="text-[13px]">{value(row.receiver?.full_name)}</span>
+                </Field>
+                <Field label={t('override.actualReceiver')}>
+                  <span className="text-[13px]">
+                    {value(row.delivered_employee?.full_name ?? row.delivered_to)}
+                  </span>
+                </Field>
+                <Field label={t('override.reason')}>
+                  <span className="whitespace-pre-wrap text-[13px]">
+                    {row.receiver_override_reason}
+                  </span>
+                </Field>
+                <Field label={t('override.at')}>
+                  <span className="text-[13px]">
+                    {row.receiver_override_at
+                      ? dateFormat.format(new Date(row.receiver_override_at))
+                      : '—'}
+                  </span>
+                </Field>
+                <Field label={t('override.by')}>
+                  <span className="text-[13px]">{overrideBy ?? '—'}</span>
+                </Field>
+              </div>
+            )}
           </div>
         )}
         {tab === 'actions' && (
@@ -242,6 +345,31 @@ function ParcelDetailPane({
                     {t('parcelDetail.relocate')}
                   </Button>
                 </div>
+              </div>
+            )}
+            {/* Fejlregistrering: pakken findes ikke fysisk og kan hverken
+                udleveres eller returneres — kun manager kan annullere den. */}
+            {canRemove && (
+              <div className="flex flex-col gap-3 rounded-md border border-destructive/40 p-4">
+                <div>
+                  <p className="text-[13px] font-[450] text-destructive">
+                    {t('removeParcel.title')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('removeParcel.actionDescription')}
+                  </p>
+                </div>
+                {canRemoveStatus ? (
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="destructive" onClick={() => setRemoveOpen(true)}>
+                      <Trash2 className="size-3.5" /> {t('removeParcel.action')}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {t('removeParcel.notRemovable', { status: t(statusLabelKey[row.status]) })}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex flex-col gap-3 rounded-md border border-destructive/40 p-4">
@@ -322,6 +450,16 @@ function ParcelDetailPane({
         />
       )}
 
+      <ParcelRemoveDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        parcel={{ id: row.id, barcode: row.barcode }}
+        onRemoved={() => {
+          onClose()
+          refresh()
+        }}
+      />
+
       {companyId && (
         <ParcelRelocateDialog
           open={relocateOpen}
@@ -368,7 +506,20 @@ function ParcelsPage() {
       header: t('parcels.receiver'),
       sortable: true,
       sortValue: (r) => r.receiver?.full_name ?? null,
-      render: (r) => r.receiver?.full_name ?? '—',
+      // Ved manager-override vises både den tilsigtede og den faktiske modtager
+      // i cellen — ellers ser listen ud som om den tilsigtede kvitterede.
+      render: (r) =>
+        r.receiver_override_reason ? (
+          <span className="flex flex-col">
+            <span>{r.receiver?.full_name ?? '—'}</span>
+            <span className="flex items-center gap-1 text-[11px] text-status-neutral-to-bad">
+              <ShieldAlert className="size-3" />→{' '}
+              {r.delivered_employee?.full_name ?? r.delivered_to ?? '—'}
+            </span>
+          </span>
+        ) : (
+          (r.receiver?.full_name ?? '—')
+        ),
     },
     {
       key: 'department',

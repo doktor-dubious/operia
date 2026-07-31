@@ -51,6 +51,9 @@
     <string name="search_placeholder">Søg…</string>
     <string name="n_in_company">%1$d i virksomheden</string>
     <string name="clear_selection">Ryd valg</string>
+    <string name="picker_none">Ikke valgt</string>
+    <string name="picker_empty">Ingen oprettet</string>
+    <string name="err_master_data">Nogle stamdata kunne ikke hentes: %1$s. Tjek forbindelsen og åbn skærmen igen.</string>
     <string name="department">Afdeling</string>
     <string name="employee">Medarbejder</string>
     <string name="cancel">Annullér</string>
@@ -83,6 +86,8 @@
     <string name="receiver">Modtager</string>
     <string name="carrier">Fragtfirma</string>
     <string name="handling">Håndtering</string>
+    <string name="sender">Afsender</string>
+    <string name="receive_sender_placeholder">fx leverandør eller webshop</string>
     <string name="storage_location">Placering</string>
     <string name="receive_already_scanned">Allerede scannet</string>
     <string name="receive_pick_recipient_first">Vælg en modtager først</string>
@@ -102,6 +107,12 @@
     <string name="receive_save_failed">Kunne ikke gemme</string>
     <string name="receive_saved_confirm">✓ %1$d pakke(r) gemt</string>
     <string name="receive_no_contact_warning">Modtageren kan ikke få besked om pakken — der mangler en gyldig e-mail eller et gyldigt mobilnummer til de aktiverede notifikationskanaler.</string>
+    <string name="receive_batch_mode">Batch-tilstand</string>
+    <string name="receive_batch_hint">Flere pakker til samme modtager — én besked sendes.</string>
+    <string name="receive_batch_finish">Afslut batch (%1$d)</string>
+    <string name="receive_batch_saved">Batch %2$s: %1$d pakke(r) gemt</string>
+    <string name="receive_batch_offline">Ingen forbindelse — %1$d pakke(r) i kø (ikke grupperet)</string>
+    <string name="receive_batch_receiver_required">Vælg en modtager for at afslutte batchen</string>
 
     <!-- udlever -->
     <string name="handout_title">Udlever / afvis</string>
@@ -123,8 +134,16 @@
     <string name="handout_return_button">Returnér til afsender</string>
     <string name="handout_reject_confirm">Afvis</string>
     <string name="handout_return_confirm">Returnér</string>
-    <string name="handout_rejected">Pakke afvist</string>
+    <string name="handout_rejected">Pakke afvist og returneret</string>
     <string name="handout_returned">Pakke returneret til afsender</string>
+    <string name="handout_batch_banner">%1$d pakke(r) til %2$s</string>
+    <string name="handout_batch_whole_only">Batch-label scannet — hele batchen (%1$d) udleveres/afvises samlet.</string>
+    <string name="handout_batch_scope_all">Hele batchen (%1$d)</string>
+    <string name="handout_batch_scope_one">Kun denne pakke</string>
+    <string name="handout_batch_deliver">Udlever alle %1$d</string>
+    <string name="handout_batch_reject">Afvis alle %1$d</string>
+    <string name="handout_batch_delivered">%1$d pakke(r) udleveret</string>
+    <string name="handout_batch_rejected">%1$d pakke(r) afvist og returneret</string>
 
     <!-- flyt (relokering) -->
     <string name="move_title">Flyt pakke</string>

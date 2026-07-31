@@ -56,7 +56,7 @@ type EventRow = {
 const PARCEL_SELECT = `id, barcode, status, parcel_type, is_private, sender,
   registered_at, delivered_at, delivered_to,
   department:departments (name),
-  receiver:employees (full_name),
+  receiver:employees!parcels_receiver_employee_id_fkey (full_name),
   carrier:carriers (name),
   location:storage_locations (name)`
 
@@ -171,7 +171,7 @@ async function buildSummary(opts: ReportOptions): Promise<ReportDoc> {
   const lead = median(leadHours)
   const statusOrder: ParcelStatus[] = [
     'unassigned', 'registered', 'in_storage', 'in_transit', 'in_locker',
-    'delivered', 'rejected', 'returned',
+    'delivered', 'rejected', 'returned', 'removed',
   ]
 
   const sections: ReportSection[] = [

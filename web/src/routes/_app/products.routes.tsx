@@ -346,6 +346,7 @@ function RouteMapPanel({
       | {
           error?: string
           address?: string
+          detail?: string
           geometry?: { coordinates: [number, number][] }
           waypoints?: RouteGeometry['waypoints']
           distance_m?: number | null
@@ -361,7 +362,12 @@ function RouteMapPanel({
             ? t('routesPage.calcProviderError')
             : code === 'missing_key'
               ? t('routesPage.calcMissingKey')
-              : t('routesPage.calcError'),
+              : // Udbyderen afviste kaldet (nøgle uden de rette API'er slået til,
+                // manglende fakturering, kvote opbrugt). Vis detaljen — den er
+                // forskellen på "adressen findes ikke" og "opsætningen er forkert".
+                code === 'provider_error'
+                ? t('routesPage.calcProviderRejected', { detail: res?.detail ?? '' })
+                : t('routesPage.calcError'),
       )
       return
     }

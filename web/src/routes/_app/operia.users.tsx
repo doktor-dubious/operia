@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { Check, ChevronsUpDown, KeyRound, Plus, ShieldCheck, UserCog } from 'lucide-react'
+import { Check, ChevronsUpDown, KeyRound, Plus, ShieldCheck, ShieldMinus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -245,6 +245,34 @@ function UserDetailPane({
   const [removeOpen, setRemoveOpen] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
   const [impersonating, setImpersonating] = useState(false)
+  const [superBusy, setSuperBusy] = useState(false)
+
+  // Giv/fjern platform-admin (superuser). Serveren (admin_set_platform_admin)
+  // genverificerer kalderen og forbyder selv-fjernelse; her mappes fejlkoderne
+  // til læsbare beskeder. Selv-fjernelse skjules også i UI'et.
+  const setSuperuser = async (makeAdmin: boolean) => {
+    setSuperBusy(true)
+    const { error } = await supabase.rpc('admin_set_platform_admin', {
+      p_target: row.user_id,
+      p_make_admin: makeAdmin,
+    })
+    setSuperBusy(false)
+    if (error) {
+      const code = error.message
+      const key =
+        code === 'cannot_revoke_self'
+          ? 'superuser.cannotRevokeSelf'
+          : code === 'user_not_found'
+            ? 'superuser.userNotFound'
+            : code === 'not_authorized'
+              ? 'common.noPermission'
+              : null
+      toast.error(key ? t(key) : describeError(error, t))
+      return
+    }
+    toast.success(makeAdmin ? t('superuser.grantedToast') : t('superuser.revokedToast'))
+    refresh()
+  }
 
   // Impersonering: kun tilgængelig for mål der IKKE selv er platform-admin.
   // Siden er i forvejen platform-admin-only (operia.tsx-vagten), så kalderen er
@@ -373,6 +401,24 @@ function UserDetailPane({
           <Field label={t('userDetail.email')}>
             <Input value={row.email ?? '—'} disabled />
           </Field>
+          {/* Superuser-konto: her kan privilegiet fjernes (ikke ens egen). */}
+          <div className="flex items-center justify-between rounded-md border p-4">
+            <div>
+              <p className="text-[13px] font-[450]">{t('superuser.title')}</p>
+              <p className="text-xs text-muted-foreground">
+                {isSelf ? t('superuser.selfHint') : t('superuser.revokeHint')}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={superBusy || isSelf}
+              onClick={() => setSuperuser(false)}
+            >
+              <ShieldMinus className="size-3.5" />
+              {t('superuser.revoke')}
+            </Button>
+          </div>
         </div>
       </DetailTabs>
     )
@@ -432,6 +478,41 @@ function UserDetailPane({
                 </Button>
               </div>
             )}
+            {/* Superuser: giv eller fjern platform-admin. Selv-fjernelse er ikke
+                mulig (skjult for egen konto), så man ikke låser sig selv ude. */}
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div>
+                <p className="text-[13px] font-[450]">{t('superuser.title')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {row.isPlatformAdmin
+                    ? isSelf
+                      ? t('superuser.selfHint')
+                      : t('superuser.revokeHint')
+                    : t('superuser.grantHint')}
+                </p>
+              </div>
+              {row.isPlatformAdmin ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={superBusy || isSelf}
+                  onClick={() => setSuperuser(false)}
+                >
+                  <ShieldMinus className="size-3.5" />
+                  {t('superuser.revoke')}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={superBusy}
+                  onClick={() => setSuperuser(true)}
+                >
+                  <ShieldCheck className="size-3.5" />
+                  {t('superuser.grant')}
+                </Button>
+              )}
+            </div>
             <div className="flex items-center justify-between rounded-md border p-4">
               <div>
                 <p className="text-[13px] font-[450]">{t('changePassword.title')}</p>

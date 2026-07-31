@@ -7,7 +7,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Lokal lagring: offline-kø for modtagelser + cachet branding.
+ * Lokal lagring: offline-kø for modtagelser + cachet handheld-design.
  * Modtagelser gemmes lokalt når nettet er væk og synkroniseres senere —
  * en håndterminal skal kunne scanne videre i en kælder uden dækning.
  */
@@ -15,7 +15,6 @@ object LocalStore {
 
     private const val PREFS = "operia_local"
     private const val KEY_PENDING = "pending_receives"
-    private const val KEY_BRAND = "brand"
     private const val KEY_HANDHELD = "handheld_design"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -70,17 +69,6 @@ object LocalStore {
     }
 
     data class SyncResult(val synced: Int, val left: Int, val dropped: Int)
-
-    // ---------- branding-cache ----------
-
-    fun brand(ctx: Context): Brand {
-        val raw = prefs(ctx).getString(KEY_BRAND, null) ?: return Brand()
-        return runCatching { json.decodeFromString(Brand.serializer(), raw) }.getOrDefault(Brand())
-    }
-
-    fun cacheBrand(ctx: Context, brand: Brand) {
-        prefs(ctx).edit().putString(KEY_BRAND, json.encodeToString(Brand.serializer(), brand)).apply()
-    }
 
     /** Cachet handheld-design, så startskærmen ser rigtig ud offline / før
      *  bootstrap er færdig (samme mønster som branding). */

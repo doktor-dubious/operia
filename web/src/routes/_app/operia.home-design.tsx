@@ -12,6 +12,7 @@ import {
   type HomeDesign,
   type TileLayoutItem,
 } from '@/lib/home-tiles'
+import { cleanupDesignImages } from '@/lib/company-files'
 import { supabase } from '@/lib/supabase'
 
 // Operia → Home-design: platformens standardopsætning af startsiden (Home).
@@ -56,6 +57,9 @@ function HomeDesignPage() {
       return
     }
     toast.success(t('settings.saved'))
+    // Platform-standardens billeder ligger i mappen 'home-design' (uden
+    // company-segment) — udskiftede slettes fra den offentlige bucket (GDPR).
+    void cleanupDesignImages('home-design', '', { tiles, design })
     queryClient.invalidateQueries({ queryKey: ['platform-home-config'] })
     queryClient.invalidateQueries({ queryKey: ['platform-home-tiles'] })
     queryClient.invalidateQueries({ queryKey: ['home-config'] })

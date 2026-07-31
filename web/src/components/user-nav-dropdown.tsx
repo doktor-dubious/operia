@@ -20,7 +20,7 @@ import { User } from '@/components/animate-ui/icons/user'
 import { flushPreferences } from '@/components/preferences-sync'
 import { useTheme } from '@/components/theme-provider'
 import { useSession } from '@/hooks/use-session'
-import { configureNav, operiaNav, visibleNavGroups } from '@/lib/nav'
+import { configureNav, modernMenuNavGroups, operiaNav } from '@/lib/nav'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
@@ -91,9 +91,10 @@ export function UserNavDropdownContent({
       <DropdownMenuSeparator />
       {includeNav && (
         <>
-          {visibleNavGroups(access)
-            .filter((group) => group.labelKey !== 'groupParcels')
-            .map((group) => {
+          {/* Punkterne fra sidemenuens store knapper er allerede filtreret fra
+              i modernMenuNavGroups — pakkegruppen står derfor tilbage med
+              oversigt/rapporter/statistik. */}
+          {modernMenuNavGroups(access).map((group) => {
             const items = group.items.filter((item) => item.href !== '/')
             if (!items.length) return null
             return (

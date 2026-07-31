@@ -48,6 +48,9 @@
     <string name="search_placeholder">Search…</string>
     <string name="n_in_company">%1$d in the company</string>
     <string name="clear_selection">Clear selection</string>
+    <string name="picker_none">Not selected</string>
+    <string name="picker_empty">None created</string>
+    <string name="err_master_data">Some master data could not be loaded: %1$s. Check the connection and reopen the screen.</string>
     <string name="department">Department</string>
     <string name="employee">Employee</string>
     <string name="cancel">Cancel</string>
@@ -80,6 +83,8 @@
     <string name="receiver">Receiver</string>
     <string name="carrier">Carrier</string>
     <string name="handling">Handling</string>
+    <string name="sender">Sender</string>
+    <string name="receive_sender_placeholder">e.g. supplier or web shop</string>
     <string name="storage_location">Storage location</string>
     <string name="receive_already_scanned">Already scanned</string>
     <string name="receive_pick_recipient_first">Pick a receiver first</string>
@@ -99,6 +104,12 @@
     <string name="receive_save_failed">Could not save</string>
     <string name="receive_saved_confirm">✓ %1$d parcel(s) saved</string>
     <string name="receive_no_contact_warning">The receiver cannot be notified about this parcel — no valid email address or mobile number for the enabled notification channels.</string>
+    <string name="receive_batch_mode">Batch mode</string>
+    <string name="receive_batch_hint">Several parcels for one recipient — one message is sent.</string>
+    <string name="receive_batch_finish">Finish batch (%1$d)</string>
+    <string name="receive_batch_saved">Batch %2$s: %1$d parcel(s) saved</string>
+    <string name="receive_batch_offline">No connection — %1$d parcel(s) queued (not grouped)</string>
+    <string name="receive_batch_receiver_required">Pick a recipient to finish the batch</string>
 
     <!-- handout -->
     <string name="handout_title">Handover</string>
@@ -120,8 +131,16 @@
     <string name="handout_return_button">Return to sender</string>
     <string name="handout_reject_confirm">Reject</string>
     <string name="handout_return_confirm">Return</string>
-    <string name="handout_rejected">Parcel rejected</string>
+    <string name="handout_rejected">Parcel rejected and returned</string>
     <string name="handout_returned">Parcel returned to sender</string>
+    <string name="handout_batch_banner">%1$d parcel(s) for %2$s</string>
+    <string name="handout_batch_whole_only">Batch label scanned — the whole batch (%1$d) is handed over/rejected together.</string>
+    <string name="handout_batch_scope_all">Whole batch (%1$d)</string>
+    <string name="handout_batch_scope_one">Just this parcel</string>
+    <string name="handout_batch_deliver">Hand over all %1$d</string>
+    <string name="handout_batch_reject">Reject all %1$d</string>
+    <string name="handout_batch_delivered">%1$d parcel(s) handed out</string>
+    <string name="handout_batch_rejected">%1$d parcel(s) rejected and returned</string>
 
     <!-- move (relocation) -->
     <string name="move_title">Move parcel</string>

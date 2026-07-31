@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Mail } from 'lucide-react'
+import { RequestAccessDialog } from '@/components/request-access-dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -15,6 +16,8 @@ import { cn } from '@/lib/utils'
 // produkter og funktioner med udløbsdatoer. Tildelinger er DCA-ejede og
 // redigeres kun på Operia → Kunder — også af platform-admins, så der kun er
 // ét sted at ændre dem. Viser kun det platformen udbyder (enabled-kataloger).
+// Ikke-aktiverede produkter/funktioner vises også — slukkede og skrivebeskyttede
+// — med en knap der åbner "Kontakt Operia"-dialogen (RequestAccessDialog).
 export const Route = createFileRoute('/_app/configure/products')({
   component: ProductsPage,
 })
@@ -72,11 +75,29 @@ function ExpiryText({ validUntil }: { validUntil: string | null | undefined }) {
   )
 }
 
+type RequestTarget = {
+  kind: 'product' | 'feature'
+  key: string
+  name: string
+  productName?: string
+}
+
+function RequestButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onClick}>
+      <Mail className="size-3.5" />
+      {t('productsPage.requestAccess')}
+    </Button>
+  )
+}
+
 function ProductsPage() {
   const { t, i18n } = useTranslation()
   const { companyId } = useCompanyContext()
   const { data, isPending } = useEntitlements(companyId)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [request, setRequest] = useState<RequestTarget | null>(null)
 
   const toggleExpanded = (key: string) =>
     setExpanded((prev) => {
@@ -88,9 +109,105 @@ function ProductsPage() {
 
   if (isPending || !data || !companyId) return <Skeleton className="h-40 w-full" />
 
-  // Vis kun de produkter virksomheden er tildelt (aktiveret) — ikke hele
-  // platformens katalog.
   const grantedProducts = data.products.filter((p) => data.granted.has(p.key))
+  // Resten af platformens katalog vises også — slukket og skrivebeskyttet — så
+  // kunden kan se hvad Operia ellers tilbyder og bede om at få det åbnet.
+  const availableProducts = data.products.filter((p) => !data.granted.has(p.key))
+
+  const renderProduct = (
+    p: (typeof data.products)[number],
+    productGranted: boolean,
+  ) => {
+    // Alle produktets funktioner vises: de tildelte som slået til, resten som
+    // slukkede med en anmod-knap (kun når selve produktet er aktiveret —
+    // ellers er produktet det, der skal bedes om først).
+    const productFeatures = data.features.filter((f) => f.product_key === p.key)
+    const open = expanded.has(p.key)
+    const productName = catalogName(p, i18n.language)
+    return (
+      <div key={p.key} className={cn('rounded-md border', !productGranted && 'border-dashed')}>
+        <div className="flex items-center justify-between gap-3 p-3">
+          <div className="min-w-0">
+            <p className={cn('text-[13px] font-[450]', !productGranted && 'text-muted-foreground')}>
+              {productName}
+            </p>
+            {catalogDescription(p, i18n.language) && (
+              <p className="text-xs text-muted-foreground">
+                {catalogDescription(p, i18n.language)}
+              </p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {productGranted ? (
+              <ExpiryText validUntil={data.granted.get(p.key)} />
+            ) : (
+              <RequestButton
+                onClick={() => setRequest({ kind: 'product', key: p.key, name: productName })}
+              />
+            )}
+            <Switch checked={productGranted} disabled />
+            {productFeatures.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => toggleExpanded(p.key)}
+              >
+                {t('productsPage.features')} ({productFeatures.length})
+                <ChevronRight
+                  className={cn('size-3.5 transition-transform', open && 'rotate-90')}
+                />
+              </Button>
+            )}
+          </div>
+        </div>
+        {open && (
+          <div className="flex flex-col divide-y divide-border border-t border-border bg-muted/30">
+            {productFeatures.map((f) => {
+              const featureGranted = data.grantedFeatures.has(f.key)
+              const featureName = catalogName(f, i18n.language)
+              return (
+                <div
+                  key={f.key}
+                  className="flex items-center justify-between gap-3 px-3 py-2 pl-6"
+                >
+                  <div className="min-w-0">
+                    <p className={cn('text-[13px]', !featureGranted && 'text-muted-foreground')}>
+                      {featureName}
+                    </p>
+                    {catalogDescription(f, i18n.language) && (
+                      <p className="text-xs text-muted-foreground">
+                        {catalogDescription(f, i18n.language)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {featureGranted ? (
+                      <ExpiryText validUntil={data.grantedFeatures.get(f.key)} />
+                    ) : (
+                      productGranted && (
+                        <RequestButton
+                          onClick={() =>
+                            setRequest({
+                              kind: 'feature',
+                              key: f.key,
+                              name: featureName,
+                              productName,
+                            })
+                          }
+                        />
+                      )
+                    )}
+                    <Switch checked={featureGranted} disabled />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-full flex-col">
@@ -111,78 +228,33 @@ function ProductsPage() {
             {t('productsPage.noneGranted')}
           </p>
         ) : (
-        <div className="flex flex-col gap-3">
-          {grantedProducts.map((p) => {
-            // Kun tildelte funktioner vises — siden lister udelukkende det,
-            // virksomheden faktisk har adgang til.
-            const productFeatures = data.features.filter(
-              (f) => f.product_key === p.key && data.grantedFeatures.has(f.key),
-            )
-            const open = expanded.has(p.key)
-            return (
-              <div key={p.key} className="rounded-md border">
-                <div className="flex items-center justify-between gap-3 p-3">
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-[450]">{catalogName(p, i18n.language)}</p>
-                    {catalogDescription(p, i18n.language) && (
-                      <p className="text-xs text-muted-foreground">
-                        {catalogDescription(p, i18n.language)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <ExpiryText validUntil={data.granted.get(p.key)} />
-                    <Switch checked disabled />
-                    {productFeatures.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => toggleExpanded(p.key)}
-                      >
-                        {t('productsPage.features')} ({productFeatures.length})
-                        <ChevronRight
-                          className={cn('size-3.5 transition-transform', open && 'rotate-90')}
-                        />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {open && (
-                  <div className="flex flex-col divide-y divide-border border-t border-border bg-muted/30">
-                    {productFeatures.map((f) => (
-                      <div
-                        key={f.key}
-                        className="flex items-center justify-between gap-3 px-3 py-2 pl-6"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-[13px]">{catalogName(f, i18n.language)}</p>
-                          {catalogDescription(f, i18n.language) && (
-                            <p className="text-xs text-muted-foreground">
-                              {catalogDescription(f, i18n.language)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <ExpiryText
-                            validUntil={
-                              data.grantedFeatures.has(f.key)
-                                ? data.grantedFeatures.get(f.key)
-                                : null
-                            }
-                          />
-                          <Switch checked={data.grantedFeatures.has(f.key)} disabled />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+          <div className="flex flex-col gap-3">
+            {grantedProducts.map((p) => renderProduct(p, true))}
+          </div>
+        )}
+
+        {availableProducts.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-sm font-medium text-foreground">
+              {t('productsPage.availableTitle')}
+            </h2>
+            <p className="mt-1 mb-4 text-xs text-muted-foreground">
+              {t('productsPage.availableSubtitle')}
+            </p>
+            <div className="flex flex-col gap-3">
+              {availableProducts.map((p) => renderProduct(p, false))}
+            </div>
+          </section>
         )}
       </div>
+
+      <RequestAccessDialog
+        open={!!request}
+        onOpenChange={(open) => {
+          if (!open) setRequest(null)
+        }}
+        target={request}
+      />
     </div>
   )
 }

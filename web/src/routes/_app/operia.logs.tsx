@@ -271,13 +271,22 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
   const a = r.action
   // '*_failed'/'*_bounced' = teknisk fejl (import.failed, asset.reminder_bounced,
   // …). Spejler public.audit_level.
-  if (/[._](failed|bounced)$/.test(a) || a === 'data_transfer.spoof_rejected') return 'error'
+  // 'parcel.removed' = en registrering trukket tilbage: fejl-niveau, i modsætning
+  // til '%.removed' på andre entiteter (advarsel). Spejler public.audit_level.
+  if (
+    a === 'parcel.removed' ||
+    /[._](failed|bounced)$/.test(a) ||
+    a === 'data_transfer.spoof_rejected'
+  )
+    return 'error'
   const to = (r.detail as Record<string, unknown> | null)?.to_status
   if (
     a === 'import.rejected' ||
     /[._]complained$/.test(a) ||
+    /[._]overridden$/.test(a) ||
     /\.(deleted|deactivated|anonymized|removed|revoked|disabled)$/.test(a) ||
-    (a === 'parcel.status_changed' && (to === 'rejected' || to === 'returned'))
+    (a === 'parcel.status_changed' &&
+      (to === 'rejected' || to === 'returned' || to === 'removed'))
   )
     return 'warning'
   return 'success'
@@ -302,9 +311,12 @@ function message(r: LogRow, t: TFn) {
       days: String(d.retention_days ?? '—'),
     })
   }
-  // Fejlet login på en email uden konto (anden sti, klient-rapporteret): markér
+  // Fejlet login / nulstillings-anmodning på en email uden konto: markér
   // eksplicit som ukendt konto — der er ingen aktør/virksomhed at vise.
-  if (r.action === 'auth.login_failed' && d.unknown_email === true) {
+  if (
+    (r.action === 'auth.login_failed' || r.action === 'auth.password_reset_requested') &&
+    d.unknown_email === true
+  ) {
     return [r.summary, t('logsPage.msg.loginUnknownEmail')].filter(Boolean).join('   ·   ')
   }
   if (r.action === 'retention.changed') {
@@ -333,6 +345,15 @@ function message(r: LogRow, t: TFn) {
   const parts: string[] = []
   if (r.summary) parts.push(r.summary)
   if (d.from_status || d.to_status) parts.push(`${d.from_status ?? '—'} → ${d.to_status ?? '—'}`)
+  // Manager-undtagelser (fjernet pakke, overstyret modtager) bærer begrundelsen
+  // med i detail — den ER revisionssporet, så den hører i selve linjen (og bliver
+  // dermed også søgbar).
+  if (
+    (r.action === 'parcel.removed' || r.action === 'parcel.receiver_overridden') &&
+    typeof d.reason === 'string' &&
+    d.reason.trim()
+  )
+    parts.push(t('logsPage.msg.reasonGiven', { reason: d.reason.trim() }))
   // Ændringshændelser (udløb, sprog, valuta, …): vis fra → til fra detail.
   const fmtChange = (v: unknown): string => {
     if (v == null) return '—'

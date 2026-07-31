@@ -141,15 +141,17 @@ export function copenhagenMinutes(now: Date): number {
   return h * 60 + m
 }
 
-function toMin(t: string | null): number | null {
+// 'HH:MM[:SS]' (Postgres time) → minutter siden midnat. null for tom/ugyldig.
+export function timeToMinutes(t: string | null | undefined): number | null {
   if (!t) return null
   const [h, m] = t.split(':')
-  return Number(h) * 60 + Number(m)
+  const min = Number(h) * 60 + Number(m)
+  return Number.isFinite(min) ? min : null
 }
 
 export function inQuietHours(nowMin: number, start: string | null, end: string | null): boolean {
-  const s = toMin(start)
-  const e = toMin(end)
+  const s = timeToMinutes(start)
+  const e = timeToMinutes(end)
   if (s == null || e == null || s === e) return false
   return s < e ? nowMin >= s && nowMin < e : nowMin >= s || nowMin < e
 }

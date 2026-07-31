@@ -16,6 +16,7 @@ import {
   type HomeDesign,
   type TileLayoutItem,
 } from '@/lib/home-tiles'
+import { cleanupDesignImages } from '@/lib/company-files'
 import { supabase } from '@/lib/supabase'
 
 // Konfigurér → Home-design: kundens egen opsætning af startsiden (Home). En
@@ -84,6 +85,8 @@ function ConfigureHomeDesignPage() {
       return
     }
     toast.success(t('settings.saved'))
+    // Udskiftede/fjernede billeder slettes fra den offentlige bucket (GDPR).
+    void cleanupDesignImages(companyId, 'home-design-', { tiles, design })
     queryClient.invalidateQueries({ queryKey: ['company-home-config-edit', companyId] })
     queryClient.invalidateQueries({ queryKey: ['home-config'] })
   }

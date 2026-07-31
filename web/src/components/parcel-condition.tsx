@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { StickyNote } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Field } from '@/components/detail-field'
 import { supabase } from '@/lib/supabase'
@@ -53,6 +55,10 @@ export function useParcelCondition(parcelId: string, conditionPhotoPath: string 
 }
 
 // Én række: miniature (klikbar til fuld størrelse) + tidspunkt/etiket og note.
+// Uden foto vises INGEN billedramme: en note er en note, og en tom ramme i
+// fotostørrelse læses som "her mangler et billede". Kan billedet ikke hentes
+// (fx en signeret URL der er udløbet, mens dialogen stod åben), falder rækken
+// tilbage til note-visningen i stedet for browserens brudte-billede-ikon.
 function ConditionEntry({
   url,
   note,
@@ -62,21 +68,26 @@ function ConditionEntry({
   note: string | null
   label: string
 }) {
+  const [failed, setFailed] = useState(false)
+  const showImage = !!url && !failed
+
   return (
     <div className="flex gap-3 rounded-md border p-3">
-      {url ? (
+      {showImage && (
         <a href={url} target="_blank" rel="noreferrer" className="shrink-0">
           <img
             src={url}
             alt=""
+            onError={() => setFailed(true)}
             className="size-20 rounded-md border object-cover transition-opacity hover:opacity-90"
           />
         </a>
-      ) : (
-        <div className="grid size-20 shrink-0 place-items-center rounded-md border text-2xl">📝</div>
       )}
       <div className="flex min-w-0 flex-col gap-1 pt-0.5">
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {!showImage && <StickyNote className="size-3.5 shrink-0" />}
+          {label}
+        </span>
         {note && <span className="whitespace-pre-wrap text-[13px]">{note}</span>}
       </div>
     </div>
@@ -133,7 +144,11 @@ export function ParcelConditionBlock({
           <ConditionEntry
             url={data?.intakeUrl ?? null}
             note={conditionNote}
-            label={t('parcelDetail.intakePhoto')}
+            // Uden foto er rækken en note ved modtagelsen — så skal etiketten
+            // ikke love et billede der ikke findes.
+            label={
+              data?.intakeUrl ? t('parcelDetail.intakePhoto') : t('parcelDetail.intakeNote')
+            }
           />
         )}
         {docs.map((d) => (

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Lightbulb, TriangleAlert } from 'lucide-react'
+import { KeyRound, Lightbulb, TriangleAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DataTable, type ColumnDef } from '@/components/data-table'
@@ -28,7 +28,7 @@ function useRows() {
       const { data, error } = await supabase
         .from('feedback')
         .select(
-          'id, kind, message, screenshot_path, page_path, created_at, user_id, company:companies (name)',
+          'id, kind, subject, message, screenshot_path, page_path, created_at, user_id, company:companies (name)',
         )
         .order('created_at', { ascending: false })
         .limit(300)
@@ -54,10 +54,19 @@ function useRows() {
   })
 }
 
+// 'access' er anmodninger om adgang til et produkt/funktion fra Konfigurér →
+// Produkter & funktioner ("Kontakt Operia"-dialogen).
+const KIND_META: Record<string, { icon: typeof Lightbulb; labelKey: string }> = {
+  issue: { icon: TriangleAlert, labelKey: 'feedback.issue' },
+  idea: { icon: Lightbulb, labelKey: 'feedback.idea' },
+  access: { icon: KeyRound, labelKey: 'feedback.access' },
+}
+
 function KindBadge({ kind }: { kind: string }) {
   const { t } = useTranslation()
   const isIssue = kind === 'issue'
-  const Icon = isIssue ? TriangleAlert : Lightbulb
+  const meta = KIND_META[kind] ?? KIND_META.idea
+  const Icon = meta.icon
   return (
     <Badge
       variant="secondary"
@@ -68,7 +77,7 @@ function KindBadge({ kind }: { kind: string }) {
       }
     >
       <Icon className="size-3" />
-      {t(isIssue ? 'feedback.issue' : 'feedback.idea')}
+      {t(meta.labelKey)}
     </Badge>
   )
 }
@@ -102,6 +111,11 @@ function FeedbackDetail({ row, onClose }: { row: Row; onClose: () => void }) {
             <KindBadge kind={row.kind} />
           </div>
         </Field>
+        {row.subject && (
+          <Field label={t('feedbackPage.subject')}>
+            <span className="text-[13px]">{row.subject}</span>
+          </Field>
+        )}
         <Field label={t('feedbackPage.message')}>
           <span className="whitespace-pre-wrap text-[13px]">{row.message}</span>
         </Field>
@@ -162,7 +176,12 @@ function FeedbackPage() {
     {
       key: 'message',
       header: t('feedbackPage.message'),
-      render: (r) => <span className="block max-w-96 truncate">{r.message}</span>,
+      // Adgangsanmodninger bærer det væsentlige i emnet — vis det først.
+      render: (r) => (
+        <span className="block max-w-96 truncate">
+          {r.subject ? `${r.subject} — ${r.message}` : r.message}
+        </span>
+      ),
     },
     {
       key: 'company',
@@ -189,7 +208,9 @@ function FeedbackPage() {
         columns={columns}
         entityLabel={t('nav.operiaFeedback').toLowerCase()}
         searchText={(row) =>
-          [row.message, row.company?.name, row.userName, row.page_path].filter(Boolean).join(' ')
+          [row.subject, row.message, row.company?.name, row.userName, row.page_path]
+            .filter(Boolean)
+            .join(' ')
         }
         storageKey="platform-feedback"
         onRowClick={(row) => setActiveId(row.id === activeId ? null : row.id)}

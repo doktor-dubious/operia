@@ -65,6 +65,10 @@ export const LABEL_FIELD_KEYS = [
   'qrcode',
   'carrier',
   'companyName',
+  // Batch-labelfelter: batch-koden (scanbar) og antal pakker i batchen. På en
+  // pakkelabel står de tomme/med eksempeldata — de er tænkt til batch-labelen.
+  'batchCode',
+  'batchCount',
 ] as const
 
 // Startplaceringer når et felt slås til — spredt så de ikke lander i én klump.
@@ -79,6 +83,8 @@ const DEFAULT_STYLES: Record<string, Partial<LabelElementStyle>> = {
   qrcode: { x: 82, y: 50, width: 26 },
   carrier: { x: 4, y: 70, fontSize: 8, align: 'left' },
   companyName: { x: 96, y: 92, fontSize: 7, align: 'right' },
+  batchCode: { x: 50, y: 84, fontSize: 8, align: 'center' },
+  batchCount: { x: 4, y: 30, fontSize: 10, bold: true, align: 'left' },
 }
 
 const FALLBACK: LabelElementStyle = {
@@ -102,6 +108,26 @@ export const DEFAULT_LABEL_DESIGN: LabelDesign = {
   },
   customTexts: [],
   texts: { da: { heading: 'PAKKE' }, en: { heading: 'PACKAGE' } },
+}
+
+// Batch-label: identificerer hele batchen. Stregkode/QR indeholder batch-koden
+// (OPB-…), som ved udlevering scannes for at hente alle pakker i batchen.
+// Viser modtager, antal pakker og batch-koden i klartekst.
+export const DEFAULT_BATCH_LABEL_DESIGN: LabelDesign = {
+  size: 'small',
+  width: 62,
+  height: 29,
+  barcodeFrom: 'reference',
+  fields: ['heading', 'recipientName', 'batchCount', 'barcode', 'batchCode'],
+  elements: {
+    heading: { x: 50, y: 12, fontSize: 12, bold: true, align: 'center' },
+    recipientName: { x: 4, y: 30, fontSize: 9, bold: true, align: 'left' },
+    batchCount: { x: 96, y: 30, fontSize: 9, bold: true, align: 'right' },
+    barcode: { x: 50, y: 55, width: 70 },
+    batchCode: { x: 50, y: 84, fontSize: 8, align: 'center' },
+  },
+  customTexts: [],
+  texts: { da: { heading: 'BATCH' }, en: { heading: 'BATCH' } },
 }
 
 export function parseLabelDesign(body: string): LabelDesign {
@@ -139,10 +165,26 @@ const SAMPLES: Record<string, string> = {
   date: new Intl.DateTimeFormat('da-DK', { dateStyle: 'short' }).format(new Date()),
   recipientName: 'Mette Jensen',
   carrier: 'GLS',
+  batchCode: 'OPB-4K7Q2ABC',
+  batchCount: '25',
 }
 
 function barcodeSample(design: LabelDesign) {
   return design.barcodeFrom === 'reference' ? 'OPERIA-2026-000042' : '5701234567890'
+}
+
+// Rigtige værdier til en label for en konkret pakke (printParcelLabel). Felter
+// der ikke sættes, udelades på labelen — en fysisk label må ALDRIG printe
+// eksempeldata (en pakke uden modtager må ikke få "Mette Jensen" klistret på).
+export type LabelValues = {
+  code?: string // stregkodens/QR-kodens indhold
+  department?: string | null
+  reference?: string | null
+  date?: string | null
+  recipientName?: string | null
+  carrier?: string | null
+  batchCode?: string | null // batch-labelens kode (OPB-…)
+  batchCount?: string | null // antal pakker i batchen
 }
 
 // Sprogtekst med fald tilbage til et hvilket som helst andet sprog, så et
@@ -162,10 +204,16 @@ function elementText(
   lang: string,
   id: string,
   companyName?: string | null,
+  values?: LabelValues,
 ): string {
   if (id === 'heading') return textFor(design, lang, 'heading') ?? 'PAKKE'
-  if (id === 'companyName') return companyName ?? 'DCA Logic ApS'
+  if (id === 'companyName') return companyName ?? (values ? '' : 'DCA Logic ApS')
   if (design.customTexts.some((c) => c.id === id)) return textFor(design, lang, id) ?? ''
+  const value = values?.[id as keyof LabelValues]
+  if (value) return String(value)
+  // Eksempeldata hører KUN til designeren/testlabelen (values udeladt). På en
+  // rigtig label udelades et tomt felt i stedet.
+  if (values) return ''
   return SAMPLES[id] ?? id
 }
 
@@ -584,17 +632,25 @@ export function LabelDesigner({
   )
 }
 
-// Testlabel: åbner et printvindue i labelens fysiske mål (mm) med samme
-// procent-positionering som designet.
-export function printTestLabel(design: LabelDesign, lang: string, companyName?: string | null) {
+// Print: åbner et printvindue i labelens fysiske mål (mm) med samme
+// procent-positionering som designet. Uden `values` printes designerens
+// eksempeldata (testlabel); med `values` printes en rigtig pakkes label.
+export function printLabel(
+  design: LabelDesign,
+  lang: string,
+  companyName?: string | null,
+  values?: LabelValues,
+) {
   const win = window.open('', '_blank', 'width=600,height=400')
   if (!win) return
+
+  const code = values?.code || barcodeSample(design)
 
   const parts = [...design.fields, ...design.customTexts.map((c) => c.id)].map((id) => {
     const el = style(design, id)
     if (id === 'barcode') {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      JsBarcode(svg, barcodeSample(design), {
+      JsBarcode(svg, code, {
         format: 'CODE128',
         displayValue: false,
         height: 36,
@@ -608,11 +664,11 @@ export function printTestLabel(design: LabelDesign, lang: string, companyName?: 
       // marginSize=4 er QR-standardens "quiet zone" (4 moduler fri kant) —
       // uden den fejlaflæser scannere koden, når den står tæt på kant/tekst.
       const svg = renderToStaticMarkup(
-        <QRCodeSVG value={barcodeSample(design)} marginSize={4} style={{ width: '100%', height: 'auto' }} />,
+        <QRCodeSVG value={code} marginSize={4} style={{ width: '100%', height: 'auto' }} />,
       )
       return `<div style="position:absolute;left:${el.x}%;top:${el.y}%;width:${el.width}%;transform:${alignTransform.center}">${svg}</div>`
     }
-    const text = elementText(design, lang, id, companyName)
+    const text = elementText(design, lang, id, companyName, values)
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
@@ -626,4 +682,29 @@ body{position:relative;width:${design.width}mm;height:${design.height}mm;font-fa
 </head><body>${parts.join('')}</body></html>`)
   win.document.close()
   win.addEventListener('load', () => win.print())
+}
+
+// Testlabel fra label-designeren: eksempeldata, ingen pakke.
+export function printTestLabel(design: LabelDesign, lang: string, companyName?: string | null) {
+  printLabel(design, lang, companyName)
+}
+
+// Batch-label: stregkode/QR indeholder batch-koden, så én scanning ved
+// udlevering henter hele batchen. `code` sættes til batch-koden uanset designets
+// barcodeFrom, så labelen altid er scanbar.
+export function printBatchLabel(
+  design: LabelDesign,
+  lang: string,
+  companyName: string | null | undefined,
+  values: { batchCode: string; batchCount: number; recipientName?: string | null; department?: string | null; date?: string | null },
+) {
+  printLabel(design, lang, companyName, {
+    code: values.batchCode,
+    reference: values.batchCode,
+    batchCode: values.batchCode,
+    batchCount: String(values.batchCount),
+    recipientName: values.recipientName ?? null,
+    department: values.department ?? null,
+    date: values.date ?? null,
+  })
 }

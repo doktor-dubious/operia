@@ -13,6 +13,15 @@ import { cn } from '@/lib/utils'
 // HandheldDesignEditor) — de to editorer deler upload-felt og til/fra-boks,
 // kun bucket-mappen er forskellig (pathPrefix).
 
+// Fjern-knappens tekst pr. billedart, så knappen siger hvad den fjerner
+// ("Fjern logo" / "Fjern sidens baggrundsbillede", …).
+const REMOVE_LABEL_KEY: Record<'logo' | 'hero' | 'tile' | 'background', string> = {
+  logo: 'designField.removeLogo',
+  hero: 'designField.removeHero',
+  tile: 'designField.removeTile',
+  background: 'designField.removeBackground',
+}
+
 // Billedfelt: upload til den offentlige company-logos-bucket (+ valgfri URL,
 // typisk kun for logoer) med forhåndsvisning og fjern-knap.
 export function DesignImageField({
@@ -26,7 +35,7 @@ export function DesignImageField({
 }: {
   url: string
   onChange: (url: string) => void
-  kind: 'logo' | 'hero' | 'tile'
+  kind: 'logo' | 'hero' | 'tile' | 'background'
   pathPrefix: string // filnavns-prefix, fx 'home-design' eller 'handheld-design'
   // Virksomhedens id skal være FØRSTE mappe-segment i stien: storage-RLS for
   // company-logos kræver (storage.foldername(name))[1] = current_company_id()
@@ -112,7 +121,7 @@ export function DesignImageField({
             <img src={url} alt="" className="max-h-full max-w-full object-contain" />
           </div>
           <Button size="sm" variant="ghost" onClick={() => onChange('')}>
-            {t('customerDetail.removeLogo')}
+            {t(REMOVE_LABEL_KEY[kind])}
           </Button>
         </div>
       )}

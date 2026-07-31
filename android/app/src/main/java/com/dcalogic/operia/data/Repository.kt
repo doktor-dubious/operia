@@ -2,10 +2,13 @@ package com.dcalogic.operia.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Alle databasekald samlet ét sted. RLS på serveren er den reelle
@@ -88,6 +91,16 @@ object Repository {
                 order("name", Order.ASCENDING)
             }.decodeList()
 
+    /** Afsender-forslag til modtagelsen: virksomhedens egne tidligere
+     *  afsendere, hyppigst brugte først. Afsender er fri tekst uden
+     *  stamdata-tabel, så forslagene kommer fra parcels.sender (RPC'en er
+     *  SECURITY INVOKER — RLS afgør hvad brugeren kan se). */
+    suspend fun senderSuggestions(companyId: String): List<String> =
+        supabase.postgrest.rpc(
+            "parcel_sender_suggestions",
+            buildJsonObject { put("p_company_id", companyId) },
+        ).decodeList<String>()
+
     /** Virksomhedens notifikations-override (kanaler + ankomstbesked). */
     suspend fun companyNotifySettings(companyId: String): CompanyNotifyRow? =
         supabase.from("companies")
@@ -122,17 +135,6 @@ object Repository {
             .filter { it.valid_until == null || it.valid_until > nowIso() }
             .map { it.product_key }
             .toSet()
-
-    /** White-labeling pr. produkt — håndterminalen følger 'parcels'-produktets udseende. */
-    suspend fun appearance(companyId: String): ProductAppearance? =
-        supabase.from("product_appearance")
-            .select(Columns.list("product_key", "header_name", "header_color", "logo_url")) {
-                filter {
-                    eq("company_id", companyId)
-                    eq("product_key", "parcels")
-                }
-                limit(1)
-            }.decodeList<ProductAppearance>().firstOrNull()
 
     /**
      * Handheld-designet for virksomheden: kundens eget (Konfigurér →
@@ -179,6 +181,92 @@ object Repository {
                 limit(limit)
             }.decodeList()
 
+    // ---------- batches ----------
+
+    /** Åbne statusser = dem en batch-handling må ramme (samme som DELIVERABLE i
+     *  HandoutScreen). Både udlevering og afvisning (→ returned) er tilladt herfra. */
+    private val OPEN_STATUSES = listOf("registered", "in_storage", "in_transit", "in_locker")
+
+    /** Opret en afsluttet batch (server genererer batch_code + validerer tenant).
+     *  Kræver forbindelse — batch_id skal kendes før pakkerne kan indsættes. */
+    suspend fun createParcelBatch(companyId: String, receiverId: String, departmentId: String?): ParcelBatch =
+        supabase.from("parcel_batches")
+            .insert(
+                ParcelBatchInsert(
+                    company_id = companyId,
+                    receiver_employee_id = receiverId,
+                    department_id = departmentId,
+                    status = "finished",
+                    created_by = supabase.auth.currentUserOrNull()?.id,
+                ),
+            ) { select() }
+            .decodeSingle()
+
+    /** Slå en batch op på dens scanbare kode (batch-labelen). */
+    suspend fun batchByCode(companyId: String, code: String): ParcelBatch? =
+        supabase.from("parcel_batches")
+            .select {
+                filter {
+                    eq("company_id", companyId)
+                    eq("batch_code", code)
+                }
+                limit(1)
+            }.decodeList<ParcelBatch>().firstOrNull()
+
+    suspend fun batchById(batchId: String): ParcelBatch? =
+        supabase.from("parcel_batches")
+            .select { filter { eq("id", batchId) }; limit(1) }
+            .decodeList<ParcelBatch>().firstOrNull()
+
+    /** Åbne medlemmer af en batch — repræsentant (til formularen) + antal ("alle N"). */
+    suspend fun batchOpenMembers(batchId: String): List<Parcel> =
+        supabase.from("parcels")
+            .select {
+                filter {
+                    eq("batch_id", batchId)
+                    isIn("status", OPEN_STATUSES)
+                }
+                order("registered_at", Order.ASCENDING)
+            }.decodeList()
+
+    /** Udlever hele batchen: alle åbne medlemmer → delivered i én operation.
+     *  Hver række går gennem guard + hændelseslog (chain-of-custody pr. pakke).
+     *  Returnerer antal ramte pakker. */
+    suspend fun deliverBatch(batchId: String, deliveredTo: String, note: String?, signaturePath: String?): Int {
+        val updated = supabase.from("parcels").update({
+            set("status", "delivered")
+            set("delivered_to", deliveredTo)
+            set("delivered_note", note)
+            if (signaturePath != null) set("delivered_signature_path", signaturePath)
+        }) {
+            select(Columns.list("id"))
+            filter {
+                eq("batch_id", batchId)
+                isIn("status", OPEN_STATUSES)
+            }
+        }.decodeList<IdRow>()
+        requireUpdated(updated)
+        return updated.size
+    }
+
+    /** Afvis hele batchen: alle åbne medlemmer → returned (retur til afsender). */
+    suspend fun rejectBatch(batchId: String, note: String, signaturePath: String?): Int {
+        val updated = supabase.from("parcels").update({
+            set("status", "returned")
+            set("delivered_to", null as String?)
+            set("delivered_note", note)
+            if (signaturePath != null) set("delivered_signature_path", signaturePath)
+        }) {
+            select(Columns.list("id"))
+            filter {
+                eq("batch_id", batchId)
+                isIn("status", OPEN_STATUSES)
+            }
+        }.decodeList<IdRow>()
+        requireUpdated(updated)
+        return updated.size
+    }
+
     /** RLS filtrerer en uautoriseret UPDATE til 0 rækker uden fejl — uden
      *  denne kontrol ville appen vise succes mens intet blev gemt (samme
      *  vagt som webbens udleveringsdialog). */
@@ -218,20 +306,23 @@ object Repository {
     }
 
     /**
-     * Afvis pakke (spec §handover: modtageren nægter at modtage). Årsagen er
-     * påkrævet — afvisninger er undtagelseshændelser, der havner i
-     * dashboardets undtagelsesliste og eskaleres i audit-loggen, så en
-     * afvisning uden begrundelse er ubrugelig for den, der skal følge op.
-     * Underskrift er valgfri (samme som udlevering): modtageren står typisk
-     * ved skranken og kan kvittere for selve afvisningen, men kan ikke tvinges.
+     * Afvis pakke (spec §handover: modtageren nægter at modtage). En afvisning
+     * betyder "send retur til afsender": pakken går derfor DIREKTE til 'returned'
+     * (ikke det mellemliggende 'rejected'). Årsagen er påkrævet — afvisninger er
+     * undtagelseshændelser, der havner i dashboardets undtagelsesliste og
+     * eskaleres i audit-loggen, så en afvisning uden begrundelse er ubrugelig for
+     * den, der skal følge op. Underskrift er valgfri (samme som udlevering):
+     * modtageren står typisk ved skranken og kan kvittere for selve afvisningen,
+     * men kan ikke tvinges.
      *
      * delivered_to nulstilles med vilje — ingen har modtaget pakken.
      * Tilladt fra registered/in_storage/in_transit (jf. state-maskinen i
-     * parcel_transition_allowed — bemærk at in_locker IKKE må afvises).
+     * parcel_transition_allowed; registered → returned blev åbnet i
+     * 20260728170000). Bemærk at in_locker IKKE må afvises (returnér i stedet).
      */
     suspend fun rejectParcel(parcelId: String, note: String, signaturePath: String?) {
         val updated = supabase.from("parcels").update({
-            set("status", "rejected")
+            set("status", "returned")
             set("delivered_to", null as String?)
             set("delivered_note", note)
             if (signaturePath != null) set("delivered_signature_path", signaturePath)

@@ -12,8 +12,28 @@ export function usePlatformSettings() {
       const { data, error } = await supabase
         .from('platform_settings')
         .select(
-          'supported_languages, default_language, supported_currencies, default_currency, quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, notify_email_enabled, notify_sms_enabled, parcel_notifications_enabled, asset_notifications_enabled, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled, shipping_model, shipping_margin_percent, shipping_margin_fixed, shipping_byoc_subscription, shipping_byoc_fee, locker_loan_ttl_hours, maps_provider, refresh_interval_seconds, sftp_enabled, sftp_host, email_enabled, email_base_domain, email_antispoof_enabled, email_antispoof_strict, email_allowlist_required, import_schedule_enabled, import_schedule_time, entra_enabled, entra_anonymize_retired, entra_sync_interval_minutes',
+          'supported_languages, default_language, supported_currencies, default_currency, quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, notify_email_enabled, notify_sms_enabled, parcel_notifications_enabled, asset_notifications_enabled, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled, shipping_model, shipping_margin_percent, shipping_margin_fixed, shipping_byoc_subscription, shipping_byoc_fee, locker_loan_ttl_hours, maps_provider, google_maps_browser_key, refresh_interval_seconds, sftp_enabled, sftp_host, email_enabled, email_base_domain, email_antispoof_enabled, email_antispoof_strict, email_allowlist_required, import_schedule_enabled, import_schedule_time, entra_enabled, entra_anonymize_retired, entra_sync_interval_minutes, cost_per_email, cost_per_sms',
         )
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// Kort-/ruteudbyderen + Google-browser-nøglen. Egen lille forespørgsel (som
+// useRefreshInterval), så ruteplanlæggerens kort ikke skal hente hele
+// indstillings-rækken bare for at vide hvilken renderer det skal bruge.
+// Læsbart for alle brugere (RLS: using(true)); browser-nøglen er offentlig pr.
+// design og referrer-begrænset i Google Cloud.
+export function useMapsConfig() {
+  return useQuery({
+    queryKey: ['maps-config'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('maps_provider, google_maps_browser_key')
         .single()
       if (error) throw error
       return data

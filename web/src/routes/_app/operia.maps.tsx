@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
@@ -61,19 +63,29 @@ function MapsPage() {
   const { data: keyStatus, isPending: keyStatusPending } = useMapsKeyStatus()
   const queryClient = useQueryClient()
   const [provider, setProvider] = useState<MapsProvider>('openrouteservice')
+  const [browserKey, setBrowserKey] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (data) setProvider(data.maps_provider as MapsProvider)
+    if (data) {
+      setProvider(data.maps_provider as MapsProvider)
+      setBrowserKey(data.google_maps_browser_key ?? '')
+    }
   }, [data])
 
-  const dirty = !!data && provider !== data.maps_provider
+  const dirty =
+    !!data &&
+    (provider !== data.maps_provider || browserKey !== (data.google_maps_browser_key ?? ''))
 
   const save = async () => {
     setSaving(true)
     const { data: saved, error } = await supabase
       .from('platform_settings')
-      .update({ maps_provider: provider })
+      .update({
+        maps_provider: provider,
+        // Tom streng = fjern nøglen, så feltet kan ryddes igen.
+        google_maps_browser_key: browserKey.trim() || null,
+      })
       .eq('id', true)
       .select('id')
     setSaving(false)
@@ -83,10 +95,14 @@ function MapsPage() {
     }
     toast.success(t('settings.saved'))
     queryClient.invalidateQueries({ queryKey: ['platform-settings'] })
+    queryClient.invalidateQueries({ queryKey: ['maps-config'] })
   }
 
   const cancel = () => {
-    if (data) setProvider(data.maps_provider as MapsProvider)
+    if (data) {
+      setProvider(data.maps_provider as MapsProvider)
+      setBrowserKey(data.google_maps_browser_key ?? '')
+    }
   }
 
   if (isPending) return <Skeleton className="h-40 w-full" />
@@ -146,6 +162,34 @@ function MapsPage() {
             supabase secrets set {SECRET_NAME[provider]}=…
           </code>
         </div>
+
+        {/* Google kræver en nøgle mere. Server-nøglen ovenfor (Geocoding +
+            Routes) må aldrig nå browseren, men Maps JavaScript API kører pr.
+            design i browseren og skal have sin egen nøgle — beskyttet med
+            HTTP-referrer-begrænsning frem for hemmeligholdelse. Derfor ligger
+            den i platform_settings og ikke som edge-secret. */}
+        {provider === 'google' && (
+          <div className="mt-4 max-w-xl rounded-md border p-4">
+            <Label htmlFor="google-browser-key" className="text-[13px] font-[450]">
+              {t('operiaMapsPage.browserKeyLabel')}
+            </Label>
+            <Input
+              id="google-browser-key"
+              value={browserKey}
+              onChange={(e) => setBrowserKey(e.target.value)}
+              placeholder="AIza…"
+              autoComplete="off"
+              spellCheck={false}
+              className="mt-2 font-mono text-xs"
+            />
+            <p className="mt-3 text-xs text-muted-foreground">
+              {t('operiaMapsPage.browserKeyHint')}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('operiaMapsPage.browserKeyReloadHint')}
+            </p>
+          </div>
+        )}
       </div>
 
       {dirty && (

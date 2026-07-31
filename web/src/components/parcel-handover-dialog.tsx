@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,6 +14,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { SignaturePad, signatureBlob } from '@/components/signature-pad'
+import {
+  EMPTY_OVERRIDE,
+  ReceiverOverrideFields,
+  describeOverrideError,
+  overrideIncomplete,
+  overrideReceiver,
+  useCanOverrideReceiver,
+  type OverrideState,
+} from '@/components/parcel-receiver-override'
 import { supabase } from '@/lib/supabase'
 
 // Udlever pakke fra pakkens detaljepanel (spec §handover): modtager­bekræftelse
@@ -47,7 +55,9 @@ export function ParcelHandoverDialog({
   const [note, setNote] = useState('')
   const [hasInk, setHasInk] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [override, setOverride] = useState<OverrideState>(EMPTY_OVERRIDE)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canOverride = useCanOverrideReceiver()
 
   // Nulstil felterne hver gang dialogen åbnes for en (evt. anden) pakke.
   useEffect(() => {
@@ -55,13 +65,15 @@ export function ParcelHandoverDialog({
       setDeliveredTo(parcel.receiverName ?? '')
       setNote('')
       setHasInk(false)
+      setOverride(EMPTY_OVERRIDE)
     }
   }, [open, parcel.receiverName])
 
   const isProxy =
     !!parcel.receiverName &&
     deliveredTo.trim().toLowerCase() !== parcel.receiverName.trim().toLowerCase()
-  const proxyBlocked = isProxy && !parcel.allowProxy
+  // En manager-overstyring ER undtagelsen fra proxy-reglen — den blokeres ikke.
+  const proxyBlocked = isProxy && !parcel.allowProxy && !override.active
 
   const confirm = async () => {
     setBusy(true)
@@ -76,6 +88,23 @@ export function ParcelHandoverDialog({
             .upload(signaturePath, blob, { contentType: 'image/png', upsert: true })
           if (error) throw error
         }
+      }
+
+      // Overstyring går gennem RPC'en: den tjekker manager-rollen igen
+      // server-side, kræver begrundelsen og skriver override-linjen i sporet.
+      if (override.active) {
+        await overrideReceiver({
+          parcelIds: [parcel.id],
+          deliveredTo,
+          reason: override.reason,
+          employeeId: override.employee?.id ?? null,
+          note,
+          signaturePath,
+        })
+        toast.success(t('override.doneToast', { barcode: parcel.barcode ?? '' }))
+        onDone()
+        onOpenChange(false)
+        return
       }
 
       const { data, error } = await supabase
@@ -99,7 +128,7 @@ export function ParcelHandoverDialog({
       onOpenChange(false)
     } catch (error) {
       console.error('Udlevering fejlede:', error)
-      toast.error(describeError(error, t))
+      toast.error(describeOverrideError(error, t))
     } finally {
       setBusy(false)
     }
@@ -145,14 +174,32 @@ export function ParcelHandoverDialog({
             <Label>{t('handout.signature')}</Label>
             <SignaturePad canvasRef={canvasRef} onChange={setHasInk} />
           </div>
+
+          {canOverride && (
+            <ReceiverOverrideFields
+              companyId={companyId}
+              intendedReceiver={parcel.receiverName}
+              value={override}
+              onChange={setOverride}
+              onEmployeePicked={(employee) => employee && setDeliveredTo(employee.full_name)}
+              disabled={busy}
+            />
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={confirm} disabled={busy || proxyBlocked || !deliveredTo.trim()}>
-            {busy ? t('common.loading') : t('handout.confirm')}
+          <Button
+            onClick={confirm}
+            disabled={busy || proxyBlocked || !deliveredTo.trim() || overrideIncomplete(override)}
+          >
+            {busy
+              ? t('common.loading')
+              : override.active
+                ? t('override.confirm')
+                : t('handout.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -79,6 +79,31 @@ data class Parcel(
     val delivered_at: String? = null,
     val delivered_to: String? = null,
     val delivered_note: String? = null,
+    val batch_id: String? = null,
+)
+
+/** En batch samler flere pakker til ÉN modtager (kurv fra fragtmanden). Én
+ *  besked sendes, og hele batchen kan udleveres/afvises ved at scanne én pakke
+ *  eller batch-labelen (batch_code, OPB-…). */
+@Serializable
+data class ParcelBatch(
+    val id: String,
+    val company_id: String,
+    val batch_code: String,
+    val receiver_employee_id: String? = null,
+    val department_id: String? = null,
+    val status: String = "open",
+)
+
+/** Insert-payload: batch_code genereres server-side af parcel_batches_guard.
+ *  Status 'finished' ⇒ batchen er klar til notifikation + label. */
+@Serializable
+data class ParcelBatchInsert(
+    val company_id: String,
+    val receiver_employee_id: String,
+    val department_id: String? = null,
+    val status: String = "finished",
+    val created_by: String? = null,
 )
 
 /** Insert-payload ved modtagelse. Status sættes af parcels_guard-triggeren
@@ -91,6 +116,7 @@ data class ParcelInsert(
     val company_id: String,
     val barcode: String,
     val receiver_employee_id: String? = null,
+    val sender: String? = null,
     val department_id: String? = null,
     val storage_location_id: String? = null,
     val carrier_id: String? = null,
@@ -98,6 +124,8 @@ data class ParcelInsert(
     val condition_note: String? = null,
     val registered_by: String? = null,
     val client_key: String? = null,
+    // Sat i batch-tilstand: parcels_guard tvinger modtageren = batchens modtager.
+    val batch_id: String? = null,
 )
 
 @Serializable
@@ -123,16 +151,8 @@ data class CompanyFeature(val feature_key: String, val valid_until: String? = nu
 @Serializable
 data class CompanyProduct(val product_key: String, val valid_until: String? = null)
 
-@Serializable
-data class ProductAppearance(
-    val product_key: String,
-    val header_name: String? = null,
-    val header_color: String? = null,
-    val logo_url: String? = null,
-)
-
-/** Cachet branding (SharedPreferences) så login-skærmen kan vise det offline. */
-@Serializable
+/** Appens faste navn og accentfarve. Kunde-white-labeling (product_appearance)
+ *  er fjernet 2026-07-28 sammen med Logo/Udseende-siderne i webben. */
 data class Brand(val name: String = "Operia", val color: String = "#2D6FF0")
 
 // ---------- handheld-design (Operia → Handheld-design) ----------

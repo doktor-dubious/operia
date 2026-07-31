@@ -32,7 +32,7 @@ import kotlinx.serialization.json.put
 
 /**
  * Session + bootstrap-tilstand for hele appen. Skærmene læser stamdata
- * (afdelinger, medarbejdere, features, branding) herfra; selve pakke-/
+ * (afdelinger, medarbejdere, features) herfra; selve pakke-/
  * lageroperationerne kalder Repository direkte.
  */
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -48,7 +48,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var storageLocations by mutableStateOf<List<com.dcalogic.operia.data.StorageLocation>>(emptyList())
     var carriers by mutableStateOf<List<com.dcalogic.operia.data.Carrier>>(emptyList())
     var handlingClasses by mutableStateOf<List<com.dcalogic.operia.data.HandlingClass>>(emptyList())
-    var brand by mutableStateOf(Brand()); private set
+    /** Afsender-forslag til modtagelsen (tidligere brugte, hyppigste først).
+     *  Ren nice-to-have: fejler hentningen, er feltet bare uden forslag. */
+    var senderSuggestions by mutableStateOf<List<String>>(emptyList())
+    /** Appens faste brand (navn + accentfarve) — ikke længere kundetilpasset. */
+    val brand = Brand()
     /** Platformens handheld-design (Operia → Handheld-design). Tom = appens
      *  standardudseende, så skærmen virker før/uden konfiguration. */
     var handheld by mutableStateOf(HandheldConfig()); private set
@@ -58,6 +62,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var notifyPrefs by mutableStateOf<com.dcalogic.operia.data.NotifyPrefs?>(null); private set
     var pendingCount by mutableStateOf(0); private set
     var bootstrapError by mutableStateOf<String?>(null); private set
+    /** Stamdata-lister der ikke kunne hentes ved bootstrap. Uden dette ville et
+     *  fejlet opslag give en tom vælger uden nogen forklaring — umuligt at skelne
+     *  fra "der er ikke oprettet nogen" i admin. */
+    var masterDataError by mutableStateOf<String?>(null); private set
 
     private var validFeatures: Set<String> = emptySet()
     private var handheldConfigured = false
@@ -82,7 +90,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
-        brand = LocalStore.brand(app)
         handheld = LocalStore.handheld(app)
         viewModelScope.launch {
             supabase.auth.sessionStatus.collect { status ->
@@ -120,25 +127,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // vokser lineært med hver ny liste (mærkbart på warehouse-Wi-Fi).
             coroutineScope {
                 val rolesD = async { runCatching { Repository.currentRoles() }.getOrNull() }
-                val deptD = async { runCatching { Repository.departments(cid) }.getOrDefault(emptyList()) }
-                val empD = async { runCatching { Repository.employees(cid) }.getOrDefault(emptyList()) }
-                val assetLocD = async { runCatching { Repository.assetLocations(cid) }.getOrDefault(emptyList()) }
-                val storageD = async { runCatching { Repository.storageLocations(cid) }.getOrDefault(emptyList()) }
-                val carrierD = async { runCatching { Repository.carriers(cid) }.getOrDefault(emptyList()) }
-                val handlingD = async { runCatching { Repository.handlingClasses(cid) }.getOrDefault(emptyList()) }
+                val deptD = async { runCatching { Repository.departments(cid) } }
+                val empD = async { runCatching { Repository.employees(cid) } }
+                val assetLocD = async { runCatching { Repository.assetLocations(cid) } }
+                val storageD = async { runCatching { Repository.storageLocations(cid) } }
+                val carrierD = async { runCatching { Repository.carriers(cid) } }
+                val handlingD = async { runCatching { Repository.handlingClasses(cid) } }
+                val sendersD = async { runCatching { Repository.senderSuggestions(cid) } }
                 val featureD = async { runCatching { Repository.featureRows(cid) }.getOrNull() }
                 val handheldD = async { runCatching { Repository.handheldConfig(cid) }.getOrNull() }
-                val appearanceD = async { runCatching { Repository.appearance(cid) }.getOrNull() }
                 val coNotifyD = async { runCatching { Repository.companyNotifySettings(cid) }.getOrNull() }
                 val pfNotifyD = async { runCatching { Repository.platformNotifySettings() }.getOrNull() }
 
                 roles = rolesD.await()
+                // En fejlet liste bliver stadig tom (skærmen skal virke), men
+                // navnet samles op, så brugeren får at vide HVAD der mangler i
+                // stedet for bare at se en tom vælger.
+                val failed = mutableListOf<String>()
                 departments = deptD.await()
+                    .getOrElse { failed += ctx.getString(R.string.department); emptyList() }
                 employees = empD.await()
-                assetLocations = assetLocD.await()
+                    .getOrElse { failed += ctx.getString(R.string.receiver); emptyList() }
+                assetLocations = assetLocD.await().getOrDefault(emptyList())
                 storageLocations = storageD.await()
+                    .getOrElse { failed += ctx.getString(R.string.storage_location); emptyList() }
                 carriers = carrierD.await()
+                    .getOrElse { failed += ctx.getString(R.string.carrier); emptyList() }
                 handlingClasses = handlingD.await()
+                    .getOrElse { failed += ctx.getString(R.string.handling); emptyList() }
+                senderSuggestions = sendersD.await().getOrDefault(emptyList())
+                masterDataError =
+                    if (failed.isEmpty()) null
+                    else ctx.getString(R.string.err_master_data, failed.joinToString(", "))
 
                 // valid_until er en Postgres DATE ('2026-07-26') — sammenlign dato mod
                 // dato (>= i dag), som web og dispatcheren; mod et fuldt tidsstempel
@@ -180,15 +200,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     handheld = cfg
                     LocalStore.cacheHandheld(ctx, cfg)
                 }
-
-                appearanceD.await()?.let { ap ->
-                    val b = Brand(
-                        name = ap.header_name?.takeIf { it.isNotBlank() } ?: "Operia",
-                        color = ap.header_color?.takeIf { it.isNotBlank() } ?: "#2D6FF0",
-                    )
-                    brand = b
-                    LocalStore.cacheBrand(ctx, b)
-                }
             }
 
             refreshPending()
@@ -219,14 +230,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             this.email = email.trim()
             this.password = password
         }
+        // Log det vellykkede login (klient-drevet, da GoTrue-hook'en ikke er
+        // tilgængelig på planen).
+        reportSuccessfulLogin()
         null
     } catch (e: AuthRestException) {
         // GoTrue svarede. Ældre gateways udelader error_code — fald tilbage på teksten.
         if (e.errorCode == AuthErrorCode.InvalidCredentials ||
             e.message?.contains("invalid login credentials", ignoreCase = true) == true
         ) {
-            // GoTrue returnerer samme fejl for forkert kode og ukendt email. Server-
-            // funktionen logger kun sidstnævnte (eksisterende konti dækkes af hook'en).
+            // GoTrue returnerer samme fejl for forkert kode og ukendt email; server-
+            // funktionen logger begge (login-audit er klient-drevet).
             reportFailedLogin(email)
             LoginError.WrongCredentials
         } else LoginError.Other(e.errorDescription)
@@ -253,6 +267,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     buildJsonObject { put("p_email", e) },
                 )
             }
+        }
+    }
+
+    /** Rapportér et vellykket login til revisionsloggen (fire-and-forget). Kaldes
+     *  som den netop indloggede bruger; enhver fejl sluges, så logning aldrig
+     *  påvirker login-flowet. */
+    private fun reportSuccessfulLogin() {
+        viewModelScope.launch {
+            runCatching { supabase.postgrest.rpc("log_login_success") }
         }
     }
 

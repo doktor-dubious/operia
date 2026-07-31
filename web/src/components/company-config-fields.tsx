@@ -1,9 +1,5 @@
-import { useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { describeError } from '@/lib/errors'
-import { toast } from 'sonner'
-import { ImageUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Field as FieldBox,
@@ -22,16 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CopyButton } from '@/components/copy-button'
 import { Field } from '@/components/detail-field'
 import { TimezonePicker } from '@/components/timezone-picker'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { CURRENCY_OPTIONS, currencyLabel } from '@/lib/currencies'
 import { LANG_OPTIONS } from '@/lib/languages'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-// Virksomhedens lokaliserings- og logo-felter — delt mellem Operia → Kunder
+// Virksomhedens lokaliseringsfelter — delt mellem Operia → Kunder
 // (detaljepanelets faner, DCA redigerer en kunde) og Konfigurér-siderne
 // (manager redigerer egen virksomhed). Komponenterne er rene formularfelter:
 // tilstanden bor hos kalderen, som også ejer dirty-sporing og gem-bjælken.
@@ -43,6 +37,9 @@ const HALF_HOURS = Array.from({ length: 48 }, (_, i) => {
   return `${h}:${i % 2 ? '30' : '00'}`
 })
 const NONE = 'none'
+
+// Statusbeskedens standard-tidspunkt (samme default som platform_settings).
+export const DEFAULT_STATUS_TIME = '13:00'
 
 function TimeSelect({
   value,
@@ -73,18 +70,6 @@ function TimeSelect({
   )
 }
 
-// Fjerner filer i virksomhedens logo-mappe — undtagen den fil keepUrl peger
-// på. Bucket'en er offentlig, så udskiftede/fjernede logoer må ikke blive
-// liggende tilgængelige (GDPR); kaldes efter gem og efter sletning af kunden.
-export async function cleanupLogos(companyId: string, keepUrl: string | null) {
-  const { data: files } = await supabase.storage.from('company-logos').list(companyId)
-  if (!files?.length) return
-  const stale = files
-    .map((f) => `${companyId}/${f.name}`)
-    .filter((path) => !keepUrl?.endsWith(path))
-  if (stale.length) await supabase.storage.from('company-logos').remove(stale)
-}
-
 // Pakkeflowets to påmindelser (Notifikationer-siderne). Hver påmindelse kan
 // slås fra; påmindelse 2 kan ikke stå alene og følger med når påmindelse 1
 // deaktiveres. Påmindelse 2 holdes altid mindst én dag efter påmindelse 1.
@@ -98,9 +83,14 @@ export type ParcelFlowValue = {
   maxReminders: number
 }
 
-// Pakkeflowet har derudover ankomstbeskeden (sendes når pakken registreres) —
-// aktiv-varianten har ingen ankomst og bruger ParcelFlowValue alene.
-export type ParcelNotifyValue = ParcelFlowValue & { arrivalEnabled: boolean }
+// Pakkeflowet har derudover ankomstbeskeden (sendes når pakken registreres) og
+// statusbeskeden (dagligt sammendrag på et fast klokkeslæt) — aktiv-varianten
+// har ingen af delene og bruger ParcelFlowValue alene.
+export type ParcelNotifyValue = ParcelFlowValue & {
+  arrivalEnabled: boolean
+  statusEnabled: boolean
+  statusTime: string
+}
 
 // Tekster der adskiller pakke- fra aktiv-varianten (kun hint/labels; selve
 // felterne og reglerne er ens).
@@ -211,12 +201,17 @@ function ReminderFlowFields({
   )
 }
 
+// statusTest: valgfri testknap i statusbesked-boksen. Kun virksomhedssiden har
+// den (der findes en konkret modtagerliste at teste med) — platformsiden sætter
+// kun standarderne og lader den være tom.
 export function ParcelFlowFields({
   value,
   onChange,
+  statusTest,
 }: {
   value: ParcelNotifyValue
   onChange: (patch: Partial<ParcelNotifyValue>) => void
+  statusTest?: ReactNode
 }) {
   const { t } = useTranslation()
   return (
@@ -240,6 +235,44 @@ export function ParcelFlowFields({
           {t('notificationsPage.arrivalHint')}
         </p>
       </div>
+
+      <div
+        className={cn(
+          'flex flex-col gap-3 rounded-lg border p-2.5',
+          value.statusEnabled &&
+            'border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/10',
+        )}
+      >
+        <FieldLabel htmlFor="pf-status" className="font-normal">
+          <Checkbox
+            id="pf-status"
+            checked={value.statusEnabled}
+            onCheckedChange={(v) => onChange({ statusEnabled: v === true })}
+          />
+          <FieldTitle>{t('notificationsPage.status')}</FieldTitle>
+        </FieldLabel>
+        <p className="pl-6 text-xs text-muted-foreground">{t('notificationsPage.statusHint')}</p>
+        {value.statusEnabled && (
+          <div className="flex flex-col gap-2 pl-6">
+            <Label htmlFor="pf-status-time" className="text-label">
+              {t('notificationsPage.statusTime')}
+            </Label>
+            <Input
+              id="pf-status-time"
+              type="time"
+              step={60}
+              className="w-40"
+              value={value.statusTime}
+              // Tomt felt (browseren tillader det) må ikke slå tidspunktet ud —
+              // fald tilbage til standarden.
+              onChange={(e) => onChange({ statusTime: e.target.value || DEFAULT_STATUS_TIME })}
+            />
+            <p className="text-xs text-muted-foreground">{t('notificationsPage.statusTimeHint')}</p>
+          </div>
+        )}
+        {statusTest && <div className="pl-6">{statusTest}</div>}
+      </div>
+
       <ReminderFlowFields
         value={value}
         onChange={onChange}
@@ -502,116 +535,6 @@ export function CompanyLocalizationFields({
       </Field>
       <Field label={t('customerDetail.timezone')}>
         <TimezonePicker value={timezone} onChange={(tz) => onChange({ timezone: tz })} />
-      </Field>
-    </div>
-  )
-}
-
-export function CompanyLogoFields({
-  companyId,
-  logoUrl,
-  onLogoUrlChange,
-}: {
-  companyId: string
-  logoUrl: string
-  onLogoUrlChange: (url: string) => void
-}) {
-  const { t } = useTranslation()
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  // Upload til den offentlige company-logos-bucket; den offentlige URL lægges
-  // i logo-feltet, og selve gemningen sker via kalderens gem-bjælke.
-  const uploadLogo = async (file: File) => {
-    // Drag-and-drop omgår <input accept>, så filtypen tjekkes her.
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('customerDetail.logoNotImage'))
-      return
-    }
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png'
-    const path = `${companyId}/logo-${Date.now()}.${ext}`
-    setUploading(true)
-    const { error } = await supabase.storage.from('company-logos').upload(path, file, {
-      upsert: true,
-    })
-    setUploading(false)
-    if (error) {
-      console.error('Kunne ikke uploade logo:', error)
-      toast.error(describeError(error, t))
-      return
-    }
-    onLogoUrlChange(supabase.storage.from('company-logos').getPublicUrl(path).data.publicUrl)
-  }
-
-  return (
-    <div className="flex flex-col gap-5">
-      <Field label={`${t('customerDetail.logoUrl')} (${t('customerDetail.optional')})`}>
-        <div className="relative">
-          <Input
-            value={logoUrl}
-            placeholder="https://…/logo.png"
-            className={logoUrl ? 'pr-10' : undefined}
-            onChange={(e) => onLogoUrlChange(e.target.value)}
-          />
-          {logoUrl && (
-            <div className="absolute right-1 top-1/2 -translate-y-1/2">
-              <CopyButton value={logoUrl} label={t('customerDetail.copyLogoUrl')} />
-            </div>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">{t('customerDetail.logoHint')}</p>
-      </Field>
-      {/* Dropzone som på Import → Lokale filer: træk-og-slip eller klik */}
-      <div className="flex max-w-2xl flex-col gap-2">
-        <button
-          type="button"
-          disabled={uploading}
-          className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-border p-10 text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground-light disabled:cursor-default disabled:opacity-60"
-          onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault()
-            const file = e.dataTransfer.files?.[0]
-            if (file) uploadLogo(file)
-          }}
-        >
-          <ImageUp className="size-6" />
-          <span className="text-[13px]">
-            {uploading ? t('common.loading') : t('customerDetail.logoDropHint')}
-          </span>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) uploadLogo(file)
-            e.target.value = ''
-          }}
-        />
-      </div>
-      <Field label={t('customerDetail.logoPreview')}>
-        {logoUrl ? (
-          <>
-            <div className="flex h-24 items-center justify-center rounded-md border bg-muted/30 p-3">
-              <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="self-start"
-              onClick={() => onLogoUrlChange('')}
-            >
-              {t('customerDetail.removeLogo')}
-            </Button>
-          </>
-        ) : (
-          <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-            {t('customerDetail.logoEmpty')}
-          </p>
-        )}
       </Field>
     </div>
   )

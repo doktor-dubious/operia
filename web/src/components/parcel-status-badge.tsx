@@ -15,6 +15,9 @@ const statusColor: Record<ParcelStatus, string> = {
   delivered: 'var(--status-good)',
   rejected: 'var(--status-neutral-to-bad)',
   returned: 'var(--status-bad)',
+  // Annulleret fejlregistrering: bevidst neutral/grå — det er ikke et dårligt
+  // udfald i pakkeflowet, men en tilbagetrukket registrering.
+  removed: 'var(--muted-foreground)',
 }
 
 const statusLabelKey: Record<ParcelStatus, string> = {
@@ -26,6 +29,7 @@ const statusLabelKey: Record<ParcelStatus, string> = {
   delivered: 'dashboard.statusDelivered',
   rejected: 'dashboard.statusRejected',
   returned: 'dashboard.statusReturned',
+  removed: 'dashboard.statusRemoved',
 }
 
 export function ParcelStatusBadge({ status }: { status: ParcelStatus }) {

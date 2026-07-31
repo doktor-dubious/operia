@@ -68,7 +68,7 @@ function ConditionPage() {
       .from('parcels')
       .select(
         `id, barcode, status,
-         receiver:employees (full_name),
+         receiver:employees!parcels_receiver_employee_id_fkey (full_name),
          department:departments (name),
          location:storage_locations (name)`,
       )

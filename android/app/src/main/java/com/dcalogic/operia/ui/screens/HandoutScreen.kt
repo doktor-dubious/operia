@@ -1,5 +1,6 @@
 package com.dcalogic.operia.ui.screens
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.dcalogic.operia.AppViewModel
 import com.dcalogic.operia.R
 import com.dcalogic.operia.data.Parcel
+import com.dcalogic.operia.data.ParcelBatch
 import com.dcalogic.operia.data.Repository
 import com.dcalogic.operia.ui.BigButton
 import com.dcalogic.operia.ui.C
@@ -39,13 +41,17 @@ import com.dcalogic.operia.ui.statusLabel
 import kotlinx.coroutines.launch
 
 // Hvilke handlinger den fundne pakkes status tillader. Spejler
-// parcel_transition_allowed (20260710031953_parcels.sql) — serveren afviser
-// alt andet, så knapperne SKAL følge state-maskinen, ellers får handleren en
-// uforståelig fejl i stedet for en knap, der ikke er der.
+// parcel_transition_allowed (20260710031953_parcels.sql, udvidet i
+// 20260728170000) — serveren afviser alt andet, så knapperne SKAL følge
+// state-maskinen, ellers får handleren en uforståelig fejl i stedet for en
+// knap, der ikke er der.
 //
-// Bemærk de to asymmetrier, der let overses:
+// "Afvis" betyder nu "send retur til afsender" og fører pakken DIREKTE til
+// 'returned' (se rejectParcel i Repository). REJECTABLE afgør stadig hvorfra der
+// må afvises; udfaldet er blot 'returned' i stedet for det gamle 'rejected'.
+//
+// Bemærk asymmetrien, der let overses:
 //   - in_locker må IKKE afvises (kun udleveres/returneres/tages i lager)
-//   - registered må IKKE returneres (men gerne afvises)
 
 /** Statusser hvorfra udlevering er tilladt. */
 private val DELIVERABLE = setOf("registered", "in_storage", "in_transit", "in_locker")
@@ -74,6 +80,16 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
     val scope = rememberCoroutineScope()
 
     var parcel by remember { mutableStateOf<Parcel?>(null) }
+    // Batchen bag den scannede pakke/batch-label (null = enkelt pakke). batchScope
+    // 'all' (standard) = handling rammer hele batchen; 'one' = kun den scannede.
+    var batch by remember { mutableStateOf<ParcelBatch?>(null) }
+    var batchScope by remember { mutableStateOf("all") }
+    var batchCount by remember { mutableStateOf(0) }
+    // Blev batchen fundet ved at scanne selve batch-labelen? Så gælder handlingen
+    // altid hele batchen — "kun denne pakke" (repræsentanten = vilkårligt medlem)
+    // giver ingen mening og skjules. Kun ved scanning af en konkret pakkes
+    // stregkode tilbydes valget.
+    var batchViaLabel by remember { mutableStateOf(false) }
     var assignEmpId by remember { mutableStateOf<String?>(null) }
     var who by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
@@ -93,23 +109,50 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
     val msgFailed = stringResource(R.string.handout_failed)
     val msgRejected = stringResource(R.string.handout_rejected)
     val msgReturned = stringResource(R.string.handout_returned)
+    val msgBatchDelivered = stringResource(R.string.handout_batch_delivered)
+    val msgBatchRejected = stringResource(R.string.handout_batch_rejected)
 
+    // Scanningen kan være en pakkes stregkode ELLER en batch-labels kode (OPB-…):
+    // først slås op på pakke, ellers på batch. Hører pakken/labelen til en batch,
+    // hentes batchens åbne medlemmer (antal + repræsentant til formularen).
     fun find(code: String) {
         scope.launch {
             try {
-                val found = Repository.findParcels(vm.companyId ?: return@launch, code)
-                if (found.isEmpty()) {
+                val companyId = vm.companyId ?: return@launch
+                val found = Repository.findParcels(companyId, code)
+                var p = found.firstOrNull { it.status in ACTIONABLE } ?: found.firstOrNull()
+                var b: ParcelBatch? = null
+                var members: List<Parcel> = emptyList()
+                var viaLabel = false
+
+                if (p != null && p.batch_id != null) {
+                    b = Repository.batchById(p.batch_id!!)
+                    if (b != null) members = Repository.batchOpenMembers(b.id)
+                } else if (p == null) {
+                    b = Repository.batchByCode(companyId, code)
+                    if (b != null) {
+                        viaLabel = true
+                        members = Repository.batchOpenMembers(b.id)
+                        p = members.firstOrNull()
+                    }
+                }
+
+                if (p == null) {
                     parcel = null
+                    batch = null
                     toast.show("err", "$msgNotFound: $code")
                     return@launch
                 }
-                val open = found.firstOrNull { it.status in ACTIONABLE }
-                parcel = open ?: found.first()
+                parcel = p
+                batch = b
+                batchCount = members.size
+                batchScope = "all"
+                batchViaLabel = viaLabel
                 assignEmpId = null
                 note = ""
                 signature = null
-                who = vm.employees.firstOrNull { it.id == parcel?.receiver_employee_id }?.full_name ?: ""
-                if (open == null) toast.show("info", msgTerminal)
+                who = vm.employees.firstOrNull { it.id == p.receiver_employee_id }?.full_name ?: ""
+                if (p.status !in ACTIONABLE) toast.show("info", msgTerminal)
             } catch (e: Exception) {
                 toast.show("err", msgLookupFailed)
             }
@@ -119,6 +162,10 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
     /** Ryd formularen efter en gennemført handling og giv scanneren fokus igen. */
     fun clearAfterAction() {
         parcel = null
+        batch = null
+        batchCount = 0
+        batchScope = "all"
+        batchViaLabel = false
         who = ""
         note = ""
         signature = null
@@ -126,27 +173,42 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
         focusStamp = System.currentTimeMillis()
     }
 
+    // Rammer handlingen hele batchen? (batch fundet + scope 'all').
+    fun actOnBatch(): Boolean = batch != null && batchScope == "all"
+
     fun deliver() {
         val p = parcel ?: return
         if (who.trim().isEmpty()) {
             toast.show("err", msgWho)
             return
         }
-        if (p.status == "unassigned" && assignEmpId == null) {
+        // Assign-før-udlevering gælder kun enkeltpakker; en batch har altid modtager.
+        if (!actOnBatch() && p.status == "unassigned" && assignEmpId == null) {
             toast.show("err", msgAssign)
             return
         }
         busy = true
         scope.launch {
             try {
-                if (p.status == "unassigned") {
-                    Repository.assignReceiver(p.id, assignEmpId!!)
+                val note0 = note.trim().ifBlank { null }
+                if (actOnBatch()) {
+                    val b = batch!!
+                    // Én underskrift dækker hele batchen (gemmes på en batch-sti).
+                    val sigPath = signature?.let { png ->
+                        runCatching { Repository.uploadSignature(p.company_id, "batch-${b.id}", png) }.getOrNull()
+                    }
+                    val n = Repository.deliverBatch(b.id, who.trim(), note0, sigPath)
+                    toast.show("ok", msgBatchDelivered.format(n))
+                } else {
+                    if (p.status == "unassigned") {
+                        Repository.assignReceiver(p.id, assignEmpId!!)
+                    }
+                    val sigPath = signature?.let { png ->
+                        runCatching { Repository.uploadSignature(p.company_id, p.id, png) }.getOrNull()
+                    }
+                    Repository.deliverParcel(p.id, who.trim(), note0, sigPath)
+                    toast.show("ok", msgDone.format(who.trim()))
                 }
-                val sigPath = signature?.let { png ->
-                    runCatching { Repository.uploadSignature(p.company_id, p.id, png) }.getOrNull()
-                }
-                Repository.deliverParcel(p.id, who.trim(), note.trim().ifBlank { null }, sigPath)
-                toast.show("ok", msgDone.format(who.trim()))
                 clearAfterAction()
             } catch (e: Exception) {
                 toast.show("err", "$msgFailed: ${e.message ?: ""}")
@@ -155,18 +217,27 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
         }
     }
 
-    /** Afvis (modtageren nægter modtagelse) — årsag påkrævet (fra dialogen),
-     *  underskrift valgfri. */
+    /** Afvis (modtageren nægter modtagelse) → pakken(erne) sendes retur til
+     *  afsender ('returned'). Årsag påkrævet (fra ReasonDialog), underskrift valgfri. */
     fun reject(reason: String) {
         val p = parcel ?: return
         busy = true
         scope.launch {
             try {
-                val sigPath = signature?.let { png ->
-                    runCatching { Repository.uploadSignature(p.company_id, p.id, png) }.getOrNull()
+                if (actOnBatch()) {
+                    val b = batch!!
+                    val sigPath = signature?.let { png ->
+                        runCatching { Repository.uploadSignature(p.company_id, "batch-${b.id}", png) }.getOrNull()
+                    }
+                    val n = Repository.rejectBatch(b.id, reason, sigPath)
+                    toast.show("ok", msgBatchRejected.format(n))
+                } else {
+                    val sigPath = signature?.let { png ->
+                        runCatching { Repository.uploadSignature(p.company_id, p.id, png) }.getOrNull()
+                    }
+                    Repository.rejectParcel(p.id, reason, sigPath)
+                    toast.show("ok", msgRejected)
                 }
-                Repository.rejectParcel(p.id, reason, sigPath)
-                toast.show("ok", msgRejected)
                 rejectOpen = false
                 clearAfterAction()
             } catch (e: Exception) {
@@ -218,9 +289,52 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
                 )
             }
 
-            val canDeliver = p.status in DELIVERABLE || p.status == "unassigned"
-            val canReject = p.status in REJECTABLE
-            val canReturn = p.status in RETURNABLE
+            // Batch-banner: pakken/labelen hører til en batch → handel på hele
+            // batchen (standard) eller kun den scannede pakke.
+            val b = batch
+            if (b != null) {
+                Card {
+                    Text(b.batch_code, color = C.txt, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    Text(
+                        stringResource(R.string.handout_batch_banner, batchCount, receiverLabel(vm, p)),
+                        color = C.muted,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    // Batch-label scannet ⇒ altid hele batchen; ellers tilbyd "kun denne".
+                    if (batchViaLabel) {
+                        Text(
+                            stringResource(R.string.handout_batch_whole_only, batchCount),
+                            color = C.muted,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    } else {
+                        Row(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                            GhostButton(
+                                text = stringResource(R.string.handout_batch_scope_all, batchCount),
+                                textColor = if (batchScope == "all") C.green else C.muted,
+                                modifier = Modifier.weight(1f),
+                            ) { batchScope = "all" }
+                            GhostButton(
+                                text = stringResource(R.string.handout_batch_scope_one),
+                                textColor = if (batchScope == "one") C.green else C.muted,
+                                modifier = Modifier.weight(1f),
+                            ) { batchScope = "one" }
+                        }
+                    }
+                }
+            }
+
+            val batchAll = actOnBatch()
+            // Batch → udlever/afvis ALLE (retur-knappen udgår, afvis→returned dækker det).
+            val canDeliver = if (batchAll) true else (p.status in DELIVERABLE || p.status == "unassigned")
+            val canReject = if (batchAll) true else (p.status in REJECTABLE)
+            // Afvis går nu direkte til 'returned' (modtageren nægter → retur til
+            // afsender), så den separate "Returnér"-knap ville være overflødig,
+            // hvor der også kan afvises. Vis den derfor kun for de statusser, der
+            // KAN returneres men IKKE afvises (unassigned, in_locker, og en
+            // historisk 'rejected'-pakke) — ellers stod to knapper med samme udfald.
+            val canReturn = if (batchAll) false else (p.status in RETURNABLE && p.status !in REJECTABLE)
             // Note-feltet herunder hører til UDLEVERING og er valgfrit. Den
             // påkrævede årsag ved afvis/returnér spørges der om i ReasonDialog
             // — ét felt kan ikke mærkes for begge regler på én gang.
@@ -291,7 +405,11 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
 
                 if (canDeliver) {
                     BigButton(
-                        stringResource(R.string.handout_deliver_button),
+                        if (batchAll) {
+                            stringResource(R.string.handout_batch_deliver, batchCount)
+                        } else {
+                            stringResource(R.string.handout_deliver_button)
+                        },
                         color = C.green,
                         contentColor = C.greenInk,
                         busy = busy,
@@ -303,7 +421,11 @@ fun HandoutScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? = n
                 // derfor åbner knapperne her kun dialogen.
                 if (canReject) {
                     BigButton(
-                        stringResource(R.string.handout_reject_button),
+                        if (batchAll) {
+                            stringResource(R.string.handout_batch_reject, batchCount)
+                        } else {
+                            stringResource(R.string.handout_reject_button)
+                        },
                         color = C.red,
                         busy = busy,
                         modifier = Modifier.padding(top = 10.dp),

@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, ChevronUp, Search } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+} from 'lucide-react'
 import { AnimateIcon } from '@/components/animate-ui/icons/icon'
 import { RefreshCw } from '@/components/animate-ui/icons/refresh-cw'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -25,6 +32,7 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { CompanySwitcher } from '@/components/company-switcher'
 import { FeedbackPopover } from '@/components/feedback-popover'
@@ -34,7 +42,6 @@ import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useRefreshInterval } from '@/hooks/use-platform-settings'
 import { useParcelsRealtime } from '@/hooks/use-parcels-realtime'
-import { useActiveAppearance } from '@/hooks/use-active-appearance'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
 import {
@@ -77,24 +84,113 @@ function useUserProfile() {
   return { name, initial: name[0]?.toUpperCase() ?? 'O' }
 }
 
-function UserTrigger({ name, initial }: { name: string; initial: string }) {
+function UserTrigger({
+  name,
+  initial,
+  collapsed = false,
+}: {
+  name: string
+  initial: string
+  collapsed?: boolean
+}) {
   return (
     <DropdownMenuTrigger asChild>
       <Button
         variant="ghost"
-        className="h-auto w-full cursor-pointer justify-start overflow-hidden rounded-none p-3 hover:bg-muted/80"
+        title={collapsed ? name : undefined}
+        className={cn(
+          'h-auto w-full cursor-pointer justify-start overflow-hidden rounded-none hover:bg-muted/80',
+          collapsed ? 'px-0 py-3' : 'p-3',
+        )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className={cn('flex min-w-0 flex-1 items-center gap-3', collapsed && 'justify-center')}>
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-muted-foreground/20">{initial}</AvatarFallback>
           </Avatar>
-          <span className="min-w-0 flex-1 truncate text-left text-xs font-medium group-data-[collapsible=icon]:hidden">
-            {name}
-          </span>
-          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+          {!collapsed && (
+            <>
+              <span className="min-w-0 flex-1 truncate text-left text-xs font-medium group-data-[collapsible=icon]:hidden">
+                {name}
+              </span>
+              <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+            </>
+          )}
         </div>
       </Button>
     </DropdownMenuTrigger>
+  )
+}
+
+// Minimér/normalisér-knappen øverst til højre i sidemenuen (claude.ai-mønsteret):
+// samme lille ghost-ikonknap i begge navigationstilstande, ikonet viser hvad
+// klikket gør. Genvejen ⌘/Ctrl+B gør det samme.
+function NavToggle({
+  collapsed,
+  onToggle,
+  className,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const label = t(collapsed ? 'nav.expandSidebar' : 'nav.collapseSidebar')
+  const Icon = collapsed ? PanelLeftOpen : PanelLeftClose
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={label}
+      title={label}
+      onClick={onToggle}
+      className={cn(
+        'h-7 w-7 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground',
+        className,
+      )}
+    >
+      <Icon className="size-4" />
+    </Button>
+  )
+}
+
+// Toppen af sidemenuen: logo + navn til venstre, minimér-knappen til højre.
+// Minimeret er der kun plads til ét ikon — som på claude.ai står logoet der, og
+// knappen træder frem ved hover/tastaturfokus.
+function BrandAndToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
+  if (collapsed) {
+    return (
+      <div className="group/brand relative mx-auto flex size-7 items-center justify-center">
+        <BrandLogo className="size-5 transition-opacity group-hover/brand:opacity-0" />
+        <NavToggle
+          collapsed
+          onToggle={onToggle}
+          className="absolute inset-0 opacity-0 transition-opacity group-hover/brand:opacity-100 focus-visible:opacity-100"
+        />
+      </div>
+    )
+  }
+  return (
+    <>
+      <BrandLogo className="h-5 w-5 shrink-0" />
+      <span className="text-[13px] font-semibold">{t('app.name')}</span>
+      <NavToggle collapsed={false} onToggle={onToggle} className="ml-auto" />
+    </>
+  )
+}
+
+// Det tomme område under menupunkterne i normal bredde: klik minimerer menuen,
+// og markøren viser det (pil mod venstre) allerede ved hover. Vises kun når
+// menuen er udfoldet — i minimeret tilstand er der intet tomrum at klikke på.
+function CollapseZone({ onCollapse }: { onCollapse: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <div
+      aria-hidden
+      title={t('nav.collapseSidebar')}
+      onClick={onCollapse}
+      className="min-h-8 flex-1 cursor-w-resize"
+    />
   )
 }
 
@@ -111,6 +207,9 @@ function ClassicSidebar() {
   const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
   const { companyId } = useCompanyContext()
+  const { state, isMobile, toggleSidebar, setOpen } = useSidebar()
+  // På mobil vises menuen som en fuld sheet — der findes ingen minimeret bredde.
+  const collapsed = !isMobile && state === 'collapsed'
   const groups = visibleNavGroups(access)
   // Konfiguration: managers for egen virksomhed; platform-admins når en
   // kunde er valgt i CompanySwitcheren.
@@ -149,14 +248,11 @@ function ClassicSidebar() {
   return (
     <Sidebar collapsible="icon" className="select-none">
       <SidebarHeader>
-        <div className="flex h-10 items-center gap-2 px-2">
-          <BrandLogo className="h-5 w-5 shrink-0" />
-          <span className="text-[13px] font-semibold group-data-[collapsible=icon]:hidden">
-            {t('app.name')}
-          </span>
+        <div className={cn('flex h-10 items-center gap-2', collapsed ? 'px-0' : 'px-2')}>
+          <BrandAndToggle collapsed={collapsed} onToggle={toggleSidebar} />
         </div>
       </SidebarHeader>
-      <CompanySwitcher />
+      <CompanySwitcher compact={collapsed} />
       <SidebarContent>
         {/* Home — øverste, selvstændige punkt med en separator under. */}
         <SidebarGroup className="pb-0">
@@ -275,6 +371,8 @@ function ClassicSidebar() {
           </SidebarGroup>
           )
         })}
+        {/* Tomrummet mellem menupunkterne og bundgruppen: klik minimerer. */}
+        {!collapsed && <CollapseZone onCollapse={() => setOpen(false)} />}
         {/* Nederst: Konfiguration (virksomhedens egen — managers, samt
             platform-admins med valgt kunde) og Operia (kun platform-admins,
             der har adgang til alt). */}
@@ -319,7 +417,7 @@ function ClassicSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-0">
         <DropdownMenu>
-          <UserTrigger name={name} initial={initial} />
+          <UserTrigger name={name} initial={initial} collapsed={collapsed} />
           <UserNavDropdownContent includeNav={false} />
         </DropdownMenu>
       </SidebarFooter>
@@ -327,63 +425,100 @@ function ClassicSidebar() {
   )
 }
 
-// Moderne tilstand: forenklet navigation til ikke-IT-vante brugere. Kun de fem
-// daglige pakkehandlinger (samme sæt som håndterminalens fliser), vist som
-// store, tydelige knapper med ikon + label. Resten af navigationen (samt
-// Konfiguration/Operia) ligger i bruger-dropdownen nederst til venstre.
+// Moderne tilstand: forenklet navigation til ikke-IT-vante brugere. Kun det
+// daglige arbejde — tavle/overblik plus de fem pakkehandlinger (samme sæt som
+// håndterminalens fliser) — vist som store, tydelige knapper med ikon + label.
+// Resten af navigationen, inkl. pakkernes listesider (oversigt/rapporter/
+// statistik) og Konfiguration/Operia, ligger i dropdownen nederst til venstre.
 const bigNavItemClass =
   'flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/30 px-3 py-3 ' +
   'text-[15px] font-medium text-foreground-light transition-colors ' +
   'hover:border-foreground/20 hover:bg-sidebar-accent hover:text-foreground [&_svg]:size-5 [&_svg]:shrink-0'
+
+// Minimeret: kun ikonerne, centreret i en smal skinne (samme bredde som den
+// klassiske ikon-tilstand). Titlen ligger i title-attributten.
+const smallNavItemClass =
+  'flex items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/30 py-2.5 ' +
+  'text-foreground-light transition-colors hover:border-foreground/20 hover:bg-sidebar-accent ' +
+  'hover:text-foreground [&_svg]:size-5 [&_svg]:shrink-0'
 
 function ModernRail() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
+  const { navCollapsed, setNavCollapsed, toggleNavCollapsed } = useUiSettings()
   const items = simpleNavItems(access)
+
+  // Samme genvej som den klassiske sidemenu (SidebarProvider): ⌘/Ctrl+B.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'b' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        toggleNavCollapsed()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [toggleNavCollapsed])
+
   return (
-    <aside className="flex w-64 shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-10 items-center gap-2 px-4 pt-1">
-        <BrandLogo className="h-5 w-5 shrink-0" />
-        <span className="text-[13px] font-semibold">{t('app.name')}</span>
+    <aside
+      className={cn(
+        'flex shrink-0 select-none flex-col border-r border-sidebar-border bg-sidebar',
+        'transition-[width] duration-200 ease-linear',
+        navCollapsed ? 'w-12' : 'w-64',
+      )}
+    >
+      <div className={cn('flex h-10 items-center gap-2 pt-1', navCollapsed ? 'px-0' : 'px-4')}>
+        <BrandAndToggle collapsed={navCollapsed} onToggle={toggleNavCollapsed} />
       </div>
-      <CompanySwitcher />
-      <nav className="flex-1 overflow-y-auto px-3 py-3">
+      <CompanySwitcher compact={navCollapsed} />
+      <nav
+        className={cn(
+          'flex flex-1 flex-col overflow-y-auto py-3',
+          navCollapsed ? 'px-2' : 'px-3',
+        )}
+      >
         <div className="flex flex-col gap-2">
           {/* Home — øverst som lille link, med en separator under; de store
               knapper nedenunder er de daglige handlinger. */}
           <Link
             to={homeNav.href}
+            title={t('nav.home')}
             className={cn(
               menuItemClass,
               'flex items-center hover:bg-sidebar-accent',
+              navCollapsed && 'justify-center px-0',
               pathname === homeNav.href && 'bg-sidebar-accent text-foreground',
             )}
           >
             <homeNav.icon />
-            <span>{t('nav.home')}</span>
+            {!navCollapsed && <span>{t('nav.home')}</span>}
           </Link>
           <div className="border-b border-sidebar-border" />
           {items.map((item) => (
             <Link
               key={item.href}
               to={item.href}
+              title={t(`nav.${item.labelKey}`)}
               className={cn(
-                bigNavItemClass,
+                navCollapsed ? smallNavItemClass : bigNavItemClass,
                 pathname === item.href &&
                   'border-primary/40 bg-primary/10 text-foreground shadow-sm',
               )}
             >
               <item.icon />
-              <span>{t(`nav.${item.labelKey}`)}</span>
+              {!navCollapsed && <span>{t(`nav.${item.labelKey}`)}</span>}
             </Link>
           ))}
         </div>
+        {/* Tomrummet under knapperne: klik minimerer skinnen. */}
+        {!navCollapsed && <CollapseZone onCollapse={() => setNavCollapsed(true)} />}
       </nav>
       <div className="border-t border-sidebar-border">
         <DropdownMenu>
-          <UserTrigger name={name} initial={initial} />
+          <UserTrigger name={name} initial={initial} collapsed={navCollapsed} />
           <UserNavDropdownContent includeNav />
         </DropdownMenu>
       </div>
@@ -487,24 +622,14 @@ function HeaderActions() {
 function PageHeader() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const appearance = useActiveAppearance()
   const active =
     allNavItems.find((item) => item.href === pathname) ??
     [...allNavItems]
       .sort((a, b) => b.href.length - a.href.length)
       .find((item) => item.href !== '/' && pathname.startsWith(item.href))
-  // Kundens white-labeling for det aktive produkt farver header-baggrunden og
-  // viser logo + brand-navn; ellers falder vi tilbage til sidens nav-titel.
-  const brandBg = appearance?.headerColor
-  const title = appearance?.headerName || (active ? t(`nav.${active.labelKey}`) : t('app.name'))
+  const title = active ? t(`nav.${active.labelKey}`) : t('app.name')
   return (
-    <header
-      className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-6"
-      style={brandBg ? { background: brandBg, color: '#fff' } : undefined}
-    >
-      {appearance?.logoUrl && (
-        <img src={appearance.logoUrl} alt="" className="h-5 w-auto shrink-0 object-contain" />
-      )}
+    <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-6">
       <h1 className="text-[13px] font-semibold">{title}</h1>
       <HeaderActions />
     </header>
@@ -512,7 +637,7 @@ function PageHeader() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { navMode } = useUiSettings()
+  const { navMode, navCollapsed, setNavCollapsed } = useUiSettings()
   // Realtime på pakker: håndterminalens handlinger slår igennem med det samme.
   // Ligger her i skallen (ikke på den enkelte skærm), så ét abonnement dækker
   // alle pakkeskærme — ved siden af auto-refresh'en i HeaderActions, der bliver
@@ -537,7 +662,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-svh w-full flex-col overflow-hidden">
       <ImpersonationBanner />
+      {/* Minimeret/normal bredde styres af den delte UI-indstilling, så valget
+          holder på tværs af sider og navigationstilstande (localStorage). */}
       <SidebarProvider
+        open={!navCollapsed}
+        onOpenChange={(open) => setNavCollapsed(!open)}
         className="min-h-0 flex-1"
         style={{ '--sidebar-width': '240px' } as React.CSSProperties}
       >

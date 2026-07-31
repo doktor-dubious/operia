@@ -511,6 +511,8 @@ export type Database = {
           parcel_reminder_2_days: number | null
           parcel_reminder_2_enabled: boolean | null
           parcel_reminder_max: number | null
+          parcel_status_enabled: boolean | null
+          parcel_status_time: string | null
           purchasing_email: string | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
@@ -546,6 +548,8 @@ export type Database = {
           parcel_reminder_2_days?: number | null
           parcel_reminder_2_enabled?: boolean | null
           parcel_reminder_max?: number | null
+          parcel_status_enabled?: boolean | null
+          parcel_status_time?: string | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -581,6 +585,8 @@ export type Database = {
           parcel_reminder_2_days?: number | null
           parcel_reminder_2_enabled?: boolean | null
           parcel_reminder_max?: number | null
+          parcel_status_enabled?: boolean | null
+          parcel_status_time?: string | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -1113,6 +1119,7 @@ export type Database = {
           message: string
           page_path: string | null
           screenshot_path: string | null
+          subject: string | null
           user_id: string | null
         }
         Insert: {
@@ -1123,6 +1130,7 @@ export type Database = {
           message: string
           page_path?: string | null
           screenshot_path?: string | null
+          subject?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1133,6 +1141,7 @@ export type Database = {
           message?: string
           page_path?: string | null
           screenshot_path?: string | null
+          subject?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -1588,6 +1597,90 @@ export type Database = {
           },
         ]
       }
+      parcel_barcode_seq: {
+        Row: {
+          company_id: string
+          last_value: number
+        }
+        Insert: {
+          company_id: string
+          last_value?: number
+        }
+        Update: {
+          company_id?: string
+          last_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcel_barcode_seq_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parcel_batches: {
+        Row: {
+          batch_code: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          finished_at: string | null
+          id: string
+          receiver_employee_id: string
+          status: Database["public"]["Enums"]["batch_status"]
+          updated_at: string
+        }
+        Insert: {
+          batch_code?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          finished_at?: string | null
+          id?: string
+          receiver_employee_id: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          updated_at?: string
+        }
+        Update: {
+          batch_code?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          finished_at?: string | null
+          id?: string
+          receiver_employee_id?: string
+          status?: Database["public"]["Enums"]["batch_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcel_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcel_batches_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcel_batches_receiver_employee_id_fkey"
+            columns: ["receiver_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parcel_documents: {
         Row: {
           company_id: string
@@ -1692,9 +1785,11 @@ export type Database = {
       }
       parcel_notifications: {
         Row: {
+          batch_id: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
           company_id: string
           created_at: string
+          digest_key: string | null
           employee_id: string | null
           error: string | null
           id: string
@@ -1706,9 +1801,11 @@ export type Database = {
           status: Database["public"]["Enums"]["notification_status"]
         }
         Insert: {
+          batch_id?: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
           company_id: string
           created_at?: string
+          digest_key?: string | null
           employee_id?: string | null
           error?: string | null
           id?: string
@@ -1720,9 +1817,11 @@ export type Database = {
           status: Database["public"]["Enums"]["notification_status"]
         }
         Update: {
+          batch_id?: string | null
           channel?: Database["public"]["Enums"]["notification_channel"]
           company_id?: string
           created_at?: string
+          digest_key?: string | null
           employee_id?: string | null
           error?: string | null
           id?: string
@@ -1760,6 +1859,7 @@ export type Database = {
       parcels: {
         Row: {
           barcode: string | null
+          batch_id: string | null
           carrier_id: string | null
           client_key: string | null
           company_id: string
@@ -1768,6 +1868,7 @@ export type Database = {
           condition_preset: string | null
           created_at: string
           delivered_at: string | null
+          delivered_employee_id: string | null
           delivered_note: string | null
           delivered_signature_path: string | null
           delivered_to: string | null
@@ -1777,8 +1878,14 @@ export type Database = {
           is_private: boolean
           parcel_type: Database["public"]["Enums"]["parcel_type"]
           receiver_employee_id: string | null
+          receiver_override_at: string | null
+          receiver_override_by: string | null
+          receiver_override_reason: string | null
           registered_at: string
           registered_by: string | null
+          removed_at: string | null
+          removed_by: string | null
+          removed_reason: string | null
           sender: string | null
           status: Database["public"]["Enums"]["parcel_status"]
           storage_location_id: string | null
@@ -1786,6 +1893,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          batch_id?: string | null
           carrier_id?: string | null
           client_key?: string | null
           company_id: string
@@ -1794,6 +1902,7 @@ export type Database = {
           condition_preset?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivered_employee_id?: string | null
           delivered_note?: string | null
           delivered_signature_path?: string | null
           delivered_to?: string | null
@@ -1803,8 +1912,14 @@ export type Database = {
           is_private?: boolean
           parcel_type?: Database["public"]["Enums"]["parcel_type"]
           receiver_employee_id?: string | null
+          receiver_override_at?: string | null
+          receiver_override_by?: string | null
+          receiver_override_reason?: string | null
           registered_at?: string
           registered_by?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
           sender?: string | null
           status?: Database["public"]["Enums"]["parcel_status"]
           storage_location_id?: string | null
@@ -1812,6 +1927,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          batch_id?: string | null
           carrier_id?: string | null
           client_key?: string | null
           company_id?: string
@@ -1820,6 +1936,7 @@ export type Database = {
           condition_preset?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivered_employee_id?: string | null
           delivered_note?: string | null
           delivered_signature_path?: string | null
           delivered_to?: string | null
@@ -1829,14 +1946,27 @@ export type Database = {
           is_private?: boolean
           parcel_type?: Database["public"]["Enums"]["parcel_type"]
           receiver_employee_id?: string | null
+          receiver_override_at?: string | null
+          receiver_override_by?: string | null
+          receiver_override_reason?: string | null
           registered_at?: string
           registered_by?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removed_reason?: string | null
           sender?: string | null
           status?: Database["public"]["Enums"]["parcel_status"]
           storage_location_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "parcels_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "parcel_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcels_carrier_id_fkey"
             columns: ["carrier_id"]
@@ -1849,6 +1979,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcels_delivered_employee_id_fkey"
+            columns: ["delivered_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -1926,6 +2063,8 @@ export type Database = {
           asset_reminder_2_enabled: boolean
           asset_reminder_max: number
           audit_retention_days: number | null
+          cost_per_email: number
+          cost_per_sms: number
           default_currency: string
           default_language: string
           email_allowlist_required: boolean
@@ -1936,6 +2075,7 @@ export type Database = {
           entra_anonymize_retired: boolean
           entra_enabled: boolean
           entra_sync_interval_minutes: number
+          google_maps_browser_key: string | null
           handheld_design: Json
           handheld_tiles: Json
           home_design: Json
@@ -1956,6 +2096,8 @@ export type Database = {
           parcel_reminder_2_days: number
           parcel_reminder_2_enabled: boolean
           parcel_reminder_max: number
+          parcel_status_enabled: boolean
+          parcel_status_time: string
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           refresh_interval_seconds: number
@@ -1978,6 +2120,8 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          cost_per_email?: number
+          cost_per_sms?: number
           default_currency?: string
           default_language?: string
           email_allowlist_required?: boolean
@@ -1988,6 +2132,7 @@ export type Database = {
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
           entra_sync_interval_minutes?: number
+          google_maps_browser_key?: string | null
           handheld_design?: Json
           handheld_tiles?: Json
           home_design?: Json
@@ -2008,6 +2153,8 @@ export type Database = {
           parcel_reminder_2_days?: number
           parcel_reminder_2_enabled?: boolean
           parcel_reminder_max?: number
+          parcel_status_enabled?: boolean
+          parcel_status_time?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           refresh_interval_seconds?: number
@@ -2030,6 +2177,8 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          cost_per_email?: number
+          cost_per_sms?: number
           default_currency?: string
           default_language?: string
           email_allowlist_required?: boolean
@@ -2040,6 +2189,7 @@ export type Database = {
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
           entra_sync_interval_minutes?: number
+          google_maps_browser_key?: string | null
           handheld_design?: Json
           handheld_tiles?: Json
           home_design?: Json
@@ -2060,6 +2210,8 @@ export type Database = {
           parcel_reminder_2_days?: number
           parcel_reminder_2_enabled?: boolean
           parcel_reminder_max?: number
+          parcel_status_enabled?: boolean
+          parcel_status_time?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           refresh_interval_seconds?: number
@@ -2412,6 +2564,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_set_platform_admin: {
+        Args: { p_make_admin: boolean; p_target: string }
+        Returns: undefined
+      }
       admin_user_emails: {
         Args: never
         Returns: {
@@ -2458,6 +2614,7 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: boolean
       }
+      generate_batch_code: { Args: { p_company_id: string }; Returns: string }
       generate_parcel_barcode: {
         Args: { p_company_id: string }
         Returns: string
@@ -2471,6 +2628,10 @@ export type Database = {
       has_role: {
         Args: { r: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      hook_password_verification_attempt: {
+        Args: { event: Json }
+        Returns: Json
       }
       impersonation_restore_auth_state: {
         Args: {
@@ -2493,6 +2654,10 @@ export type Database = {
         }
         Returns: string
       }
+      log_failed_login_attempt: {
+        Args: { p_email: string }
+        Returns: undefined
+      }
       log_gateway_event: {
         Args: {
           p_action: string
@@ -2502,6 +2667,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_login_success: { Args: never; Returns: undefined }
       log_notification_event: {
         Args: {
           p_action: string
@@ -2513,6 +2679,28 @@ export type Database = {
           p_summary: string
         }
         Returns: undefined
+      }
+      log_password_reset_done: { Args: never; Returns: undefined }
+      log_password_reset_requested: {
+        Args: { p_email: string }
+        Returns: undefined
+      }
+      mask_login_email: { Args: { p_email: string }; Returns: string }
+      next_parcel_barcode: { Args: { p_company_id: string }; Returns: string }
+      override_parcel_receiver: {
+        Args: {
+          p_delivered_employee_id?: string
+          p_delivered_to: string
+          p_note?: string
+          p_parcel_ids: string[]
+          p_reason: string
+          p_signature_path?: string
+        }
+        Returns: number
+      }
+      parcel_sender_suggestions: {
+        Args: { p_company_id: string }
+        Returns: string[]
       }
       parcel_transition_allowed: {
         Args: {
@@ -2540,6 +2728,10 @@ export type Database = {
       release_import_lock_self: {
         Args: { p_company_id: string }
         Returns: undefined
+      }
+      remove_parcel: {
+        Args: { p_parcel_ids: string[]; p_reason: string }
+        Returns: number
       }
       replace_product_texts: {
         Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
@@ -2600,8 +2792,14 @@ export type Database = {
         | "route_planner_manager"
         | "handheld_route_planner"
       asset_status: "in_stock" | "assigned" | "on_loan" | "service" | "retired"
+      batch_status: "open" | "finished"
       notification_channel: "email" | "sms"
-      notification_kind: "arrival" | "reminder_1" | "reminder_2" | "manual"
+      notification_kind:
+        | "arrival"
+        | "reminder_1"
+        | "reminder_2"
+        | "manual"
+        | "status"
       notification_status: "sent" | "failed" | "skipped"
       parcel_status:
         | "unassigned"
@@ -2612,6 +2810,7 @@ export type Database = {
         | "delivered"
         | "rejected"
         | "returned"
+        | "removed"
       parcel_type: "package" | "pallet" | "letter"
     }
     CompositeTypes: {
@@ -2761,8 +2960,15 @@ export const Constants = {
         "handheld_route_planner",
       ],
       asset_status: ["in_stock", "assigned", "on_loan", "service", "retired"],
+      batch_status: ["open", "finished"],
       notification_channel: ["email", "sms"],
-      notification_kind: ["arrival", "reminder_1", "reminder_2", "manual"],
+      notification_kind: [
+        "arrival",
+        "reminder_1",
+        "reminder_2",
+        "manual",
+        "status",
+      ],
       notification_status: ["sent", "failed", "skipped"],
       parcel_status: [
         "unassigned",
@@ -2773,6 +2979,7 @@ export const Constants = {
         "delivered",
         "rejected",
         "returned",
+        "removed",
       ],
       parcel_type: ["package", "pallet", "letter"],
     },

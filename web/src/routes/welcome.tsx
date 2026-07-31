@@ -21,6 +21,11 @@ export const Route = createFileRoute('/welcome')({
 function SetPasswordPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  // Samme side bruges til invitation (vælg kode) og nulstilling (glemt kode).
+  // Nulstillingslinket peger på /welcome?mode=reset, så teksterne kan tilpasses.
+  const isReset =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'reset'
   const [status, setStatus] = useState<'checking' | 'ok' | 'invalid'>('checking')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -74,7 +79,17 @@ function SetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password })
     setBusy(false)
     if (updateError) return setError(describeError(updateError, t))
-    toast.success(t('setPassword.done'))
+    // Revisionslog: en gennemført adgangskode-nulstilling (kun reset-mode).
+    // Fire-and-forget som den netop reautentificerede bruger; typerne kendes
+    // først efter gen:types, så kaldet castes.
+    if (isReset) {
+      void Promise.resolve(
+        (supabase.rpc as unknown as (fn: string) => PromiseLike<unknown>)(
+          'log_password_reset_done',
+        ),
+      ).catch(() => {})
+    }
+    toast.success(isReset ? t('setPassword.resetDone') : t('setPassword.done'))
     navigate({ to: '/' })
   }
 
@@ -84,19 +99,27 @@ function SetPasswordPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[28px]">
             <BrandLogo className="h-6 w-6" />
-            {t('setPassword.title')}
+            {isReset ? t('setPassword.resetTitle') : t('setPassword.title')}
           </CardTitle>
           <CardDescription>
             {status === 'invalid'
               ? expired
-                ? t('setPassword.expiredBody')
-                : t('setPassword.invalidBody')
-              : t('setPassword.subtitle')}
+                ? isReset
+                  ? t('setPassword.resetExpiredBody')
+                  : t('setPassword.expiredBody')
+                : isReset
+                  ? t('setPassword.resetInvalidBody')
+                  : t('setPassword.invalidBody')
+              : isReset
+                ? t('setPassword.resetSubtitle')
+                : t('setPassword.subtitle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {status === 'checking' && (
-            <p className="text-sm text-muted-foreground">{t('setPassword.checking')}</p>
+            <p className="text-sm text-muted-foreground">
+              {isReset ? t('setPassword.checkingReset') : t('setPassword.checking')}
+            </p>
           )}
           {status === 'invalid' && (
             <Button variant="outline" className="w-full" onClick={() => navigate({ to: '/login' })}>
@@ -127,7 +150,11 @@ function SetPasswordPage() {
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" disabled={busy}>
-                {busy ? t('common.loading') : t('setPassword.submit')}
+                {busy
+                  ? t('common.loading')
+                  : isReset
+                    ? t('setPassword.resetSubmit')
+                    : t('setPassword.submit')}
               </Button>
             </form>
           )}

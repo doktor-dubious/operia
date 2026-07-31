@@ -11,10 +11,31 @@ import { Textarea } from '@/components/ui/textarea'
 // Konfigurér → Skabeloner.
 
 // Standardkoderne for pakke-notifikationer; skabeloner med andre koder (fx
-// invitationens {{link}}) kan angives eksplicit.
+// invitationens {{link}} eller statusbeskedens sammendrags-koder) angives
+// eksplicit. Batch- og statusskabeloner har ingen {{barcode}} — de dækker
+// flere pakker.
 const DEFAULT_TOKENS = ['company_name', 'recipient_name', 'reference', 'barcode', 'carrier', 'date']
+const BATCH_TOKENS = ['company_name', 'recipient_name', 'count', 'batch_code', 'date']
+const STATUS_TOKENS = [
+  'company_name',
+  'recipient_name',
+  'count',
+  'parcel_list',
+  'delivered_count',
+  'delivered_list',
+  'date',
+]
 const TEMPLATE_TOKENS: Record<string, string[]> = {
   customer_invite: ['link'],
+  package_arrival_batch: BATCH_TOKENS,
+  package_arrival_batch_sms: BATCH_TOKENS,
+  package_reminder_1_batch: BATCH_TOKENS,
+  package_reminder_1_batch_sms: BATCH_TOKENS,
+  package_reminder_2_batch: BATCH_TOKENS,
+  package_reminder_2_batch_sms: BATCH_TOKENS,
+  package_status: STATUS_TOKENS,
+  // SMS-varianten har ingen lister — de ville sprænge beskeden.
+  package_status_sms: ['company_name', 'recipient_name', 'count', 'delivered_count', 'date'],
 }
 
 export function tokensForTemplate(key: string): string[] {
