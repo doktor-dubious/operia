@@ -107,6 +107,25 @@ type Options = {
   idleFlushMinLength?: number
   // Feltet der lovligt modtager scanningen — dér skal der ikke ryddes op.
   targetRef?: React.RefObject<HTMLElement | null>
+  // Levér OGSÅ suffiks-løse scanninger (idle-flush) fra et fremmed skrivefelt:
+  // stregkoden fjernes fra feltet og leveres som scanning. Normalt er det
+  // slået fra (en hurtig menneskelig tastesalve må ikke blive en fantom-
+  // scanning midt i en note) — men i en dialog med præcis ÉN lovlig
+  // scan-destination (fx aktivets stregkodefelt) er en 8+ tegns serie i
+  // scannertempo altid en scanning, uanset hvor markøren stod.
+  captureInForeignInputs?: boolean
+}
+
+// Felter markeret med data-scan-ignore (fx tabellernes søgefelt) EJER selv en
+// scanning: koden skal blive stående som feltets indhold (scan-til-søgning),
+// aldrig ryddes op og flyttes til en anden destination — heller ikke med
+// captureInForeignInputs. Uden markøren ville en scanning i registerets
+// søgefelt, mens et aktiv står åbent i detaljepanelet, blive trukket ud af
+// søgefeltet og lagt i det åbne aktivs stregkodefelt som en ugemt redigering.
+const SCAN_IGNORE_SELECTOR = '[data-scan-ignore]'
+
+function ownsScans(el: Element): boolean {
+  return !!el.closest(SCAN_IGNORE_SELECTOR)
 }
 
 function isEditable(node: EventTarget | null): boolean {
@@ -139,6 +158,7 @@ export function useBarcodeScanner({
   idleFlushMs = 250,
   idleFlushMinLength = 8,
   targetRef,
+  captureInForeignInputs = false,
 }: Options) {
   // To sideløbende buffere for samme serie: 'raw' er hvad OS'et faktisk skrev
   // (bruges til at rydde op i fremmede felter), 'decoded' er den layout-
@@ -200,12 +220,20 @@ export function useBarcodeScanner({
           resetBuffer()
           return
         }
+        const target = targetRef?.current ?? null
+        const active = document.activeElement
+        if (active && isEditable(active) && active !== target) {
+          // Feltet ejer selv scanningen (data-scan-ignore): koden bliver
+          // stående, Enter/Tab passerer urørt, og serien glemmes.
+          if (ownsScans(active)) {
+            resetBuffer()
+            return
+          }
+        }
         // Fang suffikset, så feltets egen Enter/Tab-håndtering ikke også
         // udløser en handling (dobbelt opslag / utilsigtet indsendelse).
         e.preventDefault()
         e.stopPropagation()
-        const target = targetRef?.current ?? null
-        const active = document.activeElement
         if (active && isEditable(active) && active !== target) {
           // Oprydning i feltet sker med den rå serie — det var den, der blev "tastet".
           stripScannedSuffix(active, rawCode)
@@ -238,8 +266,13 @@ export function useBarcodeScanner({
           const target = targetRef?.current ?? null
           const active = document.activeElement
           if (active && isEditable(active) && active !== target) {
-            resetBuffer()
-            return
+            if (!captureInForeignInputs || ownsScans(active)) {
+              resetBuffer()
+              return
+            }
+            // Én lovlig scan-destination: ryd serien ud af det fremmede felt
+            // (som Enter/Tab-stien) og levér den som scanning.
+            stripScannedSuffix(active, raw.current)
           }
           deliver()
         }, idleFlushMs)
@@ -251,5 +284,13 @@ export function useBarcodeScanner({
       clearFlush()
       document.removeEventListener('keydown', handler, { capture: true })
     }
-  }, [enabled, minLength, maxKeyIntervalMs, idleFlushMs, idleFlushMinLength, targetRef])
+  }, [
+    enabled,
+    minLength,
+    maxKeyIntervalMs,
+    idleFlushMs,
+    idleFlushMinLength,
+    targetRef,
+    captureInForeignInputs,
+  ])
 }

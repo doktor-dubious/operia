@@ -77,8 +77,14 @@ import { Route as AppConfigureHomeDesignRouteImport } from './routes/_app/config
 import { Route as AppConfigureHandheldDesignRouteImport } from './routes/_app/configure.handheld-design'
 import { Route as AppConfigureDataTransferRouteImport } from './routes/_app/configure.data-transfer'
 import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
+import { Route as AppAssetsSearchRouteImport } from './routes/_app/assets.search'
+import { Route as AppAssetsMoveRouteImport } from './routes/_app/assets.move'
 import { Route as AppAssetsLocationsRouteImport } from './routes/_app/assets.locations'
+import { Route as AppAssetsDocumentRouteImport } from './routes/_app/assets.document'
+import { Route as AppAssetsCheckoutRouteImport } from './routes/_app/assets.checkout'
+import { Route as AppAssetsCheckinRouteImport } from './routes/_app/assets.checkin'
 import { Route as AppAssetsCategoriesRouteImport } from './routes/_app/assets.categories'
+import { Route as AppAssetsBoardRouteImport } from './routes/_app/assets.board'
 import { Route as AppInventoryImportLogRouteImport } from './routes/_app/inventory.import.log'
 import { Route as AppInventoryImportLocalRouteImport } from './routes/_app/inventory.import.local'
 import { Route as AppInventoryImportExportRouteImport } from './routes/_app/inventory.import.export'
@@ -432,14 +438,44 @@ const AppConfigureBillingRoute = AppConfigureBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppConfigureRoute,
 } as any)
+const AppAssetsSearchRoute = AppAssetsSearchRouteImport.update({
+  id: '/assets/search',
+  path: '/assets/search',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsMoveRoute = AppAssetsMoveRouteImport.update({
+  id: '/assets/move',
+  path: '/assets/move',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAssetsLocationsRoute = AppAssetsLocationsRouteImport.update({
   id: '/assets/locations',
   path: '/assets/locations',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAssetsDocumentRoute = AppAssetsDocumentRouteImport.update({
+  id: '/assets/document',
+  path: '/assets/document',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsCheckoutRoute = AppAssetsCheckoutRouteImport.update({
+  id: '/assets/checkout',
+  path: '/assets/checkout',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsCheckinRoute = AppAssetsCheckinRouteImport.update({
+  id: '/assets/checkin',
+  path: '/assets/checkin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAssetsCategoriesRoute = AppAssetsCategoriesRouteImport.update({
   id: '/assets/categories',
   path: '/assets/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsBoardRoute = AppAssetsBoardRouteImport.update({
+  id: '/assets/board',
+  path: '/assets/board',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInventoryImportLogRoute = AppInventoryImportLogRouteImport.update({
@@ -501,8 +537,14 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
+  '/assets/board': typeof AppAssetsBoardRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
+  '/assets/checkin': typeof AppAssetsCheckinRoute
+  '/assets/checkout': typeof AppAssetsCheckoutRoute
+  '/assets/document': typeof AppAssetsDocumentRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
+  '/assets/move': typeof AppAssetsMoveRoute
+  '/assets/search': typeof AppAssetsSearchRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -579,8 +621,14 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
   '/': typeof AppIndexRoute
+  '/assets/board': typeof AppAssetsBoardRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
+  '/assets/checkin': typeof AppAssetsCheckinRoute
+  '/assets/checkout': typeof AppAssetsCheckoutRoute
+  '/assets/document': typeof AppAssetsDocumentRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
+  '/assets/move': typeof AppAssetsMoveRoute
+  '/assets/search': typeof AppAssetsSearchRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -660,8 +708,14 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stats': typeof AppStatsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/assets/board': typeof AppAssetsBoardRoute
   '/_app/assets/categories': typeof AppAssetsCategoriesRoute
+  '/_app/assets/checkin': typeof AppAssetsCheckinRoute
+  '/_app/assets/checkout': typeof AppAssetsCheckoutRoute
+  '/_app/assets/document': typeof AppAssetsDocumentRoute
   '/_app/assets/locations': typeof AppAssetsLocationsRoute
+  '/_app/assets/move': typeof AppAssetsMoveRoute
+  '/_app/assets/search': typeof AppAssetsSearchRoute
   '/_app/configure/billing': typeof AppConfigureBillingRoute
   '/_app/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/_app/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -741,8 +795,14 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/stats'
+    | '/assets/board'
     | '/assets/categories'
+    | '/assets/checkin'
+    | '/assets/checkout'
+    | '/assets/document'
     | '/assets/locations'
+    | '/assets/move'
+    | '/assets/search'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -819,8 +879,14 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/'
+    | '/assets/board'
     | '/assets/categories'
+    | '/assets/checkin'
+    | '/assets/checkout'
+    | '/assets/document'
     | '/assets/locations'
+    | '/assets/move'
+    | '/assets/search'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -899,8 +965,14 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/stats'
     | '/_app/'
+    | '/_app/assets/board'
     | '/_app/assets/categories'
+    | '/_app/assets/checkin'
+    | '/_app/assets/checkout'
+    | '/_app/assets/document'
     | '/_app/assets/locations'
+    | '/_app/assets/move'
+    | '/_app/assets/search'
     | '/_app/configure/billing'
     | '/_app/configure/data-transfer'
     | '/_app/configure/handheld-design'
@@ -1448,6 +1520,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigureBillingRouteImport
       parentRoute: typeof AppConfigureRoute
     }
+    '/_app/assets/search': {
+      id: '/_app/assets/search'
+      path: '/assets/search'
+      fullPath: '/assets/search'
+      preLoaderRoute: typeof AppAssetsSearchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/move': {
+      id: '/_app/assets/move'
+      path: '/assets/move'
+      fullPath: '/assets/move'
+      preLoaderRoute: typeof AppAssetsMoveRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/assets/locations': {
       id: '/_app/assets/locations'
       path: '/assets/locations'
@@ -1455,11 +1541,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAssetsLocationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/assets/document': {
+      id: '/_app/assets/document'
+      path: '/assets/document'
+      fullPath: '/assets/document'
+      preLoaderRoute: typeof AppAssetsDocumentRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/checkout': {
+      id: '/_app/assets/checkout'
+      path: '/assets/checkout'
+      fullPath: '/assets/checkout'
+      preLoaderRoute: typeof AppAssetsCheckoutRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/checkin': {
+      id: '/_app/assets/checkin'
+      path: '/assets/checkin'
+      fullPath: '/assets/checkin'
+      preLoaderRoute: typeof AppAssetsCheckinRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/assets/categories': {
       id: '/_app/assets/categories'
       path: '/assets/categories'
       fullPath: '/assets/categories'
       preLoaderRoute: typeof AppAssetsCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/board': {
+      id: '/_app/assets/board'
+      path: '/assets/board'
+      fullPath: '/assets/board'
+      preLoaderRoute: typeof AppAssetsBoardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/inventory/import/log': {
@@ -1618,8 +1732,14 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppStatsRoute: typeof AppStatsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppAssetsBoardRoute: typeof AppAssetsBoardRoute
   AppAssetsCategoriesRoute: typeof AppAssetsCategoriesRoute
+  AppAssetsCheckinRoute: typeof AppAssetsCheckinRoute
+  AppAssetsCheckoutRoute: typeof AppAssetsCheckoutRoute
+  AppAssetsDocumentRoute: typeof AppAssetsDocumentRoute
   AppAssetsLocationsRoute: typeof AppAssetsLocationsRoute
+  AppAssetsMoveRoute: typeof AppAssetsMoveRoute
+  AppAssetsSearchRoute: typeof AppAssetsSearchRoute
   AppImportConfigRoute: typeof AppImportConfigRoute
   AppImportExportRoute: typeof AppImportExportRoute
   AppImportLocalRoute: typeof AppImportLocalRoute
@@ -1663,8 +1783,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppStatsRoute: AppStatsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppAssetsBoardRoute: AppAssetsBoardRoute,
   AppAssetsCategoriesRoute: AppAssetsCategoriesRoute,
+  AppAssetsCheckinRoute: AppAssetsCheckinRoute,
+  AppAssetsCheckoutRoute: AppAssetsCheckoutRoute,
+  AppAssetsDocumentRoute: AppAssetsDocumentRoute,
   AppAssetsLocationsRoute: AppAssetsLocationsRoute,
+  AppAssetsMoveRoute: AppAssetsMoveRoute,
+  AppAssetsSearchRoute: AppAssetsSearchRoute,
   AppImportConfigRoute: AppImportConfigRoute,
   AppImportExportRoute: AppImportExportRoute,
   AppImportLocalRoute: AppImportLocalRoute,

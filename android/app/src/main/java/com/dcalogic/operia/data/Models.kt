@@ -36,6 +36,13 @@ data class CompanyNotifyRow(
     val parcel_arrival_enabled: Boolean? = null,
 )
 
+/** Platformens standard-udløb for udlån (platform_settings, singleton).
+ *  null = udlån uden udløb (og dermed uden påmindelser). */
+@Serializable
+data class PlatformLoanTtlRow(
+    val locker_loan_ttl_hours: Int? = null,
+)
+
 /** Platformens notifikations-standarder (singleton-rækken i platform_settings). */
 @Serializable
 data class PlatformNotifyRow(
@@ -232,6 +239,41 @@ data class InventoryItem(
 
 @Serializable
 data class AssetLocation(val id: String, val name: String)
+
+// ---------- aktiver ----------
+
+@Serializable
+data class Asset(
+    val id: String,
+    val company_id: String,
+    val asset_tag: String? = null,
+    val name: String,
+    val serial_no: String? = null,
+    val barcode: String? = null,
+    val status: String,
+    val condition: String? = null,
+    val is_active: Boolean = true,
+    val location_id: String? = null,
+    val assigned_to_employee_id: String? = null,
+)
+
+@Serializable
+data class AssetDocument(
+    val id: String,
+    // Nullable i modsætning til pakkernes: en post kan være en ren note.
+    val storage_path: String? = null,
+    val note: String? = null,
+    val created_at: String? = null,
+)
+
+@Serializable
+data class AssetDocumentInsert(
+    val asset_id: String,
+    val company_id: String,
+    val storage_path: String? = null,
+    val note: String? = null,
+    val created_by: String? = null,
+)
 
 @Serializable
 data class RouteStop(val address: String? = null, val lat: Double? = null, val lng: Double? = null)

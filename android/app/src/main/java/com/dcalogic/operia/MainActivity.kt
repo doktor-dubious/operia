@@ -27,6 +27,12 @@ import androidx.navigation.navArgument
 import com.dcalogic.operia.ui.C
 import com.dcalogic.operia.ui.GhostButton
 import com.dcalogic.operia.ui.OperiaTheme
+import com.dcalogic.operia.ui.screens.AssetCheckinScreen
+import com.dcalogic.operia.ui.screens.AssetCheckoutScreen
+import com.dcalogic.operia.ui.screens.AssetDocumentScreen
+import com.dcalogic.operia.ui.screens.AssetGroupScreen
+import com.dcalogic.operia.ui.screens.AssetMoveScreen
+import com.dcalogic.operia.ui.screens.AssetSearchScreen
 import com.dcalogic.operia.ui.screens.HandoutScreen
 import com.dcalogic.operia.ui.screens.HomeScreen
 import com.dcalogic.operia.ui.screens.LoginScreen
@@ -90,6 +96,26 @@ private fun AppNav(vm: AppViewModel) {
         composable("search") { SearchScreen(vm, back) { route -> nav.navigate(route) } }
         composable("route") { RouteScreen(vm, back) }
         composable("stock") { StockScreen(vm, back) }
+        // Aktiv-flowet — flow-skærmene kan åbnes med et aktiv forudvalgt
+        // (fra Søg aktiver) via ?code=…, som pakkernes handout/move.
+        composable("asset_group") { AssetGroupScreen(vm, back) { route -> nav.navigate(route) } }
+        composable(
+            "asset_checkout?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> AssetCheckoutScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable(
+            "asset_checkin?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> AssetCheckinScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable(
+            "asset_move?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> AssetMoveScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable(
+            "asset_document?code={code}",
+            arguments = listOf(navArgument("code") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry -> AssetDocumentScreen(vm, back, initialCode = entry.arguments?.getString("code")) }
+        composable("asset_search") { AssetSearchScreen(vm, back) { route -> nav.navigate(route) } }
     }
 }
 

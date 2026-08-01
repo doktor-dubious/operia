@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   Archive,
+  ArrowLeftToLine,
+  ArrowRightFromLine,
   Boxes,
   CalendarRange,
   Camera,
@@ -95,11 +97,17 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    // Aktiver-modulet (pladsholdere indtil modulet bygges). Gates på
-    // assets-produktet pr. punkt.
+    // Aktiver-modulet: flowsiderne (oversigt, tjek ud/ind, flyt, dokumentér,
+    // søg) + registret og dets stamdata. Gates på assets-produktet pr. punkt.
     labelKey: 'groupAssetManagement',
     items: [
+      { labelKey: 'assetBoard', href: '/assets/board', icon: Boxes, productKey: 'assets' },
       { labelKey: 'assets', href: '/assets', icon: Archive, productKey: 'assets' },
+      { labelKey: 'assetCheckout', href: '/assets/checkout', icon: ArrowRightFromLine, productKey: 'assets' },
+      { labelKey: 'assetCheckin', href: '/assets/checkin', icon: ArrowLeftToLine, productKey: 'assets' },
+      { labelKey: 'assetMove', href: '/assets/move', icon: Truck, productKey: 'assets' },
+      { labelKey: 'assetDocument', href: '/assets/document', icon: Camera, productKey: 'assets' },
+      { labelKey: 'assetSearch', href: '/assets/search', icon: Search, productKey: 'assets' },
       { labelKey: 'assetCategories', href: '/assets/categories', icon: Tag, productKey: 'assets' },
       { labelKey: 'assetLocations', href: '/assets/locations', icon: MapPin, productKey: 'assets' },
       {
@@ -293,7 +301,13 @@ export const operiaConfigNav = operiaConfigSections.flatMap((s) => s.items)
 // klik-flow og ligger i stedet i bund-dropdownen sammen med resten af
 // menutræet, jf. modernMenuNavGroups. Adgang filtreres pr. punkt
 // (canAccessPath), så fx statistik kun vises for managers. Rækkefølgen her er
-// den viste og følger pakkegruppens orden.
+// den viste og følger hver modulgruppes orden.
+//
+// Modulerne står efter hinanden, hvert med sin tavle først og derefter de
+// daglige flows. Sidemenuen sætter selv en streg, hvor modulet skifter (den
+// læser stiens første segment), så listen her forbliver en flad rækkefølge.
+// Aktiv-punkterne bærer productKey 'assets' i navGroups og filtreres derfor
+// helt væk hos kunder uden modulet — der ser skinnen ud præcis som før.
 export const SIMPLE_NAV_HREFS = [
   '/parcels/board',
   '/parcels/receive',
@@ -301,6 +315,12 @@ export const SIMPLE_NAV_HREFS = [
   '/parcels/move',
   '/parcels/condition',
   '/parcels/search',
+  '/assets/board',
+  '/assets/checkout',
+  '/assets/checkin',
+  '/assets/move',
+  '/assets/document',
+  '/assets/search',
 ]
 
 export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
@@ -312,6 +332,30 @@ export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
       (!item.productKey || access.isPlatformAdmin || access.products.has(item.productKey)) &&
       canAccessPath(item.href, access),
   )
+}
+
+// De samme knapper delt op pr. modul, så skinnen kan give hvert modul sin egen
+// overskrift med fold-op/ned. Gruppen (og dens navn) hentes fra navGroups —
+// altså det samme modulnavn som den klassiske sidemenu bruger — frem for at
+// være en ny liste, der kunne komme ud af trit med SIMPLE_NAV_HREFS.
+// Rækkefølgen er SIMPLE_NAV_HREFS'; en ny gruppe begynder, hver gang et punkt
+// hører til en anden navGroup end det forrige.
+export type SimpleNavGroup = { labelKey: string; items: NavItem[] }
+
+export function simpleNavGroups(access: AccessInfo | undefined): SimpleNavGroup[] {
+  const groupOf = new Map<string, string>()
+  for (const group of navGroups) {
+    for (const item of group.items) groupOf.set(item.href, group.labelKey)
+  }
+  const out: SimpleNavGroup[] = []
+  for (const item of simpleNavItems(access)) {
+    const labelKey = groupOf.get(item.href)
+    if (!labelKey) continue // punkt uden gruppe — kan ikke få en overskrift
+    const last = out.at(-1)
+    if (last?.labelKey === labelKey) last.items.push(item)
+    else out.push({ labelKey, items: [item] })
+  }
+  return out
 }
 
 // Bund-dropdownen i moderne tilstand ("startmenuen"): hele menutræet minus de

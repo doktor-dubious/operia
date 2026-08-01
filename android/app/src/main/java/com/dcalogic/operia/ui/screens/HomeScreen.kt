@@ -113,15 +113,23 @@ private val CATALOG = listOf(
     Tile("search", "search", R.string.tile_search, R.string.tile_search_sub, "search", "hh_search"),
     Tile("route", "route", R.string.tile_route, R.string.tile_route_sub, "route", "hh_route"),
     Tile("stock", "boxes", R.string.tile_stock, R.string.tile_stock_sub, "stock", "hh_stock"),
-    // Gruppe-/mappeflise: åbner en underside med pakke-fliserne. Ingen feature —
+    // Aktiv-flowet (Aktiver-produktet): tjek ud/ind, flyt, dokumentér, søg.
+    Tile("asset_checkout", "parcel-out", R.string.tile_asset_checkout, R.string.tile_asset_checkout_sub, "asset_checkout", "hh_asset_checkout"),
+    Tile("asset_checkin", "parcel-in", R.string.tile_asset_checkin, R.string.tile_asset_checkin_sub, "asset_checkin", "hh_asset_checkin"),
+    Tile("asset_move", "truck", R.string.tile_asset_move, R.string.tile_asset_move_sub, "asset_move", "hh_asset_move"),
+    Tile("asset_document", "scan", R.string.tile_asset_document, R.string.tile_asset_document_sub, "asset_document", "hh_asset_document"),
+    Tile("asset_search", "search", R.string.tile_asset_search, R.string.tile_asset_search_sub, "asset_search", "hh_asset_search"),
+    // Gruppe-/mappefliser: åbner en underside med gruppens fliser. Ingen feature —
     // GROUP_CHILDREN afgør synligheden (mindst ét tilgængeligt barn). Matcher
-    // parcel_group i web/src/lib/handheld-tiles.ts.
+    // parcel_group/asset_group i web/src/lib/handheld-tiles.ts.
     Tile("parcel_group", "inbox", R.string.tile_parcel_group, R.string.tile_parcel_group_sub, "parcel_group"),
+    Tile("asset_group", "stock", R.string.tile_asset_group, R.string.tile_asset_group_sub, "asset_group"),
 )
 
 // Gruppe-fliser: nøgle → børne-fliser vist på undersiden (i denne rækkefølge).
 private val GROUP_CHILDREN = mapOf(
     "parcel_group" to listOf("receive", "handout", "move", "condition", "search"),
+    "asset_group" to listOf("asset_checkout", "asset_checkin", "asset_move", "asset_document", "asset_search"),
 )
 
 // Rollemodel v2: hver flise kræver sin håndterminal-rolle (managers ser alt).
@@ -134,6 +142,11 @@ private val TILE_ROLES = mapOf(
     "search" to "handheld_parcel_handler",
     "route" to "handheld_route_planner",
     "stock" to "handheld_inventory_handler",
+    "asset_checkout" to "handheld_asset_handler",
+    "asset_checkin" to "handheld_asset_handler",
+    "asset_move" to "handheld_asset_handler",
+    "asset_document" to "handheld_asset_handler",
+    "asset_search" to "handheld_asset_handler",
 )
 
 /**

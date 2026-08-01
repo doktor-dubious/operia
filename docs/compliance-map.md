@@ -165,6 +165,16 @@ personal data is removed instead.
   photos and signatures regardless of age, so the retention window can never destroy
   evidence for something the system still tracks.
   Purges are audited as `retention.files_purged`, and only when something was removed.
+- `20260801180000_asset_documents_erasure.sql` — asset flow notes and photos live in
+  `asset_documents` precisely so they stay erasable (free text may contain personal
+  data; the immutable `asset_events` log holds only id references) — but the table
+  originally revoked UPDATE/DELETE with no erasure path at all. Now: DELETE policies
+  scoped to platform admins on both the `asset_documents` row and the `asset-photos`
+  object (deliberately not managers — documentation is evidence, same reasoning as the
+  parcel files above), surfaced as a delete button on the document lists in the web app.
+  UPDATE stays revoked for everyone: erasure is deletion, never rewriting. Every
+  deletion is written to the asset's history (`asset.document_deleted`, id references
+  only) and mirrored to `audit_log`.
 - Feedback screenshots (`20260720150000_review_fixes_entra_gdpr.sql`) — the private
   `feedback` bucket now has a deletion path mirroring the parcel files: DELETE policies
   for platform admins on both the `feedback` row and the screenshot object, and the

@@ -432,6 +432,115 @@ object Repository {
             .select(Columns.list("id", "name")) { filter { eq("company_id", companyId) } }
             .decodeList()
 
+    // ---------- aktiver ----------
+    //
+    // Flow-handlingerne (tjek ud/ind, flyt, udlån) går gennem SECURITY
+    // DEFINER-RPC'er, der gentjekker rettigheder server-side og skriver
+    // hændelsen i den immutable asset_events-log — aldrig direkte
+    // status-skrivninger fra terminalen (jf. 20260801090200_asset_flow_rpcs).
+
+    /** Opslag på identifikator: stregkode, serienummer ELLER aktiv-nr. — alle
+     *  tre skal virke (spec). Flere træffere kan forekomme (serienumre er ikke
+     *  garanteret unikke); kalderen vælger. */
+    suspend fun findAssets(companyId: String, code: String): List<Asset> =
+        supabase.from("assets")
+            .select(
+                Columns.list(
+                    "id", "company_id", "asset_tag", "name", "serial_no", "barcode",
+                    "status", "condition", "is_active", "location_id", "assigned_to_employee_id",
+                ),
+            ) {
+                filter {
+                    eq("company_id", companyId)
+                    or {
+                        eq("barcode", code)
+                        eq("serial_no", code)
+                        eq("asset_tag", code)
+                    }
+                }
+                order("name", Order.ASCENDING)
+                limit(10)
+            }.decodeList()
+
+    /** Tjek ud: fast tildeling til en medarbejder (in_stock → assigned). */
+    suspend fun checkoutAsset(assetId: String, employeeId: String, note: String?) {
+        supabase.postgrest.rpc(
+            "checkout_asset",
+            buildJsonObject {
+                put("p_asset_id", assetId)
+                put("p_employee_id", employeeId)
+                if (!note.isNullOrBlank()) put("p_note", note)
+            },
+        )
+    }
+
+    /** Udlån til en medarbejder fra kartoteket (in_stock → on_loan). Kontakt-
+     *  oplysninger snapshottes server-side fra medarbejderen. Udløbet følger
+     *  platformens standard (locker_loan_ttl_hours — samme startværdi som
+     *  webbens udlånsdialog), så påmindelses-maskineriet også dækker
+     *  terminal-udlån; uden udløb ville lånet aldrig blive overskredet og
+     *  dispatcheren aldrig minde nogen om det. null-standard = intet udløb. */
+    suspend fun lendAssetToEmployee(assetId: String, employeeId: String, note: String?) {
+        val ttlHours = supabase.from("platform_settings")
+            .select(Columns.list("locker_loan_ttl_hours")) { limit(1) }
+            .decodeList<PlatformLoanTtlRow>()
+            .firstOrNull()?.locker_loan_ttl_hours
+        supabase.postgrest.rpc(
+            "lend_asset",
+            buildJsonObject {
+                put("p_asset_id", assetId)
+                put("p_employee_id", employeeId)
+                if (ttlHours != null) put("p_ttl_hours", ttlHours)
+                if (!note.isNullOrBlank()) put("p_note", note)
+            },
+        )
+    }
+
+    /** Tjek ind: aktivet er tilbage på lager (lukker evt. åbent udlån). */
+    suspend fun checkinAsset(assetId: String, locationId: String?, condition: String?, note: String?) {
+        supabase.postgrest.rpc(
+            "checkin_asset",
+            buildJsonObject {
+                put("p_asset_id", assetId)
+                if (locationId != null) put("p_location_id", locationId)
+                if (!condition.isNullOrBlank()) put("p_condition", condition)
+                if (!note.isNullOrBlank()) put("p_note", note)
+            },
+        )
+    }
+
+    /** Flyt: ny placering, status uændret. */
+    suspend fun moveAsset(assetId: String, locationId: String, note: String?) {
+        supabase.postgrest.rpc(
+            "move_asset",
+            buildJsonObject {
+                put("p_asset_id", assetId)
+                put("p_location_id", locationId)
+                if (!note.isNullOrBlank()) put("p_note", note)
+            },
+        )
+    }
+
+    /** Dokumentation (fotos + noter) for et aktiv, nyeste først. */
+    suspend fun assetDocuments(assetId: String): List<AssetDocument> =
+        supabase.from("asset_documents")
+            .select(Columns.list("id", "storage_path", "note", "created_at")) {
+                filter { eq("asset_id", assetId) }
+                order("created_at", Order.DESCENDING)
+            }.decodeList()
+
+    /** Upload et aktiv-foto til asset-photos-bucket'en. Sti-konvention:
+     *  <company_id>/<asset_id>/<tid>.jpg (RLS binder første mappe til tenant'en). */
+    suspend fun uploadAssetPhoto(companyId: String, assetId: String, jpeg: ByteArray): String {
+        val path = "$companyId/$assetId/${System.currentTimeMillis()}.jpg"
+        supabase.storage.from("asset-photos").upload(path, jpeg) { upsert = false }
+        return path
+    }
+
+    suspend fun insertAssetDocument(row: AssetDocumentInsert) {
+        supabase.from("asset_documents").insert(row)
+    }
+
     // ---------- ruter ----------
 
     suspend fun routes(companyId: String): List<RouteRow> =

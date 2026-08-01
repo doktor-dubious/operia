@@ -385,6 +385,11 @@ export function DataTable<Row extends { id: string }>({
               }}
               placeholder={searchPlaceholder ?? t('dataTable.search')}
               className="pl-8"
+              // Scan-til-søgning: en stregkode scannet ind i søgefeltet skal
+              // BLIVE i søgefeltet — en sides globale scanner (fx aktiv-
+              // detaljepanelets) må ikke trække den ud og aflevere den som
+              // scanning et andet sted (use-barcode-scanner.ts).
+              data-scan-ignore=""
             />
           </div>
         </div>

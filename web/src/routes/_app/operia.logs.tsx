@@ -280,11 +280,15 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
   )
     return 'error'
   const to = (r.detail as Record<string, unknown> | null)?.to_status
+  // 'user.impersonated' = en platform-admin overtager en anden brugers session:
+  // altid en undtagelse, aldrig rutine, så den skal lyse gult. Spejler
+  // public.audit_level.
   if (
     a === 'import.rejected' ||
+    a === 'user.impersonated' ||
     /[._]complained$/.test(a) ||
     /[._]overridden$/.test(a) ||
-    /\.(deleted|deactivated|anonymized|removed|revoked|disabled)$/.test(a) ||
+    /\.(deleted|deactivated|anonymized|removed|revoked|disabled|written_off)$/.test(a) ||
     (a === 'parcel.status_changed' &&
       (to === 'rejected' || to === 'returned' || to === 'removed'))
   )

@@ -72,8 +72,7 @@ export const ROLE_GROUPS: RoleGroup[] = [
       {
         value: 'asset_handler',
         labelKey: 'usersPage.roleAssetHandler',
-        descKey: 'userDetail.roleNotDefinedDescription',
-        notDefined: true,
+        descKey: 'userDetail.roleAssetHandlerDescription',
       },
       {
         value: 'asset_manager',
@@ -83,9 +82,8 @@ export const ROLE_GROUPS: RoleGroup[] = [
       {
         value: 'handheld_asset_handler',
         labelKey: 'usersPage.roleHandheldAssetHandler',
-        descKey: 'userDetail.roleNotDefinedDescription',
+        descKey: 'userDetail.roleHandheldAssetHandlerDescription',
         hintKey: 'userDetail.roleHandheldHint',
-        notDefined: true,
       },
     ],
   },
@@ -164,6 +162,14 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/locations', roles: [] },
   { prefix: '/handling-classes', roles: [] },
   { prefix: '/carriers', roles: [] },
+  // Aktiv-flowsiderne er åbne for handlers (som pakkeflowet); registret og
+  // stamdata forbliver asset_manager-niveau via det brede /assets-præfiks.
+  { prefix: '/assets/board', roles: ['asset_handler', 'asset_manager'] },
+  { prefix: '/assets/checkout', roles: ['asset_handler', 'asset_manager'] },
+  { prefix: '/assets/checkin', roles: ['asset_handler', 'asset_manager'] },
+  { prefix: '/assets/move', roles: ['asset_handler', 'asset_manager'] },
+  { prefix: '/assets/document', roles: ['asset_handler', 'asset_manager'] },
+  { prefix: '/assets/search', roles: ['asset_handler', 'asset_manager'] },
   { prefix: '/assets', roles: ['asset_manager'] },
   { prefix: '/inventory', roles: ['inventory_manager'] },
   { prefix: '/products/routes', roles: ['route_planner_manager'] },

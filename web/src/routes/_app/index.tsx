@@ -50,9 +50,16 @@ const CELL = 120
 // Home-layoutet: kundens egen overstyring (company_home_config) hvis den findes,
 // ellers platformens standard (platform_settings). Uanset kilde filtreres
 // produktfliserne stadig efter virksomhedens aktuelle adgang (se `visible`).
-function useHomeConfig(companyId: string | null) {
+//
+// `enabled` må først være sand når virksomhedskonteksten er afgjort: mens den
+// hentes er companyId endnu null, og en forespørgsel dér ville hente — og vise —
+// platformens standardbranding et øjeblik, før den aktive virksomheds eget
+// design overtager. Uden gaten blinker forkert titel/undertitel ved hver
+// indlæsning af startsiden.
+function useHomeConfig(companyId: string | null, enabled: boolean) {
   return useQuery({
     queryKey: ['home-config', companyId],
+    enabled,
     staleTime: 60 * 1000,
     queryFn: async () => {
       if (companyId) {
@@ -117,8 +124,8 @@ function useContentAreaRect(enabled: boolean) {
 function HomePage() {
   const { t } = useTranslation()
   const { data: access } = useAccess()
-  const { companyId } = useCompanyContext()
-  const { data: config } = useHomeConfig(companyId)
+  const { companyId, isPending: companyPending } = useCompanyContext()
+  const { data: config } = useHomeConfig(companyId, !companyPending)
 
   const design = config?.design
   // Kun fliser for produkter virksomheden har adgang til, og som brugerens

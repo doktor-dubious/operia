@@ -109,6 +109,12 @@ export const HANDHELD_TILES: HandheldTile[] = [
   { key: 'search', feature: 'hh_search', labelKey: 'tile_search', subKey: 'tile_search_sub', icon: 'search' },
   { key: 'route', feature: 'hh_route', labelKey: 'tile_route', subKey: 'tile_route_sub', icon: 'route' },
   { key: 'stock', feature: 'hh_stock', labelKey: 'tile_stock', subKey: 'tile_stock_sub', icon: 'boxes' },
+  // Aktiv-flowet (Aktiver-produktet) — spejler asset_*-fliserne i HomeScreen.kt.
+  { key: 'asset_checkout', feature: 'hh_asset_checkout', labelKey: 'tile_asset_checkout', subKey: 'tile_asset_checkout_sub', icon: 'parcel-out' },
+  { key: 'asset_checkin', feature: 'hh_asset_checkin', labelKey: 'tile_asset_checkin', subKey: 'tile_asset_checkin_sub', icon: 'parcel-in' },
+  { key: 'asset_move', feature: 'hh_asset_move', labelKey: 'tile_asset_move', subKey: 'tile_asset_move_sub', icon: 'truck' },
+  { key: 'asset_document', feature: 'hh_asset_document', labelKey: 'tile_asset_document', subKey: 'tile_asset_document_sub', icon: 'scan' },
+  { key: 'asset_search', feature: 'hh_asset_search', labelKey: 'tile_asset_search', subKey: 'tile_asset_search_sub', icon: 'search' },
   // Gruppe-/mappeflise: åbner en underside med pakke-fliserne. `children` gør den
   // til en gruppe — appen viser den kun hvis mindst ét barn er tilgængeligt, og
   // navigerer til en underskærm i stedet for en enkelt funktion. Ingen `feature`:
@@ -119,6 +125,13 @@ export const HANDHELD_TILES: HandheldTile[] = [
     subKey: 'tile_parcel_group_sub',
     icon: 'inbox',
     children: ['receive', 'handout', 'move', 'condition', 'search'],
+  },
+  {
+    key: 'asset_group',
+    labelKey: 'tile_asset_group',
+    subKey: 'tile_asset_group_sub',
+    icon: 'stock',
+    children: ['asset_checkout', 'asset_checkin', 'asset_move', 'asset_document', 'asset_search'],
   },
 ]
 

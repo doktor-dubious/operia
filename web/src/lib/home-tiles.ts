@@ -88,7 +88,7 @@ export type ProductTile = {
 
 export const PRODUCT_TILES: ProductTile[] = [
   { product: 'parcels', core: true, labelKey: 'parcels', href: '/parcels/overview', icon: Package, colors: { metro: '#0b8043', ocean: '#0e7490', sunset: '#ea580c', forest: '#15803d', berry: '#7e22ce' } },
-  { product: 'assets', entitlement: 'assets', labelKey: 'assets', href: '/assets', icon: Archive, colors: { metro: '#d24726', ocean: '#0369a1', sunset: '#dc2626', forest: '#b45309', berry: '#be185d' } },
+  { product: 'assets', entitlement: 'assets', labelKey: 'assets', href: '/assets/board', icon: Archive, colors: { metro: '#d24726', ocean: '#0369a1', sunset: '#dc2626', forest: '#b45309', berry: '#be185d' } },
   { product: 'lager', entitlement: 'lager', labelKey: 'inventoryItems', href: '/inventory', icon: Boxes, colors: { metro: '#2d89ef', ocean: '#1d4ed8', sunset: '#d97706', forest: '#0f766e', berry: '#6d28d9' } },
   { product: 'lockers', entitlement: 'lockers', labelKey: 'lockers', href: '/products/lockers', icon: Lock, colors: { metro: '#603cba', ocean: '#4338ca', sunset: '#db2777', forest: '#4d7c0f', berry: '#86198f' } },
   { product: 'iot', entitlement: 'iot', labelKey: 'iot', href: '/products/iot', icon: Radio, colors: { metro: '#00aba9', ocean: '#0d9488', sunset: '#e11d48', forest: '#047857', berry: '#9333ea' } },
@@ -165,11 +165,64 @@ export const PARCEL_LINK_TARGETS: LinkTarget[] = [
   },
 ]
 
+// Aktiv-modulets sider — samme opdeling som pakkemodulet ovenfor, så en flise
+// kan pege direkte på fx "Tjek aktiv ud" i stedet for kun produktets forside.
+// 'assets-board' afløser det gamle 'assets'-mål: aktiv-produktets forside ER
+// tavlen (PRODUCT_TILES.assets.href), så den arver produktnøglens plads.
+// Alle bærer entitlement 'assets' — modsat pakkerne er modulet et tilvalg, og
+// uden nøglen ville canSeeProductTile lukke fliserne op for alle.
+export const ASSET_LINK_TARGETS: LinkTarget[] = [
+  {
+    key: 'assets-board',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsBoard',
+    href: '/assets/board',
+  },
+  {
+    key: 'assets-checkout',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsCheckout',
+    href: '/assets/checkout',
+  },
+  {
+    key: 'assets-checkin',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsCheckin',
+    href: '/assets/checkin',
+  },
+  {
+    key: 'assets-move',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsMove',
+    href: '/assets/move',
+  },
+  {
+    key: 'assets-document',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsDocument',
+    href: '/assets/document',
+  },
+  {
+    key: 'assets-search',
+    product: 'assets',
+    entitlement: 'assets',
+    labelKey: 'homeDesignPage.linkAssetsSearch',
+    href: '/assets/search',
+  },
+]
+
 export const LINK_TARGETS: LinkTarget[] = [
   ...PARCEL_LINK_TARGETS,
+  ...ASSET_LINK_TARGETS,
   // Øvrige produkter linker til deres egen forside som hidtil (nøgle =
-  // produktnøgle). Pakke-produktet er udeladt — det dækkes af listen ovenfor.
-  ...PRODUCT_TILES.filter((tile) => tile.product !== 'parcels').map((tile) => ({
+  // produktnøgle). Pakke- og aktiv-produktet er udeladt — de dækkes af de to
+  // sidelister ovenfor.
+  ...PRODUCT_TILES.filter((tile) => !['parcels', 'assets'].includes(tile.product)).map((tile) => ({
     key: tile.product,
     product: tile.product,
     ...(tile.entitlement ? { entitlement: tile.entitlement } : {}),
@@ -182,9 +235,14 @@ export const LINK_TARGET_BY_KEY: Record<string, LinkTarget> = Object.fromEntries
   LINK_TARGETS.map((target) => [target.key, target]),
 )
 
-// Gemte layouts fra før opdelingen bærer produktnøglen 'parcels' som link — den
-// peger på samme side som 'parcels-overview'.
-const LEGACY_LINK_KEYS: Record<string, string> = { parcels: 'parcels-overview' }
+// Gemte layouts fra før opdelingen bærer den bare produktnøgle som link — hver
+// peger på samme side som modulets første sidemål ('parcels' → oversigten,
+// 'assets' → tavlen, jf. PRODUCT_TILES' href for de to produkter). Uden dette
+// ville en gemt flise miste sit link, når produktnøglen forlod LINK_TARGETS.
+const LEGACY_LINK_KEYS: Record<string, string> = {
+  parcels: 'parcels-overview',
+  assets: 'assets-board',
+}
 export const resolveLinkKey = (key: string): string => LEGACY_LINK_KEYS[key] ?? key
 
 // Link-mål der giver mening på denne flade: dem hvis produkt findes i layoutet

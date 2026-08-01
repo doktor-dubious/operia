@@ -23,8 +23,8 @@ android {
         applicationId = "com.dcalogic.operia"
         minSdk = 26 // håndterminaler (Zebra/Honeywell m.fl.) kører typisk ældre Android
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
 
         // Supabase-forbindelse — anon key er offentlig by design (RLS beskytter data).
         // Overstyr i en build-variant hvis der kommer separate dev/prod-projekter.

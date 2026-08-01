@@ -54,6 +54,10 @@ const ASSET_STATUS_SYNONYMS: Record<string, string> = {
   assigned: 'assigned',
   'in use': 'assigned',
   'i brug': 'assigned',
+  tildelt: 'assigned', // UI-etiketten siden 2026-08-01 (før: "I brug")
+  written_off: 'written_off',
+  'written off': 'written_off',
+  afskrevet: 'written_off',
   service: 'service',
   repair: 'service',
   'til service': 'service',
@@ -111,7 +115,10 @@ export const MODULE_SPECS: Record<ImportModule, ModuleSpec> = {
     selectColumns:
       'id, asset_tag, name, category_id, location_id, serial_no, barcode, status, condition, purchased_at, purchase_price, warranty_until, is_active',
     zeroDefaultFields: [],
-    uniqueFields: ['barcode'], // assets_company_id_barcode_key
+    // Partielt unikt indeks: kun blandt aktiver med status <> 'retired'
+    // (assets_company_barcode_active_uniq) — dry-run-tjekket udelader
+    // udfasede tilsvarende.
+    uniqueFields: ['barcode'],
   },
   inventory: {
     module: 'inventory',

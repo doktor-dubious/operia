@@ -12,6 +12,7 @@ const statusColor: Record<AssetStatus, string> = {
   on_loan: 'var(--status-good-to-neutral)',
   service: 'var(--status-neutral-to-bad)',
   retired: 'var(--status-bad)',
+  written_off: '#7c2d12', // mørk rust — et tab, distinkt fra udfasets røde
 }
 
 const statusLabelKey: Record<AssetStatus, string> = {
@@ -20,6 +21,7 @@ const statusLabelKey: Record<AssetStatus, string> = {
   on_loan: 'assetsPage.statusOnLoan',
   service: 'assetsPage.statusService',
   retired: 'assetsPage.statusRetired',
+  written_off: 'assetsPage.statusWrittenOff',
 }
 
 export function AssetStatusBadge({ status }: { status: AssetStatus }) {
@@ -31,5 +33,5 @@ export function AssetStatusBadge({ status }: { status: AssetStatus }) {
   )
 }
 
-export { statusLabelKey }
+export { statusColor, statusLabelKey }
 export type { AssetStatus }

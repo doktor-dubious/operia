@@ -26,6 +26,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { AssetStatusBadge, statusLabelKey, type AssetStatus } from '@/components/asset-status-badge'
+import {
+  BarcodeConflictDialog,
+  useAssetBarcodeConflict,
+} from '@/components/asset-barcode-conflict'
+import { BarcodeUrlDialog } from '@/components/barcode-url-dialog'
+import { barcodeProblem, barcodeProblemKey, looksLikeUrl } from '@/lib/barcode-rules'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
@@ -33,8 +39,11 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
 import { LoanTtlSelect } from '@/components/loan-ttl-select'
+import { ScannerIndicator } from '@/components/scanner-indicator'
+import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useOpenLoan } from '@/hooks/use-open-loan'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -68,28 +77,6 @@ function useRows(companyId: string | null) {
         )
         .eq('company_id', companyId!)
         .order('name')
-      if (error) throw error
-      return data
-    },
-  })
-}
-
-// Det åbne udlån for det valgte aktiv (hvis det er udlånt) — driver
-// "Udlånt til"/"Udløber" i detaljepanelet. Unik-indekset asset_loans_open_uniq
-// garanterer højst én række.
-function useOpenLoan(assetId: string | null, enabled: boolean) {
-  return useQuery({
-    queryKey: ['asset-open-loan', assetId],
-    enabled: !!assetId && enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('asset_loans')
-        .select(
-          'id, to_name, to_address, to_email, to_phone, note, expires_at, lent_at, bounced_at, bounce_reason',
-        )
-        .eq('asset_id', assetId!)
-        .is('returned_at', null)
-        .maybeSingle()
       if (error) throw error
       return data
     },
@@ -486,7 +473,10 @@ function LenderTab({
 }
 
 // Status kan ændres manuelt — undtagen 'on_loan', som styres af udlåns-maskinen
-// (lend_asset/return_asset). Et udlånt aktiv vises skrivebeskyttet med et hint.
+// (lend_asset/return_asset), og 'written_off', som kun sættes/ophæves af
+// write_off_asset/reinstate_asset (RPC'erne stempler written_off_at, håndhæver
+// forudsætningerne og skriver chain-of-custody-detaljerne — en rå UPDATE ville
+// springe alt det over). Låste statusser vises skrivebeskyttet med et hint.
 const EDITABLE_STATUSES: AssetStatus[] = ['in_stock', 'assigned', 'service', 'retired']
 
 function AssetDetailPane({
@@ -501,6 +491,8 @@ function AssetDetailPane({
   onLoanChanged,
   onDirtyChange,
   returnBusy,
+  scanEnabled,
+  onSwitchToAsset,
 }: {
   row: Row
   categories: Picker[]
@@ -513,8 +505,16 @@ function AssetDetailPane({
   onLoanChanged: () => void
   onDirtyChange: (dirty: boolean) => void
   returnBusy: boolean
+  // Skru scanningen af mens en dialog ligger over panelet — ellers ville en
+  // scanning dér overskrive stregkodefeltet i baggrunden.
+  scanEnabled: boolean
+  // "Gå til aktivet" fra stregkode-konfliktdialogen: skifter til det aktiv der
+  // har koden. Uden om unsaved-vagten — den konfliktende redigering kasseres
+  // bevidst (den kunne alligevel ikke gemmes).
+  onSwitchToAsset: (assetId: string) => void
 }) {
   const { t } = useTranslation()
+  const { companyId } = useCompanyContext()
   const [tab, setTab] = useState('details')
   const onLoan = row.status === 'on_loan'
   const { data: loan } = useOpenLoan(row.id, onLoan)
@@ -546,6 +546,59 @@ function AssetDetailPane({
   const [loanExpires, setLoanExpires] = useState('')
   const seededLoanId = useRef<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Hardware-scanner (keyboard-wedge): en scanning lægger koden i stregkode-
+  // feltet — normaliseret (AIM-præfiks strippet, US-layout-afkodet) og uanset
+  // hvor fokus står. Feltet ligger på Detaljer-fanen, så dertil skiftes der,
+  // og gem-bjælken dukker op via dirty-sporingen som ved manuel indtastning.
+  const barcodeRef = useRef<HTMLInputElement>(null)
+  const [scanSignal, setScanSignal] = useState(0)
+  // Scannet URL-lignende kode: bekræftes før den lander i feltet (warn-and-
+  // allow — en leverandør-QR må gerne adopteres, en fejlscanning skal fanges).
+  const [pendingUrlCode, setPendingUrlCode] = useState<string | null>(null)
+  useBarcodeScanner({
+    enabled: scanEnabled,
+    targetRef: barcodeRef,
+    // Panelet har præcis én scan-destination — også suffiks-løse scanninger
+    // flyttes ud af det felt markøren tilfældigvis stod i.
+    captureInForeignInputs: true,
+    onScan: (code) => {
+      setScanSignal((n) => n + 1)
+      setTab('details')
+      if (looksLikeUrl(code)) {
+        setPendingUrlCode(code)
+        return
+      }
+      setBarcode(code)
+    },
+  })
+  // Hårde grænser (klientspejl af assets_barcode_sane): spærrer Gem.
+  const barcodeIssue = barcodeProblem(normalizeScan(barcode))
+
+  // Live-tjek: bruger et andet AKTIVT aktiv allerede stregkoden? Konflikten
+  // åbner en popup (én gang pr. kode), viser en advarsel under feltet og
+  // spærrer Gem — så et sammenstød aldrig kan ende som en stille afvisning.
+  // Gemmes rækken SELV i en status uden for det partielle unik-indeks
+  // (retired/written_off), må dens kode lovligt være identisk med et aktivt
+  // aktivs (labelen er genbrugt på erstatningen) — så dér er tjekket slået
+  // fra, ellers kunne det udfasede aktiv aldrig redigeres.
+  const statusOutsideUniqueIndex = status === 'retired' || status === 'written_off'
+  const { conflict: barcodeConflict, code: normalizedBarcode } = useAssetBarcodeConflict(
+    statusOutsideUniqueIndex ? null : companyId,
+    barcode,
+    row.id,
+  )
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const warnedForCode = useRef<string | null>(null)
+  useEffect(() => {
+    if (barcodeConflict && warnedForCode.current !== normalizedBarcode) {
+      warnedForCode.current = normalizedBarcode
+      setConflictOpen(true)
+    }
+    if (!barcodeConflict && warnedForCode.current !== null && !normalizedBarcode) {
+      warnedForCode.current = null
+    }
+  }, [barcodeConflict, normalizedBarcode])
 
   useEffect(() => {
     if (loan && seededLoanId.current !== loan.id) {
@@ -598,7 +651,7 @@ function AssetDetailPane({
   const loanValid = !loanDirty || (!!loanName.trim() && !loanEmailInvalid && loanHasContact)
 
   const dirty = assetDirty || loanDirty
-  const canSave = !saving && !!trimmedName && loanValid
+  const canSave = !saving && !!trimmedName && loanValid && !barcodeConflict && !barcodeIssue
 
   // Meld dirty-tilstanden op, så et rækkeskift kan advare om ugemte ændringer.
   useEffect(() => {
@@ -657,7 +710,9 @@ function AssetDetailPane({
           asset_tag: assetTag.trim() || null,
           serial_no: serialNo.trim() || null,
           name: trimmedName,
-          barcode: barcode.trim() || null,
+          // Samme normalisering som alle andre stregkode-indgange (scan såvel
+          // som manuel indtastning), så gem og opslag altid mødes.
+          barcode: normalizeScan(barcode) || null,
           category_id: categoryId === NONE ? null : categoryId,
           location_id: locationId === NONE ? null : locationId,
           status,
@@ -758,11 +813,32 @@ function AssetDetailPane({
             />
           </Field>
           <Field label={t('assetsPage.barcode')}>
-            <Input
-              value={barcode}
-              className="max-w-2xl font-mono"
-              onChange={(e) => setBarcode(e.target.value)}
-            />
+            <div className="flex max-w-2xl items-center gap-3">
+              <Input
+                ref={barcodeRef}
+                value={barcode}
+                className="font-mono"
+                aria-invalid={!!barcodeConflict}
+                placeholder={t('assetsPage.barcodeScanHint')}
+                onChange={(e) => setBarcode(e.target.value)}
+              />
+              <ScannerIndicator signal={scanSignal} />
+            </div>
+            {barcodeConflict && (
+              <p className="mt-1.5 text-xs text-destructive">
+                {t('assetsPage.barcodeConflictHint', { name: barcodeConflict.name })}
+              </p>
+            )}
+            {barcodeIssue && (
+              <p className="mt-1.5 text-xs text-destructive">{t(barcodeProblemKey[barcodeIssue])}</p>
+            )}
+            {/* Manuelt indtastet URL: kun en advarsel — man taster ikke en URL
+                ved et uheld, så her spærres og spørges der ikke. */}
+            {!barcodeIssue && !barcodeConflict && looksLikeUrl(barcode) && (
+              <p className="mt-1.5 text-xs text-status-neutral-to-bad">
+                {t('assetsPage.barcodeUrlInlineHint')}
+              </p>
+            )}
           </Field>
           <div className="grid max-w-2xl grid-cols-2 gap-4">
             <Field label={t('assetsPage.category')}>
@@ -775,9 +851,15 @@ function AssetDetailPane({
           <div className="grid max-w-2xl grid-cols-2 gap-4">
             <Field
               label={t('assetsPage.status')}
-              info={onLoan ? t('assetsPage.statusLockedOnLoan') : undefined}
+              info={
+                onLoan
+                  ? t('assetsPage.statusLockedOnLoan')
+                  : row.status === 'written_off'
+                    ? t('assetsPage.statusLockedWrittenOff')
+                    : undefined
+              }
             >
-              {onLoan ? (
+              {onLoan || row.status === 'written_off' ? (
                 <Input value={t(statusLabelKey[row.status])} disabled />
               ) : (
                 <Select value={status} onValueChange={(v) => setStatus(v as AssetStatus)}>
@@ -936,6 +1018,19 @@ function AssetDetailPane({
           </Button>
         </div>
       )}
+
+      <BarcodeConflictDialog
+        open={conflictOpen}
+        onOpenChange={setConflictOpen}
+        code={normalizedBarcode}
+        conflict={barcodeConflict}
+        onGoToAsset={onSwitchToAsset}
+      />
+      <BarcodeUrlDialog
+        code={pendingUrlCode}
+        onOpenChange={(open) => !open && setPendingUrlCode(null)}
+        onAccept={setBarcode}
+      />
     </>
   )
 }
@@ -974,6 +1069,7 @@ function NewAssetDialog({
   categories,
   locations,
   onCreated,
+  onShowAsset,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -981,6 +1077,9 @@ function NewAssetDialog({
   categories: Picker[]
   locations: Picker[]
   onCreated: () => void
+  // "Gå til aktivet" fra stregkode-konfliktdialogen: luk oprettelsen og åbn
+  // det aktiv der allerede har koden.
+  onShowAsset: (assetId: string) => void
 }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
@@ -990,6 +1089,42 @@ function NewAssetDialog({
   const [categoryId, setCategoryId] = useState(NONE)
   const [locationId, setLocationId] = useState(NONE)
   const [busy, setBusy] = useState(false)
+
+  // Hardware-scanner: mens dialogen er åben, lander en scanning i stregkode-
+  // feltet (normaliseret) — uanset hvilket felt fokus står i.
+  const barcodeRef = useRef<HTMLInputElement>(null)
+  const [scanSignal, setScanSignal] = useState(0)
+  const [pendingUrlCode, setPendingUrlCode] = useState<string | null>(null)
+  useBarcodeScanner({
+    enabled: open,
+    targetRef: barcodeRef,
+    // Dialogen har præcis én scan-destination — en scanning skal i stregkode-
+    // feltet, uanset om markøren stod i Navn/Aktiv-nr./Serienr.
+    captureInForeignInputs: true,
+    onScan: (code) => {
+      setScanSignal((n) => n + 1)
+      if (looksLikeUrl(code)) {
+        setPendingUrlCode(code)
+        return
+      }
+      setBarcode(code)
+    },
+  })
+  const barcodeIssue = barcodeProblem(normalizeScan(barcode))
+
+  // Live-tjek som i detaljepanelet: konflikt → popup + spærret Gem.
+  const { conflict: barcodeConflict, code: normalizedBarcode } = useAssetBarcodeConflict(
+    open ? companyId : null,
+    barcode,
+  )
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const warnedForCode = useRef<string | null>(null)
+  useEffect(() => {
+    if (barcodeConflict && warnedForCode.current !== normalizedBarcode) {
+      warnedForCode.current = normalizedBarcode
+      setConflictOpen(true)
+    }
+  }, [barcodeConflict, normalizedBarcode])
 
   const trimmed = name.trim()
 
@@ -1001,6 +1136,9 @@ function NewAssetDialog({
       setBarcode('')
       setCategoryId(NONE)
       setLocationId(NONE)
+      setConflictOpen(false)
+      setPendingUrlCode(null)
+      warnedForCode.current = null
     }
     onOpenChange(next)
   }
@@ -1013,7 +1151,7 @@ function NewAssetDialog({
       name: trimmed,
       asset_tag: assetTag.trim() || null,
       serial_no: serialNo.trim() || null,
-      barcode: barcode.trim() || null,
+      barcode: normalizeScan(barcode) || null,
       category_id: categoryId === NONE ? null : categoryId,
       location_id: locationId === NONE ? null : locationId,
     })
@@ -1080,16 +1218,34 @@ function NewAssetDialog({
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="new-asset-barcode" className="text-label">
-            {t('assetsPage.barcode')}
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="new-asset-barcode" className="text-label">
+              {t('assetsPage.barcode')}
+            </Label>
+            <ScannerIndicator signal={scanSignal} />
+          </div>
           <Input
             id="new-asset-barcode"
+            ref={barcodeRef}
             value={barcode}
             className="font-mono"
+            aria-invalid={!!barcodeConflict}
             placeholder={t('assetsPage.barcodePlaceholder')}
             onChange={(e) => setBarcode(e.target.value)}
           />
+          {barcodeConflict && (
+            <p className="text-xs text-destructive">
+              {t('assetsPage.barcodeConflictHint', { name: barcodeConflict.name })}
+            </p>
+          )}
+          {barcodeIssue && (
+            <p className="text-xs text-destructive">{t(barcodeProblemKey[barcodeIssue])}</p>
+          )}
+          {!barcodeIssue && !barcodeConflict && looksLikeUrl(barcode) && (
+            <p className="text-xs text-status-neutral-to-bad">
+              {t('assetsPage.barcodeUrlInlineHint')}
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <Label className="text-label">{t('assetsPage.category')}</Label>
@@ -1103,11 +1259,30 @@ function NewAssetDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button disabled={busy || !trimmed || !companyId} onClick={create}>
+          <Button
+            disabled={busy || !trimmed || !companyId || !!barcodeConflict || !!barcodeIssue}
+            onClick={create}
+          >
             {busy ? t('common.loading') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <BarcodeConflictDialog
+        open={conflictOpen}
+        onOpenChange={setConflictOpen}
+        code={normalizedBarcode}
+        conflict={barcodeConflict}
+        onGoToAsset={(id) => {
+          handleOpenChange(false)
+          onShowAsset(id)
+        }}
+      />
+      <BarcodeUrlDialog
+        code={pendingUrlCode}
+        onOpenChange={(o) => !o && setPendingUrlCode(null)}
+        onAccept={setBarcode}
+      />
     </Dialog>
   )
 }
@@ -1343,6 +1518,10 @@ function AssetsPage() {
           onLoanChanged={refresh}
           onDirtyChange={setPaneDirty}
           returnBusy={returnBusy}
+          scanEnabled={!newOpen && !lendOpen && !deleteOpen && pendingAction === null}
+          // Bevidst uden om unsaved-vagten: skiftet kasserer netop den
+          // konfliktende (ugemmelige) stregkode-redigering.
+          onSwitchToAsset={setActiveId}
         />
       )}
       {activeRow && (
@@ -1377,6 +1556,7 @@ function AssetsPage() {
         categories={pickers?.categories ?? []}
         locations={pickers?.locations ?? []}
         onCreated={refresh}
+        onShowAsset={(id) => guarded(() => setActiveId(id))}
       />
       {/* Advarsel ved rækkeskift/luk med ugemte ændringer. */}
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>

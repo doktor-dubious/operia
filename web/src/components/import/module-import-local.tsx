@@ -358,6 +358,11 @@ export function ModuleImportLocal({ spec }: { spec: ModuleSpec }) {
         const seenInFile = new Map<string, number>()
         const owner = new Map<string, string>() // værdi → keyValue på rækken der har den
         for (const e of existingRows) {
+          // Udfasede/afskrevne aktiver tæller ikke: unik-indekset er partielt
+          // (assets_company_barcode_active_uniq, status not in
+          // ('retired','written_off')), så deres stregkode må genbruges af et
+          // aktivt aktiv.
+          if (e.status === 'retired' || e.status === 'written_off') continue
           const v = e[field]
           if (v != null && String(v) !== '') owner.set(String(v), String(e[spec.keyField] ?? ''))
         }

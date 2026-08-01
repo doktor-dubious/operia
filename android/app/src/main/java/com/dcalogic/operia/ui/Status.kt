@@ -26,3 +26,25 @@ fun statusColor(status: String): Color = when (status) {
     "rejected", "returned" -> C.red
     else -> C.amber
 }
+
+/** Danske statuslabels for asset_status-enum'en. */
+@Composable
+fun assetStatusLabel(status: String): String = stringResource(
+    when (status) {
+        "in_stock" -> R.string.asset_status_in_stock
+        "assigned" -> R.string.asset_status_assigned
+        "on_loan" -> R.string.asset_status_on_loan
+        "service" -> R.string.asset_status_service
+        "retired" -> R.string.asset_status_retired
+        "written_off" -> R.string.asset_status_written_off
+        else -> R.string.status_unknown
+    },
+)
+
+fun assetStatusColor(status: String): Color = when (status) {
+    "in_stock" -> C.green
+    "assigned" -> C.blue
+    "on_loan", "service" -> C.amber
+    "retired", "written_off" -> C.red
+    else -> C.muted
+}

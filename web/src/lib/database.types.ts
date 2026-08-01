@@ -109,6 +109,108 @@ export type Database = {
           },
         ]
       }
+      asset_documents: {
+        Row: {
+          asset_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          storage_path: string | null
+        }
+        Insert: {
+          asset_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          storage_path?: string | null
+        }
+        Update: {
+          asset_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_documents_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_events: {
+        Row: {
+          actor_user_id: string | null
+          asset_id: string
+          company_id: string
+          created_at: string
+          detail: Json
+          event_type: string
+          from_location_id: string | null
+          from_status: Database["public"]["Enums"]["asset_status"] | null
+          id: number
+          to_location_id: string | null
+          to_status: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          asset_id: string
+          company_id: string
+          created_at?: string
+          detail?: Json
+          event_type: string
+          from_location_id?: string | null
+          from_status?: Database["public"]["Enums"]["asset_status"] | null
+          id?: never
+          to_location_id?: string | null
+          to_status?: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          asset_id?: string
+          company_id?: string
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          from_location_id?: string | null
+          from_status?: Database["public"]["Enums"]["asset_status"] | null
+          id?: never
+          to_location_id?: string | null
+          to_status?: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_events_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_loan_notifications: {
         Row: {
           asset_id: string | null
@@ -183,6 +285,7 @@ export type Database = {
           bounce_reason: string | null
           bounced_at: string | null
           company_id: string
+          employee_id: string | null
           expires_at: string | null
           id: string
           lent_at: string
@@ -201,6 +304,7 @@ export type Database = {
           bounce_reason?: string | null
           bounced_at?: string | null
           company_id: string
+          employee_id?: string | null
           expires_at?: string | null
           id?: string
           lent_at?: string
@@ -219,6 +323,7 @@ export type Database = {
           bounce_reason?: string | null
           bounced_at?: string | null
           company_id?: string
+          employee_id?: string | null
           expires_at?: string | null
           id?: string
           lent_at?: string
@@ -244,6 +349,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_loans_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
@@ -286,6 +398,8 @@ export type Database = {
       assets: {
         Row: {
           asset_tag: string | null
+          assigned_at: string | null
+          assigned_to_employee_id: string | null
           barcode: string | null
           category_id: string | null
           company_id: string
@@ -297,12 +411,19 @@ export type Database = {
           name: string
           purchase_price: number | null
           purchased_at: string | null
+          retired_at: string | null
+          retired_reason: string | null
           serial_no: string | null
+          service_expected_back: string | null
+          service_vendor: string | null
           status: Database["public"]["Enums"]["asset_status"]
           warranty_until: string | null
+          written_off_at: string | null
         }
         Insert: {
           asset_tag?: string | null
+          assigned_at?: string | null
+          assigned_to_employee_id?: string | null
           barcode?: string | null
           category_id?: string | null
           company_id: string
@@ -314,12 +435,19 @@ export type Database = {
           name: string
           purchase_price?: number | null
           purchased_at?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
           serial_no?: string | null
+          service_expected_back?: string | null
+          service_vendor?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           warranty_until?: string | null
+          written_off_at?: string | null
         }
         Update: {
           asset_tag?: string | null
+          assigned_at?: string | null
+          assigned_to_employee_id?: string | null
           barcode?: string | null
           category_id?: string | null
           company_id?: string
@@ -331,11 +459,23 @@ export type Database = {
           name?: string
           purchase_price?: number | null
           purchased_at?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
           serial_no?: string | null
+          service_expected_back?: string | null
+          service_vendor?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           warranty_until?: string | null
+          written_off_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assets_assigned_to_employee_id_fkey"
+            columns: ["assigned_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assets_category_id_fkey"
             columns: ["category_id"]
@@ -2599,6 +2739,10 @@ export type Database = {
         Args: { p_ids: string[]; p_label?: string }
         Returns: number
       }
+      asset_flow_note: {
+        Args: { p_asset_id: string; p_company_id: string; p_note: string }
+        Returns: undefined
+      }
       asset_status_from_text: {
         Args: { p_text: string }
         Returns: Database["public"]["Enums"]["asset_status"]
@@ -2608,7 +2752,21 @@ export type Database = {
         Args: { p_action: string; p_detail: Json }
         Returns: string
       }
+      can_operate_assets: { Args: { p_company_id: string }; Returns: boolean }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
+      checkin_asset: {
+        Args: {
+          p_asset_id: string
+          p_condition?: string
+          p_location_id?: string
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      checkout_asset: {
+        Args: { p_asset_id: string; p_employee_id: string; p_note?: string }
+        Returns: undefined
+      }
       current_company_id: { Args: never; Returns: string }
       employee_has_open_parcels: {
         Args: { p_employee_id: string }
@@ -2645,10 +2803,11 @@ export type Database = {
       lend_asset: {
         Args: {
           p_asset_id: string
+          p_employee_id?: string
           p_note?: string
           p_to_address?: string
           p_to_email?: string
-          p_to_name: string
+          p_to_name?: string
           p_to_phone?: string
           p_ttl_hours?: number
         }
@@ -2686,6 +2845,10 @@ export type Database = {
         Returns: undefined
       }
       mask_login_email: { Args: { p_email: string }; Returns: string }
+      move_asset: {
+        Args: { p_asset_id: string; p_location_id: string; p_note?: string }
+        Returns: undefined
+      }
       next_parcel_barcode: { Args: { p_company_id: string }; Returns: string }
       override_parcel_receiver: {
         Args: {
@@ -2721,6 +2884,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      reinstate_asset: { Args: { p_asset_id: string }; Returns: undefined }
       release_import_lock: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -2737,12 +2901,25 @@ export type Database = {
         Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
         Returns: undefined
       }
+      retire_asset: {
+        Args: { p_asset_id: string; p_note?: string; p_reason: string }
+        Returns: undefined
+      }
       retire_employee: {
         Args: { p_anonymize: boolean; p_employee_id: string; p_label?: string }
         Returns: string
       }
       return_asset: { Args: { p_asset_id: string }; Returns: undefined }
       run_retention_purge: { Args: never; Returns: undefined }
+      send_asset_to_service: {
+        Args: {
+          p_asset_id: string
+          p_expected_back?: string
+          p_note?: string
+          p_vendor?: string
+        }
+        Returns: undefined
+      }
       set_company_sftp_password: {
         Args: { p_company_id: string; p_password: string }
         Returns: undefined
@@ -2773,6 +2950,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      write_off_asset: {
+        Args: { p_asset_id: string; p_note?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
@@ -2791,7 +2972,13 @@ export type Database = {
         | "route_planner_handler"
         | "route_planner_manager"
         | "handheld_route_planner"
-      asset_status: "in_stock" | "assigned" | "on_loan" | "service" | "retired"
+      asset_status:
+        | "in_stock"
+        | "assigned"
+        | "on_loan"
+        | "service"
+        | "retired"
+        | "written_off"
       batch_status: "open" | "finished"
       notification_channel: "email" | "sms"
       notification_kind:
@@ -2959,7 +3146,14 @@ export const Constants = {
         "route_planner_manager",
         "handheld_route_planner",
       ],
-      asset_status: ["in_stock", "assigned", "on_loan", "service", "retired"],
+      asset_status: [
+        "in_stock",
+        "assigned",
+        "on_loan",
+        "service",
+        "retired",
+        "written_off",
+      ],
       batch_status: ["open", "finished"],
       notification_channel: ["email", "sms"],
       notification_kind: [
