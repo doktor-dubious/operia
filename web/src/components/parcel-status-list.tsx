@@ -83,7 +83,7 @@ type Item =
     }
 
 const PARCEL_COLUMNS = `id, barcode, status, registered_at, delivered_at, delivered_to, updated_at,
-   condition_note, condition_photo_path, batch_id,
+   sender, condition_note, condition_photo_path, batch_id,
    receiver_override_reason, receiver_override_at, removed_reason, removed_at,
    receiver:employees!parcels_receiver_employee_id_fkey (full_name),
    delivered_employee:employees!parcels_delivered_employee_id_fkey (full_name),
@@ -99,6 +99,7 @@ type ParcelRow = {
   delivered_at: string | null
   delivered_to: string | null
   updated_at: string | null
+  sender: string | null
   condition_note: string | null
   condition_photo_path: string | null
   batch_id: string | null
@@ -122,6 +123,7 @@ const toListParcel = (d: ParcelRow): ListParcel => ({
   locationName: d.location?.name ?? null,
   registeredAt: d.registered_at,
   deliveredTo: d.delivered_to,
+  sender: d.sender,
   conditionNote: d.condition_note,
   conditionPhotoPath: d.condition_photo_path,
   overrideReason: d.receiver_override_reason,

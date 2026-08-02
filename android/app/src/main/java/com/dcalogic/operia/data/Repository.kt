@@ -170,6 +170,21 @@ object Repository {
     suspend fun insertParcels(rows: List<ParcelInsert>): List<Parcel> =
         supabase.from("parcels").insert(rows) { select() }.decodeList()
 
+    /** Står koden allerede som en åben pakke? Spejler webbens dublet-værn på
+     *  modtag-formularen: kun slutstatusserne (delivered/returned/rejected/
+     *  removed) frigiver koden til genregistrering — 'unassigned' tæller med
+     *  som åben. */
+    suspend fun hasOpenParcel(companyId: String, code: String): Boolean =
+        supabase.from("parcels")
+            .select(Columns.list("id")) {
+                filter {
+                    eq("company_id", companyId)
+                    eq("barcode", code)
+                    isIn("status", listOf("unassigned") + OPEN_STATUSES)
+                }
+                limit(1)
+            }.decodeList<IdRow>().isNotEmpty()
+
     suspend fun findParcels(companyId: String, code: String, limit: Long = 15): List<Parcel> =
         supabase.from("parcels")
             .select {
@@ -387,6 +402,21 @@ object Repository {
 
     suspend fun insertParcelDocument(row: ParcelDocumentInsert) {
         supabase.from("parcel_documents").insert(row)
+    }
+
+    /** Intake-tilstandsfoto fra Modtag-skærmen: samme sti og kolonne som webbens
+     *  modtag-formular (<company_id>/<parcel_id>.jpg + condition_photo_path),
+     *  så fotoet vises som pakkens tilstandsfoto på webbens pakke-detalje. */
+    suspend fun uploadIntakePhoto(companyId: String, parcelId: String, jpeg: ByteArray) {
+        val path = "$companyId/$parcelId.jpg"
+        supabase.storage.from("parcel-photos").upload(path, jpeg) { upsert = true }
+        val updated = supabase.from("parcels").update({
+            set("condition_photo_path", path)
+        }) {
+            select(Columns.list("id"))
+            filter { eq("id", parcelId) }
+        }.decodeList<IdRow>()
+        requireUpdated(updated)
     }
 
     suspend fun parcelEvents(parcelId: String): List<ParcelEvent> =

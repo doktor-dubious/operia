@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
@@ -23,9 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Layers, Printer, Wand2, X } from 'lucide-react'
+import { Camera, Layers, Printer, Wand2, X } from 'lucide-react'
+import { looksLikeUrl } from '@/lib/barcode-rules'
+import { BarcodeUrlDialog } from '@/components/barcode-url-dialog'
 import { useCompany } from '@/components/company-provider'
 import { EmployeePicker, type PickedEmployee } from '@/components/employee-picker'
+import { SenderCombobox } from '@/components/sender-combobox'
 import { printLabel } from '@/components/label-designer'
 import { PhotoCapture } from '@/components/photo-capture'
 import { ScannerIndicator } from '@/components/scanner-indicator'
@@ -44,6 +47,13 @@ import { supabase } from '@/lib/supabase'
 // Genbruges på /parcels/receive (fuld side) og som popup på /parcels.
 
 const NONE = '__none__'
+
+// En pakke i batch-listen: koden + et valgfrit tilstandsfoto (fx hvis netop
+// dén pakke er beskadiget — resten af batchen deler de øvrige felter).
+type BatchItem = {
+  code: string
+  photo: Blob | null
+}
 
 export type ParcelSessionEntry = {
   id: string
@@ -71,7 +81,7 @@ function useMasterData(companyId: string | null) {
     queryKey: ['receive-master-data', companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const [departments, carriers, handling, locations, senders] = await Promise.all([
+      const [departments, carriers, handling, locations] = await Promise.all([
         supabase.from('departments').select('id, name').eq('company_id', companyId!).order('name'),
         supabase
           .from('carriers')
@@ -90,9 +100,6 @@ function useMasterData(companyId: string | null) {
           .eq('company_id', companyId!)
           .eq('is_active', true)
           .order('name'),
-        // Afsender er fri tekst uden stamdata — forslagene er virksomhedens
-        // egne tidligere afsendere (hyppigst brugte først).
-        supabase.rpc('parcel_sender_suggestions', { p_company_id: companyId! }),
       ])
       const firstError = departments.error ?? carriers.error ?? handling.error ?? locations.error
       if (firstError) throw firstError
@@ -101,12 +108,45 @@ function useMasterData(companyId: string | null) {
         carriers: carriers.data!,
         handling: handling.data!,
         locations: locations.data!,
-        // Forslag er nice-to-have: fejler opslaget, virker formularen stadig
-        // (feltet er bare uden autocomplete).
-        senders: senders.error ? [] : (senders.data ?? []),
       }
     },
   })
+}
+
+// Afsender er fri tekst uden stamdata — forslagene er virksomhedens egne
+// tidligere afsendere (hyppigst brugte først). Egen query, fordi listen
+// genindlæses efter hver gemning med afsender: den må ikke trække de fire
+// stamdata-opslag med sig hver gang.
+function useSenderSuggestions(companyId: string | null) {
+  return useQuery({
+    queryKey: ['sender-suggestions', companyId],
+    enabled: !!companyId,
+    queryFn: async () => {
+      // Forslag er nice-to-have: fejler opslaget, virker formularen stadig
+      // (feltet er bare uden autocomplete).
+      const { data, error } = await supabase.rpc('parcel_sender_suggestions', {
+        p_company_id: companyId!,
+      })
+      return error ? [] : (data ?? [])
+    },
+  })
+}
+
+// Upload tilstandsfoto og hægt stien på pakken — fælles for enkelt- og
+// batch-tilstand, så sti-skema/bucket/kolonne kun findes ét sted (Android har
+// sin egen spejling i Repository.uploadIntakePhoto). Kaster ved fejl; pakken
+// er allerede gemt, så kalderen afgør om det er fatalt eller kun en advarsel.
+async function uploadConditionPhoto(companyId: string, parcelId: string, photo: Blob) {
+  const path = `${companyId}/${parcelId}.jpg`
+  const { error: uploadError } = await supabase.storage
+    .from('parcel-photos')
+    .upload(path, photo, { contentType: 'image/jpeg', upsert: true })
+  if (uploadError) throw uploadError
+  const { error: updateError } = await supabase
+    .from('parcels')
+    .update({ condition_photo_path: path })
+    .eq('id', parcelId)
+  if (updateError) throw updateError
 }
 
 // Virksomhedens kanal-/ankomstindstillinger + SMS-tilvalget — bruges til at
@@ -161,6 +201,7 @@ export function ParcelReceiveForm({
   const queryClient = useQueryClient()
   const { activeCompany } = useCompany()
   const { data: master } = useMasterData(companyId)
+  const { data: senders } = useSenderSuggestions(companyId)
   const { data: platform } = usePlatformSettings()
   const { data: notifyCfg } = useArrivalNotifyConfig(companyId)
   // Pakkelabelen (virksomhedens udgave, ellers platformens) — til print-knappen.
@@ -183,12 +224,20 @@ export function ParcelReceiveForm({
   const [confirmUnassignedOpen, setConfirmUnassignedOpen] = useState(false)
   // Batch-tilstand: samme modtager for hele batchen, scan lægger sig i en liste,
   // og "afslut batch" opretter batchen + alle pakker på én gang → én notifikation.
+  // Hver pakke i batchen kan få sit eget tilstandsfoto (fx en beskadiget pakke).
   const batchAvailable = !!onBatchFinished
   const [batchMode, setBatchMode] = useState(false)
-  const [batchItems, setBatchItems] = useState<string[]>([])
-  // Koder i batch-listen der allerede står som åbne pakker i databasen — samme
-  // dublet-advarsel som enkelt-tilstand (advarer, blokerer ikke).
+  const [batchItems, setBatchItems] = useState<BatchItem[]>([])
+  // Koder i batch-listen der allerede stod som åbne pakker i databasen, og som
+  // brugeren bekræftede alligevel — markeres i listen som påmindelse.
   const [batchDupes, setBatchDupes] = useState<Set<string>>(new Set())
+  // Scan-værn (samme warn-and-allow som aktiver/enkelt-tilstand): URL-lignende
+  // koder bekræftes før brug, og en kode der allerede står som åben pakke
+  // bekræftes efter tilføjelsen. Køer, ikke enkeltfelter — en hardware-scanner
+  // kan nå at fyre igen, mens en dialog står åben, og så må den første kode
+  // ikke overskrives og forsvinde.
+  const [pendingUrls, setPendingUrls] = useState<string[]>([])
+  const [pendingDups, setPendingDups] = useState<string[]>([])
   // Remount-nøgle: EmployeePicker har intern skrivetilstand, som skal nulstilles
   // sammen med formularen — ellers står et forældet navn tilbage i feltet.
   const [formKey, setFormKey] = useState(0)
@@ -240,29 +289,76 @@ export function ParcelReceiveForm({
     setDuplicate(q ? await isOpenDuplicate(q) : false)
   }
 
-  // Batch-tilstand: læg en scannet/indtastet kode i batch-listen (dedup) og ryd
-  // feltet, klar til næste scan. Databasen tjekkes også — en pakke der allerede
-  // ER registreret, markeres i listen (enkelt-tilstandens dublet-advarsel).
+  // Læg en kode i batch-listen (dedup inden for listen) og hold fokus i
+  // scan-feltet, klar til næste scan.
+  const commitBatchItem = (code: string) => {
+    setBatchItems((list) =>
+      list.some((item) => item.code === code) ? list : [{ code, photo: null }, ...list],
+    )
+    barcodeRef.current?.focus()
+  }
+
+  // Koden lander i batchen MED DET SAMME — tilføjelsen må ikke vente på
+  // netværket: scanneren skal se rækken straks, og "afslut batch" må ikke
+  // kunne overhale en kode, hvis dublet-opslag stadig er undervejs (så ville
+  // den stille forsvinde). Opslaget kører i baggrunden; står koden allerede
+  // som åben pakke, bekræftes den bagefter (behold/fjern) i en dialog.
+  const enqueueBatchCode = (code: string) => {
+    commitBatchItem(code)
+    void isOpenDuplicate(code).then((dup) => {
+      if (dup) setPendingDups((q) => (q.includes(code) ? q : [...q, code]))
+    })
+  }
+
+  // Batch-tilstand: feltet ryddes med det samme; URL-lignende koder bekræftes
+  // før de tilføjes, alt andet tilføjes straks.
   const addBatchItem = (raw: string) => {
     const code = normalizeScan(raw)
     if (!code) return
-    setBatchItems((list) => (list.includes(code) ? list : [code, ...list]))
-    void isOpenDuplicate(code).then((dup) => {
-      if (dup) setBatchDupes((s) => new Set(s).add(code))
-    })
     setBarcode('')
-    barcodeRef.current?.focus()
+    if (looksLikeUrl(code)) {
+      setPendingUrls((q) => (q.includes(code) ? q : [...q, code]))
+      return
+    }
+    enqueueBatchCode(code)
+  }
+
+  // URL-dialogens "brug alligevel": i batch-tilstand tilføjes koden som en
+  // almindelig scanning; i enkelt-tilstand lander den i stregkodefeltet.
+  const acceptUrlCode = (code: string) => {
+    if (batchMode) {
+      enqueueBatchCode(code)
+      return
+    }
+    setBarcode(code)
+    void checkDuplicate(code)
+  }
+
+  // Første dublet-kode der stadig står i batchen. En kode der nåede at blive
+  // fjernet eller gemt, inden opslaget kom tilbage, skal ikke bekræftes.
+  const activeDup = pendingDups.find((c) => batchItems.some((i) => i.code === c)) ?? null
+
+  const resolveDup = (code: string, keep: boolean) => {
+    if (keep) setBatchDupes((s) => new Set(s).add(code))
+    else setBatchItems((list) => list.filter((i) => i.code !== code))
+    setPendingDups((q) => q.filter((c) => c !== code))
   }
 
   // Hardware-scanner (keyboard-wedge): en scanning hvor som helst på siden
   // udfylder stregkoden og tjekker for dublet — også uden at feltet er i fokus.
   // I batch-tilstand lægges scanningen i stedet direkte i batch-listen.
+  // URL-lignende QR-koder (fx et link på en leverandørlabel) bekræftes først —
+  // samme warn-and-allow som på aktiver.
   useBarcodeScanner({
     targetRef: barcodeRef,
     onScan: (code) => {
       setScanSignal((n) => n + 1)
       if (batchMode) {
         addBatchItem(code)
+        return
+      }
+      if (looksLikeUrl(code)) {
+        setPendingUrls((q) => (q.includes(code) ? q : [...q, code]))
         return
       }
       setBarcode(code)
@@ -357,9 +453,9 @@ export function ParcelReceiveForm({
         .single()
       if (batchError) throw batchError
 
-      const rows = batchItems.map((code) => ({
+      const rows = batchItems.map((item) => ({
         company_id: companyId,
-        barcode: code,
+        barcode: item.code,
         receiver_employee_id: receiver.id,
         sender: sender.trim() || null,
         department_id: departmentId === NONE ? null : departmentId,
@@ -369,11 +465,36 @@ export function ParcelReceiveForm({
         condition_note: note.trim() || null,
         batch_id: batch.id,
       }))
-      const { error: parcelsError } = await supabase.from('parcels').insert(rows)
+      const { data: inserted, error: parcelsError } = await supabase
+        .from('parcels')
+        .insert(rows)
+        .select('id, barcode')
       if (parcelsError) throw parcelsError
+
+      // Tilstandsfotos pr. pakke (fx en beskadiget pakke i batchen): upload
+      // efter oprettelsen og hægt stien på pakken — samme sti/format som
+      // enkelt-tilstand. Fejler et foto, er batchen stadig gemt: advar i
+      // stedet for at rulle tilbage.
+      const withPhoto = batchItems.filter((item) => item.photo)
+      if (withPhoto.length > 0) {
+        const idByCode = new Map((inserted ?? []).map((p) => [p.barcode, p.id]))
+        const results = await Promise.all(
+          withPhoto.map((item) => {
+            const parcelId = idByCode.get(item.code)
+            if (!parcelId) return false
+            return uploadConditionPhoto(companyId, parcelId, item.photo!).then(
+              () => true,
+              () => false,
+            )
+          }),
+        )
+        if (results.some((ok) => !ok)) toast.warning(t('receive.batchPhotoFailed'))
+      }
 
       queryClient.invalidateQueries({ queryKey: ['parcels'] })
       queryClient.invalidateQueries({ queryKey: ['parcel-status-counts'] })
+      // En ny afsender skal med i dropdown'en allerede ved næste pakke.
+      if (sender.trim()) queryClient.invalidateQueries({ queryKey: ['sender-suggestions'] })
       toast.success(t('receive.batchSaved', { count: rows.length, code: batch.batch_code }))
       onBatchFinished?.({
         id: batch.id,
@@ -385,6 +506,7 @@ export function ParcelReceiveForm({
       })
       setBatchItems([])
       setBatchDupes(new Set())
+      setPendingDups([])
       reset()
     } catch (error) {
       console.error('Batch fejlede:', error)
@@ -415,21 +537,12 @@ export function ParcelReceiveForm({
         .single()
       if (error) throw error
 
-      if (photo) {
-        const path = `${companyId}/${parcel.id}.jpg`
-        const { error: uploadError } = await supabase.storage
-          .from('parcel-photos')
-          .upload(path, photo, { contentType: 'image/jpeg' })
-        if (uploadError) throw uploadError
-        const { error: updateError } = await supabase
-          .from('parcels')
-          .update({ condition_photo_path: path })
-          .eq('id', parcel.id)
-        if (updateError) throw updateError
-      }
+      if (photo) await uploadConditionPhoto(companyId, parcel.id, photo)
 
       queryClient.invalidateQueries({ queryKey: ['parcels'] })
       queryClient.invalidateQueries({ queryKey: ['parcel-status-counts'] })
+      // En ny afsender skal med i dropdown'en allerede ved næste pakke.
+      if (sender.trim()) queryClient.invalidateQueries({ queryKey: ['sender-suggestions'] })
       // Serveren genererer en intern stregkode (OPR-…) hvis der ikke blev
       // scannet én — vis DEN, så pakken kan mærkes/printes.
       toast.success(t('receive.saved', { barcode: parcel.barcode ?? parcel.id.slice(0, 8) }))
@@ -463,6 +576,7 @@ export function ParcelReceiveForm({
               if (!on) {
                 setBatchItems([])
                 setBatchDupes(new Set())
+                setPendingDups([])
               }
               barcodeRef.current?.focus()
             }}
@@ -498,6 +612,9 @@ export function ParcelReceiveForm({
         />
         {duplicate && !batchMode && (
           <p className="text-xs text-status-neutral-to-bad">{t('receive.duplicateWarning')}</p>
+        )}
+        {!batchMode && looksLikeUrl(normalizeScan(barcode)) && (
+          <p className="text-xs text-muted-foreground">{t('assetsPage.barcodeUrlInlineHint')}</p>
         )}
         {!batchMode && (
           /* Ulæselig stregkode/QR-kode: generér en ny kode og print en label. */
@@ -542,6 +659,7 @@ export function ParcelReceiveForm({
                 onClick={() => {
                   setBatchItems([])
                   setBatchDupes(new Set())
+                  setPendingDups([])
                 }}
               >
                 {t('receive.batchClear')}
@@ -552,21 +670,32 @@ export function ParcelReceiveForm({
             <p className="text-xs text-muted-foreground">{t('receive.batchEmpty')}</p>
           ) : (
             <ul className="max-h-40 divide-y divide-border overflow-auto rounded-md border">
-              {batchItems.map((code) => (
-                <li key={code} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                  <span className="truncate font-mono text-xs">{code}</span>
-                  {batchDupes.has(code) && (
+              {batchItems.map((item) => (
+                <li key={item.code} className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs">{item.code}</span>
+                  {batchDupes.has(item.code) && (
                     <span className="shrink-0 text-xs text-status-neutral-to-bad">
                       {t('receive.batchDuplicate')}
                     </span>
                   )}
+                  <BatchPhotoCell
+                    code={item.code}
+                    photo={item.photo}
+                    onPhoto={(photo) =>
+                      setBatchItems((list) =>
+                        list.map((i) => (i.code === item.code ? { ...i, photo } : i)),
+                      )
+                    }
+                  />
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
                     className="h-6 w-6 text-muted-foreground hover:text-foreground"
                     aria-label={t('receive.batchRemove')}
-                    onClick={() => setBatchItems((list) => list.filter((c) => c !== code))}
+                    onClick={() =>
+                      setBatchItems((list) => list.filter((i) => i.code !== item.code))
+                    }
                   >
                     <X className="size-3.5" />
                   </Button>
@@ -612,21 +741,14 @@ export function ParcelReceiveForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="sender">{t('receive.sender')}</Label>
-          {/* Fri tekst med autocomplete over virksomhedens tidligere afsendere
-              (native datalist — skriv frit eller vælg et forslag). */}
-          <Input
+          {/* Dropdown over virksomhedens tidligere afsendere + fri indtastning
+              — nye navne gemmes med pakken og optræder i listen fremover. */}
+          <SenderCombobox
             id="sender"
             value={sender}
-            list="sender-suggestions"
-            autoComplete="off"
-            placeholder={t('receive.senderPlaceholder')}
-            onChange={(e) => setSender(e.target.value)}
+            onChange={setSender}
+            suggestions={senders ?? []}
           />
-          <datalist id="sender-suggestions">
-            {master?.senders.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
         </div>
         <div className="flex flex-col gap-2">
           <Label>{t('receive.carrier')}</Label>
@@ -729,6 +851,104 @@ export function ParcelReceiveForm({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Warn-and-allow for URL-lignende scanninger (fx en QR-kode med et link):
+        bekræftes før koden bruges — i batch-listen eller stregkodefeltet.
+        Kø: dialogen viser første ventende kode, næste følger efter. */}
+    <BarcodeUrlDialog
+      code={pendingUrls[0] ?? null}
+      bodyKey="receive.barcodeUrlBody"
+      onOpenChange={(open) => !open && setPendingUrls((q) => q.slice(1))}
+      onAccept={acceptUrlCode}
+    />
+
+    {/* Batch-tilstand: koden står allerede som åben pakke i databasen. Den ER
+        tilføjet (synkront — en scanning må aldrig vente på netværket), så
+        dialogen spørger om den skal fjernes igen. Luk/Behold = behold og
+        markér som dublet i listen. */}
+    <Dialog open={activeDup !== null} onOpenChange={(o) => !o && activeDup && resolveDup(activeDup, true)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('receive.batchDupTitle')}</DialogTitle>
+          <DialogDescription>{t('receive.batchDupBody')}</DialogDescription>
+        </DialogHeader>
+        <p className="break-all rounded-md border bg-background/50 p-3 font-mono text-xs">
+          {activeDup}
+        </p>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => activeDup && resolveDup(activeDup, false)}
+          >
+            {t('receive.batchDupRemove')}
+          </Button>
+          <Button onClick={() => activeDup && resolveDup(activeDup, true)}>
+            {t('receive.batchDupKeep')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
+  )
+}
+
+// Foto-knap for én pakke i batch-listen: kamera-ikon uden foto, mini-
+// forhåndsvisning når der er ét. Åbner en dialog med den delte PhotoCapture
+// (fil eller webcam) for netop dén pakke.
+function BatchPhotoCell({
+  code,
+  photo,
+  onPhoto,
+}: {
+  code: string
+  photo: Blob | null
+  onPhoto: (photo: Blob | null) => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!photo) {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(photo)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photo])
+
+  return (
+    <>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+        aria-label={t('receive.batchPhotoAdd')}
+        title={t('receive.batchPhotoAdd')}
+        onClick={() => setOpen(true)}
+      >
+        {previewUrl ? (
+          <img src={previewUrl} alt="" className="size-5 rounded-sm border object-cover" />
+        ) : (
+          <Camera className="size-3.5" />
+        )}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('receive.batchPhotoTitle')}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{code}</DialogDescription>
+          </DialogHeader>
+          <PhotoCapture photo={photo} onPhoto={onPhoto} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

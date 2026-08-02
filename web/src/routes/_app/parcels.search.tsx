@@ -30,6 +30,7 @@ type Hit = {
   status: ParcelStatus
   registeredAt: string
   deliveredTo: string | null
+  sender: string | null
   conditionNote: string | null
   conditionPhotoPath: string | null
   receiverName: string | null
@@ -57,7 +58,7 @@ function SearchPage() {
     const { data, error } = await supabase
       .from('parcels')
       .select(
-        `id, barcode, status, registered_at, delivered_to, condition_note, condition_photo_path,
+        `id, barcode, status, registered_at, delivered_to, sender, condition_note, condition_photo_path,
          receiver_override_reason, receiver_override_at, removed_reason, removed_at,
          receiver:employees!parcels_receiver_employee_id_fkey (full_name),
          delivered_employee:employees!parcels_delivered_employee_id_fkey (full_name),
@@ -80,6 +81,7 @@ function SearchPage() {
         status: d.status,
         registeredAt: d.registered_at,
         deliveredTo: d.delivered_to,
+        sender: d.sender,
         conditionNote: d.condition_note,
         conditionPhotoPath: d.condition_photo_path,
         receiverName: d.receiver?.full_name ?? null,

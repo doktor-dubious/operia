@@ -1,12 +1,21 @@
 package com.dcalogic.operia.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,14 +29,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import com.dcalogic.operia.AppViewModel
 import com.dcalogic.operia.R
 import com.dcalogic.operia.data.LocalStore
+import com.dcalogic.operia.data.Parcel
 import com.dcalogic.operia.data.ParcelInsert
 import com.dcalogic.operia.data.Repository
 import com.dcalogic.operia.data.supabase
@@ -37,6 +52,7 @@ import com.dcalogic.operia.ui.ConfirmDialog
 import com.dcalogic.operia.ui.EmptyBox
 import com.dcalogic.operia.ui.FieldLabel
 import com.dcalogic.operia.ui.FoldSection
+import com.dcalogic.operia.ui.GhostButton
 import com.dcalogic.operia.ui.LookupPicker
 import com.dcalogic.operia.ui.ScanBox
 import com.dcalogic.operia.ui.Screen
@@ -51,6 +67,10 @@ private data class ScannedItem(
     val departmentId: String?,
     val employeeId: String?,
     val label: String,
+    // Valgfrit tilstandsfoto for netop denne pakke (fx synlig skade) —
+    // uploades efter gemning; offline droppes det med en henvisning til
+    // Tilstand-fanen (fotoet kan ikke hægtes på en pakke, serveren ikke har).
+    val photo: ByteArray? = null,
 )
 
 // Spejler webbens notify-contact-regler (web/src/lib/notify-contact.ts), som
@@ -67,6 +87,10 @@ private fun hasValidMsisdn(phone: String?): Boolean {
     if (digits.startsWith("00")) digits = digits.substring(2)
     return digits.length == 8 || digits.length in 9..15
 }
+
+// "Ligner en webadresse" — samme bevidst løse regel som webbens barcode-rules:
+// fanger typisk QR-indhold (https://…, www.…), ikke alt der kunne være en URI.
+private val URL_LIKE = Regex("""^(https?://|www\.)""", RegexOption.IGNORE_CASE)
 
 /**
  * Flow 1 — Modtag pakker: vælg modtager, scan én eller flere pakker, gem.
@@ -87,6 +111,16 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     var note by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<ScannedItem>>(emptyList()) }
     var confirmUnassignedOpen by remember { mutableStateOf(false) }
+    // Scan-værn (samme warn-and-allow som webbens modtag-formular): URL-
+    // lignende koder bekræftes før brug, og en kode der allerede står som åben
+    // pakke bekræftes efter tilføjelsen. Køer, ikke enkeltfelter — scanneren
+    // kan nå at fyre igen, mens en dialog står åben, og så må den første kode
+    // ikke overskrives og forsvinde.
+    var pendingUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var pendingDups by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Foto-dialogens mål: stregkoden på posten der fotograferes. null = lukket.
+    var photoTarget by remember { mutableStateOf<String?>(null) }
+    var pendingUri by remember { mutableStateOf<Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
     var lastCount by remember { mutableStateOf(0) }
     var focusStamp by remember { mutableStateOf(0L) }
@@ -118,15 +152,25 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     val msgBatchSaved = stringResource(R.string.receive_batch_saved)
     val msgBatchOffline = stringResource(R.string.receive_batch_offline)
     val msgBatchReceiver = stringResource(R.string.receive_batch_receiver_required)
+    val msgPhotoFailed = stringResource(R.string.condition_photo_failed)
+    val msgCameraDenied = stringResource(R.string.condition_camera_denied)
+    val msgPhotoUploadFailed = stringResource(R.string.receive_photo_upload_failed)
+    val msgPhotoOffline = stringResource(R.string.receive_photo_offline)
 
-    fun addScan(code: String) {
+    // Ingen modtager kræves for at scanne — som på webben kan pakker
+    // registreres uden modtager (bliver 'unassigned'); det bekræftes ved
+    // gemning, ikke ved scanning.
+    // Tilføjelsen er SYNKRON (offline-first): posten skal stå i listen med det
+    // samme — også uden net, og før en gemning kan nå at snapshotte listen.
+    // Dublet-opslaget (som webbens modtag-formular) kører bagefter i
+    // baggrunden; står koden allerede som åben pakke, bekræftes den i en
+    // dialog (behold/fjern). Offline fejler opslaget stille — serverens
+    // dublet-regler gælder stadig ved synkroniseringen.
+    fun commitScan(code: String) {
         if (items.any { it.barcode == code }) {
             toast.show("info", "$msgAlready: $code")
             return
         }
-        // Ingen modtager kræves for at scanne — som på webben kan pakker
-        // registreres uden modtager (bliver 'unassigned'); det bekræftes ved
-        // gemning, ikke ved scanning.
         items = listOf(
             ScannedItem(
                 barcode = code,
@@ -136,6 +180,84 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             ),
         ) + items
         toast.show("ok", "$msgAdded: $code")
+        val companyId = vm.companyId ?: return
+        scope.launch {
+            val dup = runCatching { Repository.hasOpenParcel(companyId, code) }.getOrDefault(false)
+            // Kun hvis koden stadig står i listen — er den fjernet eller gemt
+            // inden svaret kom, er der intet at bekræfte.
+            if (dup && items.any { it.barcode == code } && code !in pendingDups) {
+                pendingDups = pendingDups + code
+            }
+        }
+    }
+
+    fun addScan(code: String) {
+        if (items.any { it.barcode == code }) {
+            toast.show("info", "$msgAlready: $code")
+            return
+        }
+        // URL-lignende QR-koder (fx et link på en leverandørlabel) bekræftes
+        // først — samme warn-and-allow som på webben.
+        if (URL_LIKE.containsMatchIn(code)) {
+            if (code !in pendingUrls) pendingUrls = pendingUrls + code
+            return
+        }
+        commitScan(code)
+    }
+
+    // ----- pr.-pakke-tilstandsfoto (samme kamera/galleri-flow som Tilstand) -----
+
+    fun setItemPhoto(code: String, jpeg: ByteArray?) {
+        items = items.map { if (it.barcode == code) it.copy(photo = jpeg) else it }
+    }
+
+    fun applyPhoto(uri: Uri?) {
+        if (uri == null) return
+        val target = photoTarget ?: return
+        val bytes = readScaledJpeg(ctx, uri)
+        if (bytes == null) {
+            toast.show("err", msgPhotoFailed)
+            return
+        }
+        setItemPhoto(target, bytes)
+    }
+
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok) applyPhoto(pendingUri)
+    }
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        applyPhoto(uri)
+    }
+
+    fun launchCamera() {
+        val uri = newCaptureUri(ctx)
+        pendingUri = uri
+        takePicture.launch(uri)
+    }
+
+    // Kameraet kræver runtime-tilladelse, fordi appen deklarerer CAMERA i manifestet.
+    val requestCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchCamera() else toast.show("err", msgCameraDenied)
+    }
+
+    fun onTakePhoto() {
+        val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) launchCamera() else requestCamera.launch(Manifest.permission.CAMERA)
+    }
+
+    // Upload pr.-pakke-fotos efter en vellykket gemning. Pakkerne ER gemt på
+    // det tidspunkt — fejler et foto, advares der (med henvisning til
+    // Tilstand) i stedet for at rulle tilbage.
+    suspend fun uploadPhotos(inserted: List<Parcel>, photos: Map<String, ByteArray>) {
+        if (photos.isEmpty()) return
+        var failed = 0
+        inserted.forEach { p ->
+            val jpeg = p.barcode?.let(photos::get) ?: return@forEach
+            runCatching { Repository.uploadIntakePhoto(p.company_id, p.id, jpeg) }
+                .onFailure { failed++ }
+        }
+        if (failed > 0) toast.show("info", msgPhotoUploadFailed.format(failed))
     }
 
     // Byg insert-rækkerne. Med batchId sat er modtageren batchens (enmodtager),
@@ -169,15 +291,18 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         confirmUnassignedOpen = false
         val rows = rowsFor(null)
         if (rows.isEmpty()) return
+        // Fotos fanges FØR listen ryddes, så de kan uploades efter indsættet.
+        val photos = items.mapNotNull { item -> item.photo?.let { item.barcode to it } }.toMap()
         busy = true
         scope.launch {
             try {
-                Repository.insertParcels(rows)
+                val inserted = Repository.insertParcels(rows)
                 lastCount = rows.size
                 toast.show("ok", msgSaved.format(rows.size))
                 items = emptyList()
                 sender = ""
                 note = ""
+                uploadPhotos(inserted, photos)
             } catch (e: RestException) {
                 toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
             } catch (e: Exception) {
@@ -192,6 +317,9 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 items = emptyList()
                 sender = ""
                 note = ""
+                // Fotos kan ikke hægtes på pakker serveren ikke har endnu —
+                // de droppes med en henvisning til Tilstand-fanen efter synk.
+                if (photos.isNotEmpty()) toast.show("info", msgPhotoOffline.format(photos.size))
             }
             busy = false
             focusStamp = System.currentTimeMillis()
@@ -216,14 +344,16 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 null // offline — falder tilbage til ugrupperet kø nedenfor
             }
             val rows = rowsFor(batch?.id)
+            val photos = items.mapNotNull { item -> item.photo?.let { item.barcode to it } }.toMap()
             try {
                 if (batch == null) throw IllegalStateException("offline")
-                Repository.insertParcels(rows)
+                val inserted = Repository.insertParcels(rows)
                 lastCount = rows.size
                 toast.show("ok", msgBatchSaved.format(rows.size, batch.batch_code))
                 items = emptyList()
                 sender = ""
                 note = ""
+                uploadPhotos(inserted, photos)
             } catch (e: RestException) {
                 toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
             } catch (e: Exception) {
@@ -238,6 +368,8 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 items = emptyList()
                 sender = ""
                 note = ""
+                // Fotos kan ikke hægtes på pakker serveren ikke har endnu.
+                if (photos.isNotEmpty()) toast.show("info", msgPhotoOffline.format(photos.size))
             }
             busy = false
             focusStamp = System.currentTimeMillis()
@@ -500,6 +632,21 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
+                // Tilstandsfoto for netop denne pakke — grøn ramme = foto sat.
+                Text(
+                    "📷",
+                    fontSize = 20.sp,
+                    modifier = Modifier
+                        .let {
+                            if (item.photo != null) {
+                                it.border(1.5.dp, C.green, RoundedCornerShape(8.dp))
+                            } else {
+                                it
+                            }
+                        }
+                        .clickable { photoTarget = item.barcode }
+                        .padding(4.dp),
+                )
                 Text(
                     "✕",
                     color = C.red,
@@ -558,5 +705,103 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             onDismiss = { confirmUnassignedOpen = false },
             onConfirm = { doSave() },
         )
+    }
+
+    // Warn-and-allow for URL-lignende scanninger: "brug alligevel" tilføjer
+    // koden som en almindelig scanning. Kø — dialogen viser første ventende
+    // kode, næste følger efter.
+    pendingUrls.firstOrNull()?.let { code ->
+        ConfirmDialog(
+            title = stringResource(R.string.scan_url_title),
+            body = stringResource(R.string.scan_url_body, code),
+            confirmText = stringResource(R.string.scan_url_confirm),
+            onDismiss = { pendingUrls = pendingUrls - code },
+            onConfirm = {
+                pendingUrls = pendingUrls - code
+                commitScan(code)
+            },
+        )
+    }
+
+    // Koden står allerede som en åben pakke i databasen. Den ER tilføjet
+    // (synkront — en scanning må aldrig vente på netværket), så dialogen
+    // spørger om den skal fjernes igen; annullér/luk beholder den. Kun koder
+    // der stadig står i listen bekræftes — resten af køen er forældet.
+    val activeDup = pendingDups.firstOrNull { code -> items.any { it.barcode == code } }
+    if (pendingDups.isNotEmpty() && activeDup == null) pendingDups = emptyList()
+    activeDup?.let { code ->
+        ConfirmDialog(
+            title = stringResource(R.string.receive_dup_title),
+            body = stringResource(R.string.receive_dup_body, code),
+            confirmText = stringResource(R.string.receive_dup_confirm),
+            confirmColor = C.red,
+            contentColor = Color.White,
+            onDismiss = { pendingDups = pendingDups - code },
+            onConfirm = {
+                items = items.filter { it.barcode != code }
+                pendingDups = pendingDups - code
+            },
+        )
+    }
+
+    // Tilstandsfoto for én scannet pakke (kamera/galleri som Tilstand-fanen).
+    photoTarget?.let { target ->
+        val item = items.firstOrNull { it.barcode == target }
+        if (item == null) {
+            photoTarget = null
+        } else {
+            Dialog(onDismissRequest = { photoTarget = null }) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(C.panel, RoundedCornerShape(18.dp))
+                        .padding(20.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.receive_photo_title),
+                        color = C.txt,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Text(target, color = C.muted, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                    val preview = remember(item.photo) {
+                        item.photo?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() }
+                    }
+                    if (preview != null) {
+                        Image(
+                            bitmap = preview,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth().height(200.dp).padding(top = 12.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                        GhostButton(
+                            stringResource(R.string.condition_remove_photo),
+                            textColor = C.red,
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) { setItemPhoto(target, null) }
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            GhostButton(
+                                stringResource(R.string.condition_take_photo),
+                                modifier = Modifier.weight(1f),
+                            ) { onTakePhoto() }
+                            GhostButton(
+                                stringResource(R.string.condition_pick_gallery),
+                                modifier = Modifier.weight(1f),
+                            ) { pickImage.launch("image/*") }
+                        }
+                    }
+                    BigButton(
+                        stringResource(R.string.close),
+                        color = C.green,
+                        contentColor = C.greenInk,
+                        modifier = Modifier.padding(top = 18.dp),
+                    ) { photoTarget = null }
+                }
+            }
+        }
     }
 }

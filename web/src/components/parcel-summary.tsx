@@ -23,6 +23,7 @@ export type ParcelSummaryData = {
   locationName: string | null
   registeredAt: string
   deliveredTo: string | null
+  sender?: string | null
   // Tilstand: intake-note/-foto. Dokumentposterne hentes af blokken selv.
   conditionNote?: string | null
   conditionPhotoPath?: string | null
@@ -71,6 +72,8 @@ export function ParcelSummary({
         <dd>{parcel.receiverName ?? '—'}</dd>
         <dt className="text-muted-foreground">{t('parcels.department')}</dt>
         <dd>{parcel.departmentName ?? '—'}</dd>
+        <dt className="text-muted-foreground">{t('parcels.sender')}</dt>
+        <dd>{parcel.sender ?? '—'}</dd>
         <dt className="text-muted-foreground">{t('parcels.location')}</dt>
         <dd>{parcel.locationName ?? '—'}</dd>
         <dt className="text-muted-foreground">{t('parcels.registeredAt')}</dt>

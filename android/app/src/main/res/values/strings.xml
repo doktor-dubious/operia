@@ -57,6 +57,7 @@
     <string name="department">Afdeling</string>
     <string name="employee">Medarbejder</string>
     <string name="cancel">Annullér</string>
+    <string name="close">Luk</string>
     <string name="save">Gem</string>
     <string name="note_optional">Note (valgfri)</string>
     <string name="reason_required">Årsag (påkrævet)</string>
@@ -99,6 +100,15 @@
     <string name="receive_note_placeholder">fx tilstand / bemærkning</string>
     <string name="receive_save_button">Gem %1$d pakke(r)</string>
     <string name="receive_scan_at_least_one">Scan mindst én pakke</string>
+    <string name="receive_photo_title">Tilstandsfoto</string>
+    <string name="receive_photo_upload_failed">%1$d foto(s) kunne ikke uploades — tilføj dem via Tilstand</string>
+    <string name="receive_photo_offline">%1$d foto(s) blev ikke gemt (offline) — tilføj dem via Tilstand, når pakkerne er synkroniseret</string>
+    <string name="receive_dup_title">Allerede registreret</string>
+    <string name="receive_dup_body">%1$s står allerede som en åben pakke. Den er lagt i listen — skal den fjernes igen?</string>
+    <string name="receive_dup_confirm">Fjern fra listen</string>
+    <string name="scan_url_title">Ligner en webadresse</string>
+    <string name="scan_url_body">Den scannede kode ligner en webadresse — fx en QR-kode med et link. Vil du bruge den som pakkens stregkode alligevel?\n\n%1$s</string>
+    <string name="scan_url_confirm">Brug som stregkode</string>
     <string name="receive_unassigned_title">Registrér som ikke-tildelt?</string>
     <string name="receive_unassigned_body">Der er ikke valgt en modtager. Pakkerne registreres som ikke-tildelt og vises under Dashboard → Undtagelser, indtil en manager tildeler en modtager.</string>
     <string name="receive_unassigned_confirm">Registrér</string>

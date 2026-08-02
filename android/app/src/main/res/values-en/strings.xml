@@ -54,6 +54,7 @@
     <string name="department">Department</string>
     <string name="employee">Employee</string>
     <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
     <string name="save">Save</string>
     <string name="note_optional">Note (optional)</string>
     <string name="reason_required">Reason (required)</string>
@@ -96,6 +97,15 @@
     <string name="receive_note_placeholder">e.g. condition / remark</string>
     <string name="receive_save_button">Save %1$d parcel(s)</string>
     <string name="receive_scan_at_least_one">Scan at least one parcel</string>
+    <string name="receive_photo_title">Condition photo</string>
+    <string name="receive_photo_upload_failed">%1$d photo(s) could not be uploaded — add them via Condition</string>
+    <string name="receive_photo_offline">%1$d photo(s) were not saved (offline) — add them via Condition once the parcels have synced</string>
+    <string name="receive_dup_title">Already registered</string>
+    <string name="receive_dup_body">%1$s already exists as an open parcel. It has been added to the list — remove it again?</string>
+    <string name="receive_dup_confirm">Remove from list</string>
+    <string name="scan_url_title">Looks like a web address</string>
+    <string name="scan_url_body">The scanned code looks like a web address — e.g. a QR code containing a link. Use it as the parcel\'s barcode anyway?\n\n%1$s</string>
+    <string name="scan_url_confirm">Use as barcode</string>
     <string name="receive_unassigned_title">Register as unassigned?</string>
     <string name="receive_unassigned_body">No receiver is selected. The parcels will be registered as unassigned and shown under Dashboard → Exceptions until a manager assigns a receiver.</string>
     <string name="receive_unassigned_confirm">Register</string>
