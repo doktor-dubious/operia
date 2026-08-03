@@ -395,9 +395,32 @@ export type Database = {
           },
         ]
       }
+      asset_no_seq: {
+        Row: {
+          company_id: string
+          last_value: number
+        }
+        Insert: {
+          company_id: string
+          last_value?: number
+        }
+        Update: {
+          company_id?: string
+          last_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_no_seq_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
-          asset_tag: string | null
+          asset_tag: string
           assigned_at: string | null
           assigned_to_employee_id: string | null
           barcode: string | null
@@ -421,7 +444,7 @@ export type Database = {
           written_off_at: string | null
         }
         Insert: {
-          asset_tag?: string | null
+          asset_tag: string
           assigned_at?: string | null
           assigned_to_employee_id?: string | null
           barcode?: string | null
@@ -445,7 +468,7 @@ export type Database = {
           written_off_at?: string | null
         }
         Update: {
-          asset_tag?: string | null
+          asset_tag?: string
           assigned_at?: string | null
           assigned_to_employee_id?: string | null
           barcode?: string | null
@@ -631,6 +654,9 @@ export type Database = {
       }
       companies: {
         Row: {
+          asset_no_length: number | null
+          asset_no_prefix: string
+          asset_no_type: string
           asset_reminder_1_days: number | null
           asset_reminder_1_enabled: boolean | null
           asset_reminder_2_days: number | null
@@ -668,6 +694,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asset_no_length?: number | null
+          asset_no_prefix?: string
+          asset_no_type?: string
           asset_reminder_1_days?: number | null
           asset_reminder_1_enabled?: boolean | null
           asset_reminder_2_days?: number | null
@@ -705,6 +734,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asset_no_length?: number | null
+          asset_no_prefix?: string
+          asset_no_type?: string
           asset_reminder_1_days?: number | null
           asset_reminder_1_enabled?: boolean | null
           asset_reminder_2_days?: number | null
@@ -2196,6 +2228,9 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          asset_no_length: number | null
+          asset_no_prefix: string
+          asset_no_type: string
           asset_notifications_enabled: boolean
           asset_reminder_1_days: number
           asset_reminder_1_enabled: boolean
@@ -2253,6 +2288,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asset_no_length?: number | null
+          asset_no_prefix?: string
+          asset_no_type?: string
           asset_notifications_enabled?: boolean
           asset_reminder_1_days?: number
           asset_reminder_1_enabled?: boolean
@@ -2310,6 +2348,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asset_no_length?: number | null
+          asset_no_prefix?: string
+          asset_no_type?: string
           asset_notifications_enabled?: boolean
           asset_reminder_1_days?: number
           asset_reminder_1_enabled?: boolean
@@ -2767,6 +2808,19 @@ export type Database = {
         Args: { p_asset_id: string; p_employee_id: string; p_note?: string }
         Returns: undefined
       }
+      create_assets_batch: {
+        Args: {
+          p_category_id?: string
+          p_company_id: string
+          p_count: number
+          p_location_id?: string
+          p_name: string
+        }
+        Returns: {
+          asset_tag: string
+          id: string
+        }[]
+      }
       current_company_id: { Args: never; Returns: string }
       employee_has_open_parcels: {
         Args: { p_employee_id: string }
@@ -2849,6 +2903,11 @@ export type Database = {
         Args: { p_asset_id: string; p_location_id: string; p_note?: string }
         Returns: undefined
       }
+      next_asset_no: { Args: { p_company_id: string }; Returns: string }
+      next_asset_no_unchecked: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       next_parcel_barcode: { Args: { p_company_id: string }; Returns: string }
       override_parcel_receiver: {
         Args: {
@@ -2897,6 +2956,7 @@ export type Database = {
         Args: { p_parcel_ids: string[]; p_reason: string }
         Returns: number
       }
+      renumber_asset: { Args: { p_asset_id: string }; Returns: string }
       replace_product_texts: {
         Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
         Returns: undefined

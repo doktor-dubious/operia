@@ -483,12 +483,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             // foldes derfor sammen; i "modtag til afdeling"-tilstand (uden
             // medarbejder) er afdelingen selve modtageren og vises altid.
             if (showEmp) {
-                FoldSection(title = stringResource(R.string.department), summary = deptName(deptId)) {
+                FoldSection(title = stringResource(R.string.department), summary = deptName(deptId)) { collapse ->
                     LookupPicker(
                         title = stringResource(R.string.department),
                         items = vm.departments.map { it.id to it.name },
                         selectedId = deptId,
-                        onSelect = { deptId = it; focusStamp = System.currentTimeMillis() },
+                        onSelect = { deptId = it; focusStamp = System.currentTimeMillis(); collapse() },
                         embedded = true,
                     )
                 }
@@ -507,7 +507,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         FoldSection(
             title = stringResource(R.string.sender),
             summary = sender.trim().ifBlank { null },
-        ) {
+        ) { collapse ->
             OutlinedTextField(
                 value = sender,
                 onValueChange = { sender = it },
@@ -538,7 +538,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                                 .padding(end = 6.dp)
                                 .border(1.dp, C.line, RoundedCornerShape(999.dp))
                                 .background(C.panel, RoundedCornerShape(999.dp))
-                                .clickable { sender = s; focusStamp = System.currentTimeMillis() }
+                                .clickable { sender = s; focusStamp = System.currentTimeMillis(); collapse() }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
@@ -549,12 +549,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             FoldSection(
                 title = stringResource(R.string.carrier),
                 summary = vm.carriers.firstOrNull { it.id == carrierId }?.name,
-            ) {
+            ) { collapse ->
                 LookupPicker(
                     title = stringResource(R.string.carrier),
                     items = vm.carriers.map { it.id to it.name },
                     selectedId = carrierId,
-                    onSelect = { carrierId = it; focusStamp = System.currentTimeMillis() },
+                    onSelect = { carrierId = it; focusStamp = System.currentTimeMillis(); collapse() },
                     embedded = true,
                 )
             }
@@ -563,12 +563,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             FoldSection(
                 title = stringResource(R.string.handling),
                 summary = vm.handlingClasses.firstOrNull { it.id == handlingId }?.name,
-            ) {
+            ) { collapse ->
                 LookupPicker(
                     title = stringResource(R.string.handling),
                     items = vm.handlingClasses.map { it.id to it.name },
                     selectedId = handlingId,
-                    onSelect = { handlingId = it; focusStamp = System.currentTimeMillis() },
+                    onSelect = { handlingId = it; focusStamp = System.currentTimeMillis(); collapse() },
                     embedded = true,
                 )
             }
@@ -577,12 +577,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             FoldSection(
                 title = stringResource(R.string.storage_location),
                 summary = vm.storageLocations.firstOrNull { it.id == locationId }?.name,
-            ) {
+            ) { collapse ->
                 LookupPicker(
                     title = stringResource(R.string.storage_location),
                     items = vm.storageLocations.map { it.id to it.name },
                     selectedId = locationId,
-                    onSelect = { locationId = it; focusStamp = System.currentTimeMillis() },
+                    onSelect = { locationId = it; focusStamp = System.currentTimeMillis(); collapse() },
                     embedded = true,
                 )
             }

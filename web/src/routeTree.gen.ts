@@ -61,6 +61,7 @@ import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.cus
 import { Route as AppOperiaCarriersRouteImport } from './routes/_app/operia.carriers'
 import { Route as AppOperiaBillingRouteImport } from './routes/_app/operia.billing'
 import { Route as AppOperiaAssetsRouteImport } from './routes/_app/operia.assets'
+import { Route as AppOperiaAssetDataRouteImport } from './routes/_app/operia.asset-data'
 import { Route as AppImportLogRouteImport } from './routes/_app/import.log'
 import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 import { Route as AppImportExportRouteImport } from './routes/_app/import.export'
@@ -77,7 +78,9 @@ import { Route as AppConfigureHomeDesignRouteImport } from './routes/_app/config
 import { Route as AppConfigureHandheldDesignRouteImport } from './routes/_app/configure.handheld-design'
 import { Route as AppConfigureDataTransferRouteImport } from './routes/_app/configure.data-transfer'
 import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
+import { Route as AppConfigureAssetDataRouteImport } from './routes/_app/configure.asset-data'
 import { Route as AppAssetsSearchRouteImport } from './routes/_app/assets.search'
+import { Route as AppAssetsNewRouteImport } from './routes/_app/assets.new'
 import { Route as AppAssetsMoveRouteImport } from './routes/_app/assets.move'
 import { Route as AppAssetsLocationsRouteImport } from './routes/_app/assets.locations'
 import { Route as AppAssetsDocumentRouteImport } from './routes/_app/assets.document'
@@ -353,6 +356,11 @@ const AppOperiaAssetsRoute = AppOperiaAssetsRouteImport.update({
   path: '/assets',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaAssetDataRoute = AppOperiaAssetDataRouteImport.update({
+  id: '/asset-data',
+  path: '/asset-data',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppImportLogRoute = AppImportLogRouteImport.update({
   id: '/import/log',
   path: '/import/log',
@@ -438,9 +446,19 @@ const AppConfigureBillingRoute = AppConfigureBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppConfigureRoute,
 } as any)
+const AppConfigureAssetDataRoute = AppConfigureAssetDataRouteImport.update({
+  id: '/asset-data',
+  path: '/asset-data',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
 const AppAssetsSearchRoute = AppAssetsSearchRouteImport.update({
   id: '/assets/search',
   path: '/assets/search',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsNewRoute = AppAssetsNewRouteImport.update({
+  id: '/assets/new',
+  path: '/assets/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAssetsMoveRoute = AppAssetsMoveRouteImport.update({
@@ -544,7 +562,9 @@ export interface FileRoutesByFullPath {
   '/assets/document': typeof AppAssetsDocumentRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
   '/assets/move': typeof AppAssetsMoveRoute
+  '/assets/new': typeof AppAssetsNewRoute
   '/assets/search': typeof AppAssetsSearchRoute
+  '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -561,6 +581,7 @@ export interface FileRoutesByFullPath {
   '/import/export': typeof AppImportExportRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
+  '/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
@@ -628,7 +649,9 @@ export interface FileRoutesByTo {
   '/assets/document': typeof AppAssetsDocumentRoute
   '/assets/locations': typeof AppAssetsLocationsRoute
   '/assets/move': typeof AppAssetsMoveRoute
+  '/assets/new': typeof AppAssetsNewRoute
   '/assets/search': typeof AppAssetsSearchRoute
+  '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -645,6 +668,7 @@ export interface FileRoutesByTo {
   '/import/export': typeof AppImportExportRoute
   '/import/local': typeof AppImportLocalRoute
   '/import/log': typeof AppImportLogRoute
+  '/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
@@ -715,7 +739,9 @@ export interface FileRoutesById {
   '/_app/assets/document': typeof AppAssetsDocumentRoute
   '/_app/assets/locations': typeof AppAssetsLocationsRoute
   '/_app/assets/move': typeof AppAssetsMoveRoute
+  '/_app/assets/new': typeof AppAssetsNewRoute
   '/_app/assets/search': typeof AppAssetsSearchRoute
+  '/_app/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/_app/configure/billing': typeof AppConfigureBillingRoute
   '/_app/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/_app/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
@@ -732,6 +758,7 @@ export interface FileRoutesById {
   '/_app/import/export': typeof AppImportExportRoute
   '/_app/import/local': typeof AppImportLocalRoute
   '/_app/import/log': typeof AppImportLogRoute
+  '/_app/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/_app/operia/assets': typeof AppOperiaAssetsRoute
   '/_app/operia/billing': typeof AppOperiaBillingRoute
   '/_app/operia/carriers': typeof AppOperiaCarriersRoute
@@ -802,7 +829,9 @@ export interface FileRouteTypes {
     | '/assets/document'
     | '/assets/locations'
     | '/assets/move'
+    | '/assets/new'
     | '/assets/search'
+    | '/configure/asset-data'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -819,6 +848,7 @@ export interface FileRouteTypes {
     | '/import/export'
     | '/import/local'
     | '/import/log'
+    | '/operia/asset-data'
     | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
@@ -886,7 +916,9 @@ export interface FileRouteTypes {
     | '/assets/document'
     | '/assets/locations'
     | '/assets/move'
+    | '/assets/new'
     | '/assets/search'
+    | '/configure/asset-data'
     | '/configure/billing'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
@@ -903,6 +935,7 @@ export interface FileRouteTypes {
     | '/import/export'
     | '/import/local'
     | '/import/log'
+    | '/operia/asset-data'
     | '/operia/assets'
     | '/operia/billing'
     | '/operia/carriers'
@@ -972,7 +1005,9 @@ export interface FileRouteTypes {
     | '/_app/assets/document'
     | '/_app/assets/locations'
     | '/_app/assets/move'
+    | '/_app/assets/new'
     | '/_app/assets/search'
+    | '/_app/configure/asset-data'
     | '/_app/configure/billing'
     | '/_app/configure/data-transfer'
     | '/_app/configure/handheld-design'
@@ -989,6 +1024,7 @@ export interface FileRouteTypes {
     | '/_app/import/export'
     | '/_app/import/local'
     | '/_app/import/log'
+    | '/_app/operia/asset-data'
     | '/_app/operia/assets'
     | '/_app/operia/billing'
     | '/_app/operia/carriers'
@@ -1408,6 +1444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaAssetsRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/asset-data': {
+      id: '/_app/operia/asset-data'
+      path: '/asset-data'
+      fullPath: '/operia/asset-data'
+      preLoaderRoute: typeof AppOperiaAssetDataRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/import/log': {
       id: '/_app/import/log'
       path: '/import/log'
@@ -1520,11 +1563,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigureBillingRouteImport
       parentRoute: typeof AppConfigureRoute
     }
+    '/_app/configure/asset-data': {
+      id: '/_app/configure/asset-data'
+      path: '/asset-data'
+      fullPath: '/configure/asset-data'
+      preLoaderRoute: typeof AppConfigureAssetDataRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
     '/_app/assets/search': {
       id: '/_app/assets/search'
       path: '/assets/search'
       fullPath: '/assets/search'
       preLoaderRoute: typeof AppAssetsSearchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/new': {
+      id: '/_app/assets/new'
+      path: '/assets/new'
+      fullPath: '/assets/new'
+      preLoaderRoute: typeof AppAssetsNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/assets/move': {
@@ -1636,6 +1693,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppConfigureRouteChildren {
+  AppConfigureAssetDataRoute: typeof AppConfigureAssetDataRoute
   AppConfigureBillingRoute: typeof AppConfigureBillingRoute
   AppConfigureDataTransferRoute: typeof AppConfigureDataTransferRoute
   AppConfigureHandheldDesignRoute: typeof AppConfigureHandheldDesignRoute
@@ -1651,6 +1709,7 @@ interface AppConfigureRouteChildren {
 }
 
 const AppConfigureRouteChildren: AppConfigureRouteChildren = {
+  AppConfigureAssetDataRoute: AppConfigureAssetDataRoute,
   AppConfigureBillingRoute: AppConfigureBillingRoute,
   AppConfigureDataTransferRoute: AppConfigureDataTransferRoute,
   AppConfigureHandheldDesignRoute: AppConfigureHandheldDesignRoute,
@@ -1670,6 +1729,7 @@ const AppConfigureRouteWithChildren = AppConfigureRoute._addFileChildren(
 )
 
 interface AppOperiaRouteChildren {
+  AppOperiaAssetDataRoute: typeof AppOperiaAssetDataRoute
   AppOperiaAssetsRoute: typeof AppOperiaAssetsRoute
   AppOperiaBillingRoute: typeof AppOperiaBillingRoute
   AppOperiaCarriersRoute: typeof AppOperiaCarriersRoute
@@ -1693,6 +1753,7 @@ interface AppOperiaRouteChildren {
 }
 
 const AppOperiaRouteChildren: AppOperiaRouteChildren = {
+  AppOperiaAssetDataRoute: AppOperiaAssetDataRoute,
   AppOperiaAssetsRoute: AppOperiaAssetsRoute,
   AppOperiaBillingRoute: AppOperiaBillingRoute,
   AppOperiaCarriersRoute: AppOperiaCarriersRoute,
@@ -1739,6 +1800,7 @@ interface AppRouteChildren {
   AppAssetsDocumentRoute: typeof AppAssetsDocumentRoute
   AppAssetsLocationsRoute: typeof AppAssetsLocationsRoute
   AppAssetsMoveRoute: typeof AppAssetsMoveRoute
+  AppAssetsNewRoute: typeof AppAssetsNewRoute
   AppAssetsSearchRoute: typeof AppAssetsSearchRoute
   AppImportConfigRoute: typeof AppImportConfigRoute
   AppImportExportRoute: typeof AppImportExportRoute
@@ -1790,6 +1852,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAssetsDocumentRoute: AppAssetsDocumentRoute,
   AppAssetsLocationsRoute: AppAssetsLocationsRoute,
   AppAssetsMoveRoute: AppAssetsMoveRoute,
+  AppAssetsNewRoute: AppAssetsNewRoute,
   AppAssetsSearchRoute: AppAssetsSearchRoute,
   AppImportConfigRoute: AppImportConfigRoute,
   AppImportExportRoute: AppImportExportRoute,

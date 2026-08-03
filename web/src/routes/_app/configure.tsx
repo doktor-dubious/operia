@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ConfigSideNav } from '@/components/config-side-nav'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
-import { configureConfigSections } from '@/lib/nav'
+import { configureConfigSections, visibleConfigSections } from '@/lib/nav'
 
 // Konfiguration af virksomheden (managers; platform-admins for den valgte
 // kunde) — samme layout som Operia-konfigurationen: sekundær venstremenu +
@@ -28,7 +28,7 @@ function ConfigureLayout() {
       <ConfigSideNav
         title={t('configureConfig.title')}
         sectionNs="configureConfig"
-        sections={configureConfigSections}
+        sections={visibleConfigSections(configureConfigSections, access)}
         storageKey="configure-config-collapsed"
       />
       <div className="min-w-0 flex-1">

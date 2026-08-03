@@ -416,7 +416,11 @@ fun ConfirmDialog(
 fun FoldSection(
     title: String,
     summary: String? = null, // vist til højre når foldet sammen (fx den valgte værdi)
-    content: @Composable () -> Unit,
+    // Indholdet får en `collapse`-funktion, så et valg inde i sektionen kan lukke
+    // den igen. Uden den ville en indlejret LookupPicker blive stående åben efter
+    // valget (dens egen luk-logik gælder kun den fritstående variant), og feltet
+    // skulle lukkes manuelt på overskriften.
+    content: @Composable (collapse: () -> Unit) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -450,7 +454,7 @@ fun FoldSection(
             Text(if (expanded) "▾" else "▸", color = C.muted, fontSize = 15.sp)
         }
         if (expanded) {
-            Column(Modifier.padding(top = 8.dp)) { content() }
+            Column(Modifier.padding(top = 8.dp)) { content { expanded = false } }
         }
     }
 }

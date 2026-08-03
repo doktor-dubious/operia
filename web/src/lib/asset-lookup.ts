@@ -107,6 +107,10 @@ export const ASSET_RPC_ERRORS: Record<string, string> = {
   bad_email: 'assetsPage.lendEmailInvalid',
   bad_reason: 'assetFlow.errBadReason',
   not_authorized: 'common.noPermission',
+  no_access: 'common.noPermission',
+  // NB: countInvalid interpolerer {{max}} — kalderen skal give værdien med.
+  count_out_of_range: 'assetsPage.countInvalid',
+  asset_tag_immutable: 'assetsPage.tagImmutable',
 }
 
 export function assetRpcErrorKey(error: { message?: string } | null): string | null {

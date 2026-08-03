@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Screenshots from .claude/skills/run-operia-web/driver.mjs
+shots
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

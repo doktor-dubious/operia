@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
@@ -39,8 +39,16 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
 import { LoanTtlSelect } from '@/components/loan-ttl-select'
+import {
+  NewAssetForm,
+  NONE,
+  PickerSelect,
+  useAssetPickers,
+  type AssetPicker,
+} from '@/components/new-asset-form'
 import { ScannerIndicator } from '@/components/scanner-indicator'
 import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
+import { assetRpcErrorKey } from '@/lib/asset-lookup'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useOpenLoan } from '@/hooks/use-open-loan'
@@ -54,16 +62,19 @@ import { isValidEmail } from '@/lib/validation'
 // skrivebeskyttet; ellers kun deaktivering (rækken består, lånehistorik bevares)
 // og hård sletning for platform-admins (testdata-oprydning). Ingen anonymisering
 // — aktiver bærer ingen persondata.
+// ?id= åbner detaljepanelet for det aktiv — deep-linket fra "Gå til aktivet" i
+// stregkode-konfliktdialogen på /assets/new. Parametret ryddes efter brug, så
+// panelet kan lukkes/skiftes frit bagefter.
 export const Route = createFileRoute('/_app/assets/')({
+  validateSearch: (search: Record<string, unknown>): { id?: string } =>
+    typeof search.id === 'string' && search.id ? { id: search.id } : {},
   component: AssetsPage,
 })
 
 const dateTimeFormat = new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
 
-const NONE = '__none__'
-
 type Row = NonNullable<ReturnType<typeof useRows>['data']>[number]
-type Picker = { id: string; name: string }
+type Picker = AssetPicker
 
 function useRows(companyId: string | null) {
   return useQuery({
@@ -103,32 +114,6 @@ function useOpenLoans(companyId: string | null) {
 }
 
 // Aktive kategorier + placeringer til "+ Ny"-dialogens vælgere.
-function usePickers(companyId: string | null) {
-  return useQuery({
-    queryKey: ['asset-pickers', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const [categories, locations] = await Promise.all([
-        supabase
-          .from('asset_categories')
-          .select('id, name')
-          .eq('company_id', companyId!)
-          .eq('is_active', true)
-          .order('name'),
-        supabase
-          .from('asset_locations')
-          .select('id, name')
-          .eq('company_id', companyId!)
-          .eq('is_active', true)
-          .order('name'),
-      ])
-      const err = categories.error ?? locations.error
-      if (err) throw err
-      return { categories: categories.data as Picker[], locations: locations.data as Picker[] }
-    },
-  })
-}
-
 // «Lån ud»: udløb (starter på platformens standard), modtagerens navn og
 // kontaktvej. Serveren (lend_asset) er den der håndhæver reglerne — felterne
 // her spejler dem, så brugeren ikke skal møde en rå databasefejl.
@@ -310,6 +295,11 @@ type Loan = NonNullable<ReturnType<typeof useOpenLoan>['data']>
 
 // ISO → 'YYYY-MM-DDTHH:mm' i lokal tid, som <input type="datetime-local"> vil have
 // det. Tom streng = intet udløb.
+// Rå UUID'er som aktiv-nr. stammer fra backfillet i 20260803120644 (aktiver
+// fra før nummerpligten) eller fra en 'uuid'-serie. Kun de aktiver tilbydes et
+// nyt, server-tildelt nummer — seriens egne numre ligger fast.
+const RAW_UUID_TAG = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function toLocalInput(iso: string | null): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -519,9 +509,27 @@ function AssetDetailPane({
   const onLoan = row.status === 'on_loan'
   const { data: loan } = useOpenLoan(row.id, onLoan)
 
-  // Redigerbare felter (alt undtagen ID), spejlet fra rækken. Panelet
-  // genmonteres ved aktivskift (key), så staten reseedes automatisk.
-  const [assetTag, setAssetTag] = useState(row.asset_tag ?? '')
+  // Nyt aktiv-nr. (kun for rå UUID-numre): serveren tildeler fra serien —
+  // klienten vælger aldrig værdien, så nummerets troværdighed består.
+  const [renumberOpen, setRenumberOpen] = useState(false)
+  const [renumberBusy, setRenumberBusy] = useState(false)
+  const renumber = async () => {
+    setRenumberBusy(true)
+    const { data: newTag, error } = await supabase.rpc('renumber_asset', { p_asset_id: row.id })
+    setRenumberBusy(false)
+    if (error || !newTag) {
+      console.error('Kunne ikke tildele nyt aktiv-nr.:', error)
+      const key = error ? assetRpcErrorKey(error) : null
+      toast.error(key ? t(key) : error ? describeError(error, t) : t('common.noPermission'))
+      return
+    }
+    setRenumberOpen(false)
+    toast.success(t('assetsPage.renumberedToast', { tag: newTag }))
+    onLoanChanged()
+  }
+
+  // Redigerbare felter (alt undtagen ID og Aktiv-nr.), spejlet fra rækken.
+  // Panelet genmonteres ved aktivskift (key), så staten reseedes automatisk.
   const [serialNo, setSerialNo] = useState(row.serial_no ?? '')
   const [name, setName] = useState(row.name)
   const [barcode, setBarcode] = useState(row.barcode ?? '')
@@ -619,7 +627,6 @@ function AssetDetailPane({
   // (og refetch) matcher det serverværdien. Ellers ville et efterstillet mellemrum
   // efterlade «Gem ændringer»-bjælken hængende, selv efter en vellykket gemning.
   const assetDirty =
-    assetTag.trim() !== (row.asset_tag ?? '') ||
     serialNo.trim() !== (row.serial_no ?? '') ||
     trimmedName !== row.name ||
     barcode.trim() !== (row.barcode ?? '') ||
@@ -672,7 +679,6 @@ function AssetDetailPane({
       : locations
 
   const cancel = () => {
-    setAssetTag(row.asset_tag ?? '')
     setSerialNo(row.serial_no ?? '')
     setName(row.name)
     setBarcode(row.barcode ?? '')
@@ -707,7 +713,6 @@ function AssetDetailPane({
       const { data: updated, error } = await supabase
         .from('assets')
         .update({
-          asset_tag: assetTag.trim() || null,
           serial_no: serialNo.trim() || null,
           name: trimmedName,
           // Samme normalisering som alle andre stregkode-indgange (scan såvel
@@ -789,12 +794,23 @@ function AssetDetailPane({
             </div>
           </Field>
           <div className="grid max-w-2xl grid-cols-2 gap-4">
+            {/* Aktiv-nr. tildeles ved oprettelsen og ligger fast: nummeret er
+                aktivets identitet ud mod labels, lister og historik, og en
+                fortløbende serie ville miste sin mening, hvis den kunne rettes.
+                Undtagelsen er rå UUID-numre (fra før nummerpligten): de kan få
+                et nyt nummer fra serien — men aldrig et selvvalgt. */}
             <Field label={t('assetsPage.tag')}>
-              <Input
-                value={assetTag}
-                className="font-mono"
-                onChange={(e) => setAssetTag(e.target.value)}
-              />
+              <Input value={row.asset_tag} disabled className="font-mono" />
+              {RAW_UUID_TAG.test(row.asset_tag ?? '') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-1.5"
+                  onClick={() => setRenumberOpen(true)}
+                >
+                  {t('assetsPage.renumber')}
+                </Button>
+              )}
             </Field>
             <Field label={t('assetsPage.serialNo')}>
               <Input
@@ -1031,37 +1047,33 @@ function AssetDetailPane({
         onOpenChange={(open) => !open && setPendingUrlCode(null)}
         onAccept={setBarcode}
       />
+      {/* Bekræftelse før nyt nummer: det gamle forsvinder fra lister/labels. */}
+      <Dialog open={renumberOpen} onOpenChange={(open) => !renumberBusy && setRenumberOpen(open)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('assetsPage.renumberTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('assetsPage.renumberDescription', { tag: row.asset_tag })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenumberOpen(false)} disabled={renumberBusy}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={() => void renumber()} disabled={renumberBusy}>
+              {renumberBusy ? t('common.loading') : t('assetsPage.renumber')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
 
-// Optional-vælger (kategori/placering) med et "—"-punkt for "ingen".
-function PickerSelect({
-  value,
-  onChange,
-  items,
-}: {
-  value: string
-  onChange: (v: string) => void
-  items: Picker[]
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NONE}>—</SelectItem>
-        {items.map((it) => (
-          <SelectItem key={it.id} value={it.id}>
-            {it.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
+// Opret-dialogen på Aktiver-siden. Selve formularen er delt med den
+// selvstændige side /assets/new; her er kun rammen om den. DialogContent
+// afmonteres ved luk, så formularen nulstiller sig selv — og henter et nyt
+// Aktiv-nr. — hver gang dialogen åbnes.
 function NewAssetDialog({
   open,
   onOpenChange,
@@ -1082,207 +1094,26 @@ function NewAssetDialog({
   onShowAsset: (assetId: string) => void
 }) {
   const { t } = useTranslation()
-  const [name, setName] = useState('')
-  const [assetTag, setAssetTag] = useState('')
-  const [serialNo, setSerialNo] = useState('')
-  const [barcode, setBarcode] = useState('')
-  const [categoryId, setCategoryId] = useState(NONE)
-  const [locationId, setLocationId] = useState(NONE)
-  const [busy, setBusy] = useState(false)
-
-  // Hardware-scanner: mens dialogen er åben, lander en scanning i stregkode-
-  // feltet (normaliseret) — uanset hvilket felt fokus står i.
-  const barcodeRef = useRef<HTMLInputElement>(null)
-  const [scanSignal, setScanSignal] = useState(0)
-  const [pendingUrlCode, setPendingUrlCode] = useState<string | null>(null)
-  useBarcodeScanner({
-    enabled: open,
-    targetRef: barcodeRef,
-    // Dialogen har præcis én scan-destination — en scanning skal i stregkode-
-    // feltet, uanset om markøren stod i Navn/Aktiv-nr./Serienr.
-    captureInForeignInputs: true,
-    onScan: (code) => {
-      setScanSignal((n) => n + 1)
-      if (looksLikeUrl(code)) {
-        setPendingUrlCode(code)
-        return
-      }
-      setBarcode(code)
-    },
-  })
-  const barcodeIssue = barcodeProblem(normalizeScan(barcode))
-
-  // Live-tjek som i detaljepanelet: konflikt → popup + spærret Gem.
-  const { conflict: barcodeConflict, code: normalizedBarcode } = useAssetBarcodeConflict(
-    open ? companyId : null,
-    barcode,
-  )
-  const [conflictOpen, setConflictOpen] = useState(false)
-  const warnedForCode = useRef<string | null>(null)
-  useEffect(() => {
-    if (barcodeConflict && warnedForCode.current !== normalizedBarcode) {
-      warnedForCode.current = normalizedBarcode
-      setConflictOpen(true)
-    }
-  }, [barcodeConflict, normalizedBarcode])
-
-  const trimmed = name.trim()
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) {
-      setName('')
-      setAssetTag('')
-      setSerialNo('')
-      setBarcode('')
-      setCategoryId(NONE)
-      setLocationId(NONE)
-      setConflictOpen(false)
-      setPendingUrlCode(null)
-      warnedForCode.current = null
-    }
-    onOpenChange(next)
-  }
-
-  const create = async () => {
-    if (!companyId || !trimmed) return
-    setBusy(true)
-    const { error } = await supabase.from('assets').insert({
-      company_id: companyId,
-      name: trimmed,
-      asset_tag: assetTag.trim() || null,
-      serial_no: serialNo.trim() || null,
-      barcode: normalizeScan(barcode) || null,
-      category_id: categoryId === NONE ? null : categoryId,
-      location_id: locationId === NONE ? null : locationId,
-    })
-    setBusy(false)
-    if (error) {
-      console.error('Kunne ikke oprette aktiv:', error)
-      // 23505 = unik-constraint. Aktivet har to (aktiv-nr. og stregkode), så
-      // constraint-navnet afgør hvilket felt brugeren skal rette.
-      if (error.code === '23505') {
-        toast.error(
-          error.message.includes('barcode') ? t('assetsPage.barcodeTaken') : t('assetsPage.tagTaken'),
-        )
-        return
-      }
-      toast.error(describeError(error, t))
-      return
-    }
-    toast.success(t('assetsPage.createdToast', { name: trimmed }))
-    onCreated()
-    handleOpenChange(false)
-  }
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-w-md flex-col gap-4">
         <DialogHeader>
           <DialogTitle>{t('assetsPage.newTitle')}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="new-asset-name" className="text-label">
-            {t('assetsPage.name')}
-          </Label>
-          <Input
-            id="new-asset-name"
-            value={name}
-            autoFocus
-            placeholder={t('assetsPage.namePlaceholder')}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="new-asset-tag" className="text-label">
-              {t('assetsPage.tag')}
-            </Label>
-            <Input
-              id="new-asset-tag"
-              value={assetTag}
-              className="font-mono"
-              placeholder={t('assetsPage.tagPlaceholder')}
-              onChange={(e) => setAssetTag(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="new-asset-serial" className="text-label">
-              {t('assetsPage.serialNo')}
-            </Label>
-            <Input
-              id="new-asset-serial"
-              value={serialNo}
-              className="font-mono"
-              onChange={(e) => setSerialNo(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="new-asset-barcode" className="text-label">
-              {t('assetsPage.barcode')}
-            </Label>
-            <ScannerIndicator signal={scanSignal} />
-          </div>
-          <Input
-            id="new-asset-barcode"
-            ref={barcodeRef}
-            value={barcode}
-            className="font-mono"
-            aria-invalid={!!barcodeConflict}
-            placeholder={t('assetsPage.barcodePlaceholder')}
-            onChange={(e) => setBarcode(e.target.value)}
-          />
-          {barcodeConflict && (
-            <p className="text-xs text-destructive">
-              {t('assetsPage.barcodeConflictHint', { name: barcodeConflict.name })}
-            </p>
-          )}
-          {barcodeIssue && (
-            <p className="text-xs text-destructive">{t(barcodeProblemKey[barcodeIssue])}</p>
-          )}
-          {!barcodeIssue && !barcodeConflict && looksLikeUrl(barcode) && (
-            <p className="text-xs text-status-neutral-to-bad">
-              {t('assetsPage.barcodeUrlInlineHint')}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label className="text-label">{t('assetsPage.category')}</Label>
-          <PickerSelect value={categoryId} onChange={setCategoryId} items={categories} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label className="text-label">{t('assetsPage.location')}</Label>
-          <PickerSelect value={locationId} onChange={setLocationId} items={locations} />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            disabled={busy || !trimmed || !companyId || !!barcodeConflict || !!barcodeIssue}
-            onClick={create}
-          >
-            {busy ? t('common.loading') : t('common.save')}
-          </Button>
-        </DialogFooter>
+        <NewAssetForm
+          companyId={companyId}
+          categories={categories}
+          locations={locations}
+          scanEnabled={open}
+          finishLabel={t('common.close')}
+          onCreated={onCreated}
+          onFinish={() => onOpenChange(false)}
+          onShowAsset={(id) => {
+            onOpenChange(false)
+            onShowAsset(id)
+          }}
+        />
       </DialogContent>
-
-      <BarcodeConflictDialog
-        open={conflictOpen}
-        onOpenChange={setConflictOpen}
-        code={normalizedBarcode}
-        conflict={barcodeConflict}
-        onGoToAsset={(id) => {
-          handleOpenChange(false)
-          onShowAsset(id)
-        }}
-      />
-      <BarcodeUrlDialog
-        code={pendingUrlCode}
-        onOpenChange={(o) => !o && setPendingUrlCode(null)}
-        onAccept={setBarcode}
-      />
     </Dialog>
   )
 }
@@ -1292,11 +1123,19 @@ function AssetsPage() {
   const { companyId } = useCompanyContext()
   const { data, isPending } = useRows(companyId)
   const { data: openLoans } = useOpenLoans(companyId)
-  const { data: pickers } = usePickers(companyId)
+  const { data: pickers } = useAssetPickers(companyId)
   const { data: access } = useAccess()
   const { data: settings } = usePlatformSettings()
   const queryClient = useQueryClient()
   const [activeId, setActiveId] = useState<string | null>(null)
+  // Deep-link (?id=): åbn panelet og ryd parametret fra adresselinjen.
+  const { id: linkedId } = Route.useSearch()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!linkedId) return
+    setActiveId(linkedId)
+    void navigate({ to: '/assets', search: {}, replace: true })
+  }, [linkedId, navigate])
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)

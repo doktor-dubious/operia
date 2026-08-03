@@ -6,6 +6,7 @@ import {
   Boxes,
   CalendarRange,
   Camera,
+  CirclePlus,
   Cog,
   FileText,
   Handshake,
@@ -108,6 +109,7 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'assetMove', href: '/assets/move', icon: Truck, productKey: 'assets' },
       { labelKey: 'assetDocument', href: '/assets/document', icon: Camera, productKey: 'assets' },
       { labelKey: 'assetSearch', href: '/assets/search', icon: Search, productKey: 'assets' },
+      { labelKey: 'assetNew', href: '/assets/new', icon: CirclePlus, productKey: 'assets' },
       { labelKey: 'assetCategories', href: '/assets/categories', icon: Tag, productKey: 'assets' },
       { labelKey: 'assetLocations', href: '/assets/locations', icon: MapPin, productKey: 'assets' },
       {
@@ -181,10 +183,29 @@ export const configureNav: NavItem = {
 
 // En sektion i en sekundærmenu (Operia/Konfigurér): en overskrift + dens punkter.
 // `labelKey` peger på sektionsoverskriften; menuernes egne i18n-namespaces
-// (operiaConfig.* / configureConfig.*) holder overskrifterne.
+// (operiaConfig.* / configureConfig.*) holder overskrifterne. `productKey`
+// gater et punkt på virksomhedens produktkøb (som i navGroups).
 export type ConfigNavSection = {
   labelKey: string
-  items: { labelKey: string; href: string }[]
+  items: { labelKey: string; href: string; productKey?: string }[]
+}
+
+// Konfigurér-punkterne filtreret på produktkøb — samme regel som
+// visibleNavGroups, så en kunde uden fx aktiver-modulet heller ikke ser dets
+// konfigurationsside.
+export function visibleConfigSections(
+  sections: ConfigNavSection[],
+  access: AccessInfo,
+): ConfigNavSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) =>
+          !item.productKey || access.isPlatformAdmin || access.products.has(item.productKey),
+      ),
+    }))
+    .filter((section) => section.items.length > 0)
 }
 
 // Konfigurér-sekundærmenuen (kundefladen, reduceret sæt) grupperet i fire
@@ -217,6 +238,7 @@ export const configureConfigSections: ConfigNavSection[] = [
   {
     labelKey: 'sectionData',
     items: [
+      { labelKey: 'configureAssetData', href: '/configure/asset-data', productKey: 'assets' },
       { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
       { labelKey: 'configureIntegrations', href: '/configure/integrations' },
       { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
@@ -269,6 +291,7 @@ export const operiaConfigSections: ConfigNavSection[] = [
   {
     labelKey: 'sectionData',
     items: [
+      { labelKey: 'operiaAssetData', href: '/operia/asset-data' },
       { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
       { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
     ],
@@ -321,6 +344,7 @@ export const SIMPLE_NAV_HREFS = [
   '/assets/move',
   '/assets/document',
   '/assets/search',
+  '/assets/new',
 ]
 
 export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
