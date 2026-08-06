@@ -8,4 +8,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('VITE_SUPABASE_URL og VITE_SUPABASE_ANON_KEY skal være sat i web/.env')
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+// experimental.passkey: Supabase-beta for passkey-login (biometrisk login på
+// login-siden + enrollment under /settings). API'et kan ændre sig uden varsel.
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: { experimental: { passkey: true } },
+})

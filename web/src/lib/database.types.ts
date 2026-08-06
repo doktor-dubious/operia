@@ -665,8 +665,11 @@ export type Database = {
           created_at: string
           default_currency: string
           default_language: string
+          handheld_reauth_minutes: number | null
           id: string
           is_active: boolean
+          login_biometric_enabled: boolean | null
+          login_password_enabled: boolean | null
           logo_url: string | null
           name: string
           notify_email_enabled: boolean | null
@@ -705,8 +708,11 @@ export type Database = {
           created_at?: string
           default_currency?: string
           default_language?: string
+          handheld_reauth_minutes?: number | null
           id?: string
           is_active?: boolean
+          login_biometric_enabled?: boolean | null
+          login_password_enabled?: boolean | null
           logo_url?: string | null
           name: string
           notify_email_enabled?: boolean | null
@@ -745,8 +751,11 @@ export type Database = {
           created_at?: string
           default_currency?: string
           default_language?: string
+          handheld_reauth_minutes?: number | null
           id?: string
           is_active?: boolean
+          login_biometric_enabled?: boolean | null
+          login_password_enabled?: boolean | null
           logo_url?: string | null
           name?: string
           notify_email_enabled?: boolean | null
@@ -774,6 +783,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      company_ai_config: {
+        Row: {
+          company_id: string
+          created_at: string
+          model: string | null
+          provider: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          model?: string | null
+          provider?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          model?: string | null
+          provider?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_ai_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_data_transfer: {
         Row: {
@@ -2228,6 +2269,9 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          ai_enabled: boolean
+          ai_models: string[]
+          ai_providers: string[]
           asset_no_length: number | null
           asset_no_prefix: string
           asset_no_type: string
@@ -2252,6 +2296,7 @@ export type Database = {
           entra_sync_interval_minutes: number
           google_maps_browser_key: string | null
           handheld_design: Json
+          handheld_reauth_minutes: number
           handheld_tiles: Json
           home_design: Json
           home_tiles: Json
@@ -2260,6 +2305,8 @@ export type Database = {
           import_schedule_enabled: boolean
           import_schedule_time: string | null
           locker_loan_ttl_hours: number | null
+          login_biometric_enabled: boolean
+          login_password_enabled: boolean
           maps_provider: string
           notify_email_enabled: boolean
           notify_sms_enabled: boolean
@@ -2288,6 +2335,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_enabled?: boolean
+          ai_models?: string[]
+          ai_providers?: string[]
           asset_no_length?: number | null
           asset_no_prefix?: string
           asset_no_type?: string
@@ -2312,6 +2362,7 @@ export type Database = {
           entra_sync_interval_minutes?: number
           google_maps_browser_key?: string | null
           handheld_design?: Json
+          handheld_reauth_minutes?: number
           handheld_tiles?: Json
           home_design?: Json
           home_tiles?: Json
@@ -2320,6 +2371,8 @@ export type Database = {
           import_schedule_enabled?: boolean
           import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
+          login_biometric_enabled?: boolean
+          login_password_enabled?: boolean
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
@@ -2348,6 +2401,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_enabled?: boolean
+          ai_models?: string[]
+          ai_providers?: string[]
           asset_no_length?: number | null
           asset_no_prefix?: string
           asset_no_type?: string
@@ -2372,6 +2428,7 @@ export type Database = {
           entra_sync_interval_minutes?: number
           google_maps_browser_key?: string | null
           handheld_design?: Json
+          handheld_reauth_minutes?: number
           handheld_tiles?: Json
           home_design?: Json
           home_tiles?: Json
@@ -2380,6 +2437,8 @@ export type Database = {
           import_schedule_enabled?: boolean
           import_schedule_time?: string | null
           locker_loan_ttl_hours?: number | null
+          login_biometric_enabled?: boolean
+          login_password_enabled?: boolean
           maps_provider?: string
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
@@ -2808,6 +2867,20 @@ export type Database = {
         Args: { p_asset_id: string; p_employee_id: string; p_note?: string }
         Returns: undefined
       }
+      create_asset_handheld: {
+        Args: {
+          p_barcode?: string
+          p_category_id?: string
+          p_company_id: string
+          p_location_id?: string
+          p_name: string
+          p_serial_no?: string
+        }
+        Returns: {
+          asset_tag: string
+          id: string
+        }[]
+      }
       create_assets_batch: {
         Args: {
           p_category_id?: string
@@ -2831,6 +2904,7 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: string
       }
+      get_login_options: { Args: never; Returns: Json }
       has_any_role: {
         Args: { p_roles: Database["public"]["Enums"]["app_role"][] }
         Returns: boolean

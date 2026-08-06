@@ -19,6 +19,28 @@
     <string name="login_failed">Login fejlede: %1$s</string>
     <string name="err_no_company">Din bruger er ikke knyttet til en virksomhed.\nHåndterminalen er til virksomhedens pakkepersonale — kontakt din administrator.</string>
 
+    <!-- biometrisk login (fingeraftryk/ansigt — enheden vælger selv; IKKE enhedens PIN,
+         se Biometrics.kt: en delt terminals skærmlåskode er ofte fælles viden) -->
+    <string name="biometric_toggle">Log ind med fingeraftryk</string>
+    <string name="biometric_toggle_sub">Lås terminalen op med fingeraftryk eller ansigtsgenkendelse</string>
+    <string name="biometric_prompt_title">Lås Operia op</string>
+    <string name="biometric_prompt_subtitle">Bekræft, at det er dig</string>
+    <string name="biometric_enroll_subtitle">Bekræft for at slå login med fingeraftryk til</string>
+    <string name="biometric_locked_body">Operia er låst.\nLås op for at fortsætte.</string>
+    <string name="biometric_unlock">Lås op</string>
+    <string name="biometric_failed">Oplåsning mislykkedes. Prøv igen, eller log ud og brug adgangskode.</string>
+    <string name="or_divider">eller</string>
+    <string name="biometric_login_title">Log ind på Operia</string>
+    <string name="biometric_login_as">Log ind som %1$s</string>
+    <string name="biometric_login_generic">den gemte bruger</string>
+    <string name="biometric_forget">Glem fingeraftryk-login på denne enhed</string>
+    <string name="biometric_login_expired">Fingeraftryk-login er udløbet. Log ind med adgangskode, og slå det til igen.</string>
+    <string name="biometric_login_not_allowed">Biometrisk login er slået fra for din virksomhed. Log ind med e-mail og adgangskode.</string>
+    <string name="biometric_offer_title">Log ind med fingeraftryk?</string>
+    <string name="biometric_offer_body">Næste gang kan du logge ind på denne terminal med fingeraftryk eller ansigtsgenkendelse i stedet for adgangskode. Du kan altid slå det fra igen nederst på startskærmen.</string>
+    <string name="biometric_offer_accept">Slå til</string>
+    <string name="biometric_offer_decline">Ikke nu</string>
+
     <!-- hjem -->
     <string name="greeting_morning">Godmorgen</string>
     <string name="greeting_day">Goddag</string>
@@ -103,6 +125,14 @@
     <string name="receive_photo_title">Tilstandsfoto</string>
     <string name="receive_photo_upload_failed">%1$d foto(s) kunne ikke uploades — tilføj dem via Tilstand</string>
     <string name="receive_photo_offline">%1$d foto(s) blev ikke gemt (offline) — tilføj dem via Tilstand, når pakkerne er synkroniseret</string>
+    <string name="receive_ai_button">📷 Læs label med AI</string>
+    <string name="receive_ai_reading">Læser label…</string>
+    <string name="receive_ai_done">Label læst — felterne er udfyldt</string>
+    <string name="receive_ai_no_fields">Ingen felter kunne læses fra labelen</string>
+    <string name="receive_ai_no_receiver">Modtageren “%1$s” blev ikke fundet i medarbejderlisten</string>
+    <string name="receive_ai_failed">Label-læsningen fejlede — prøv igen</string>
+    <string name="receive_ai_not_configured">AI er ikke sat op for virksomheden — vælg model under Konfigurér → Integrationer</string>
+    <string name="receive_ai_no_vision">Den valgte AI-model kan ikke læse billeder — vælg en vision-model</string>
     <string name="receive_dup_title">Allerede registreret</string>
     <string name="receive_dup_body">%1$s står allerede som en åben pakke. Den er lagt i listen — skal den fjernes igen?</string>
     <string name="receive_dup_confirm">Fjern fra listen</string>
@@ -313,4 +343,26 @@
     <string name="asset_search_failed">Søgning fejlede</string>
     <string name="asset_status_written_off">Afskrevet</string>
     <string name="asset_move_written_off">Aktivet er afskrevet og kan ikke flyttes</string>
+    <string name="tile_asset_new">Nyt aktiv</string>
+    <string name="tile_asset_new_sub">Opret på stedet</string>
+    <string name="asset_new_title">Nyt aktiv</string>
+    <string name="asset_new_scan_label">Scan stregkoden til det nye aktiv</string>
+    <string name="asset_new_name_label">Navn</string>
+    <string name="asset_new_name_placeholder">Fx Bærbar Dell 5540, Palleløfter</string>
+    <string name="asset_new_barcode_label">Stregkode (valgfri)</string>
+    <string name="asset_new_barcode_placeholder">Scan eller indtast</string>
+    <string name="asset_new_barcode_url_warning">Koden ligner en webadresse — fx en QR-kode med et link. Ret den, hvis det ikke er aktivets stregkode.</string>
+    <string name="asset_new_serial_label">Serienr. (valgfri)</string>
+    <string name="asset_new_serial_placeholder">Fabrikantens serienummer</string>
+    <string name="asset_new_category_label">Kategori (valgfri)</string>
+    <string name="asset_new_location_label">Placering (valgfri)</string>
+    <string name="asset_new_button">Opret aktiv</string>
+    <string name="asset_new_created">Aktivet er oprettet</string>
+    <string name="asset_new_last_created">Sidst oprettet</string>
+    <string name="asset_new_tag_prefix">Aktiv-nr.: %1$s</string>
+    <string name="asset_new_document">Dokumentér aktivet</string>
+    <string name="asset_new_name_required">Aktivet skal have et navn</string>
+    <string name="asset_new_barcode_taken">Stregkoden bruges allerede af et andet aktiv</string>
+    <string name="asset_new_no_access">Du har ikke rettigheder til at oprette aktiver</string>
+    <string name="asset_new_failed">Oprettelse fejlede</string>
 </resources>

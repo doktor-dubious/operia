@@ -6,9 +6,12 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- NFC: MIFARE-kort ved udlevering (spec §handover) -->
     <uses-permission android:name="android.permission.NFC" />
+    <!-- Biometrisk login: fingeraftryk/ansigt/enheds-PIN låser den gemte session op -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 
     <application
         android:allowBackup="false"

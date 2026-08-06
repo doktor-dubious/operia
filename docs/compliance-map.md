@@ -264,6 +264,45 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
 - `supabase/config.toml` — refresh-token rotation, auth rate limits,
   `minimum_password_length = 8` (mirror in the hosted project: Dashboard → Auth →
   Passwords). MFA (TOTP) present but disabled — see gaps.
+- **Allowed sign-in methods** (`20260804044212_login_security_settings.sql`):
+  `platform_settings.login_password_enabled` / `login_biometric_enabled` with
+  nullable per-company twins on `companies` (effective = platform AND
+  `coalesce(company, true)`; a company can narrow, never widen). Edited on
+  `/operia/login-security` and `/configure/login-security`; read pre-login by the
+  `get_login_options()` RPC (anon-executable, exposes only those two booleans).
+  A DB check constraint on both tables prevents disabling every method.
+  Per-row checks cannot see both levels at once, so
+  `20260804053046_login_methods_cross_level_guard.sql` adds deferred constraint
+  triggers on both tables rejecting any change that would leave a company with
+  no usable method (two individually-legal edits could otherwise combine into a
+  lockout).
+  **The password flag gates UI only** — GoTrue cannot refuse a password grant
+  per company on the current plan (the password-verification hook is
+  unavailable, §3). **The biometric flag is enforced**: `login.tsx` re-checks
+  the signed-in user's company after the passkey ceremony and signs them back
+  out if the company disabled it, and enrollment re-checks the live value.
+- **Biometric sign-in** — web uses Supabase passkeys/WebAuthn
+  (`registerPasskey` / `signInWithPasskey`, experimental opt-in in
+  `web/src/lib/supabase.ts`; enrollment UI in `web/src/components/passkey-section.tsx`);
+  the handheld uses `androidx.biometric` (`android/.../data/Biometrics.kt`) to lock
+  the already-persisted supabase-kt session behind the device prompt.
+  **Biometrics is device trust, NOT personal identification** (verified on an
+  emulator 2026-08-04 with two enrolled fingerprints): Android's
+  `BiometricPrompt` returns only "authenticated", never *which* enrolled finger
+  matched, and enrolment is device-level rather than per Operia user. A second
+  person who enrols their finger on a shared handheld can therefore sign in as
+  whichever account that terminal remembers, and subsequent `parcel_events` are
+  attributed to the remembered user. Chain-of-custody consequence: a handheld
+  offering biometric sign-in should be treated as a **personal** device (one
+  person's biometrics enrolled), or biometrics disabled for that customer via
+  `/configure/login-security`. The password path is unaffected.
+  **GDPR-relevant: no biometric data is collected, transmitted or stored by
+  Operia.** Verification happens entirely on the device; Supabase holds only a
+  WebAuthn public key, and the handheld stores only a local boolean
+  (`LocalStore.biometric_login`). The device — not Operia — decides whether the
+  check is fingerprint, face or device PIN, so the two are not separable
+  settings. Web passkeys additionally require Dashboard → Authentication →
+  Passkeys (see gaps).
 
 ## Known gaps / roadmap
 
@@ -271,6 +310,8 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
 |---|---|
 | MFA + Entra ID SSO (NIS2 requirement per spec §security) | **Open** — TOTP disabled in `config.toml` (needs Supabase Pro), no enrollment UI, no SSO. Planned. |
 | Retention settings UI | **Open** — mechanism live (§6) but platform admins must set windows via SQL. |
+| Web passkey activation | **Open** — `[auth.passkey]` / `[auth.webauthn]` are set in `config.toml`, but CLI 2.111.0's `config push` silently ignores them (verified 2026-08-04: an invalid value still reports "up to date"), so the hosted project still reports `passkeys_enabled: false`. A platform admin must switch it on in Dashboard → Authentication → Passkeys with the same rp values. Until then `login_biometric_enabled` stays false (default since `20260804051827`) and the web button is hidden; the handheld is unaffected. |
+| Handheld session at rest | **Open** — supabase-kt persists the session in plain SharedPreferences. Biometric login gates the *app* at startup, not the stored token, so a rooted/ADB-accessible device can still read it. A Keystore-backed `SessionManager` would be the fix. |
 | Hosted password policy | **Open** — `config.toml` raised to 8 (2026-07-16) but the hosted project's Auth → Passwords setting must be raised manually in the dashboard. |
 | `?token=` removal from hook URLs | **Pending verification** — header/basic-auth deployed and verified 2026-07-16; drop the query fallback from `gateway/docker-compose.yml` and the Postmark URL after the next gateway redeploy. |
 | `gateway/.env` file permissions | **Fixed on the current box** (600, 2026-07-16) + README instruction; re-check on any new deployment. |

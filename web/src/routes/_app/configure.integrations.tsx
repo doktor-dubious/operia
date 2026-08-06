@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { OperiaPage } from '@/components/operia-config-page'
+import { CompanyAiFields } from '@/components/company-ai-fields'
 import { CompanyEntraFields } from '@/components/company-entra-fields'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
@@ -26,14 +27,18 @@ function Page() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
   const { data: platform, isPending } = usePlatformSettings()
-  const [selected, setSelected] = useState('entra')
+  const [selected, setSelected] = useState<string | null>(null)
 
-  const available = platform?.entra_enabled
-    ? [{ key: 'entra', labelKey: 'integrationsPage.entra' }]
-    : []
+  const available = [
+    ...(platform?.entra_enabled ? [{ key: 'entra', labelKey: 'integrationsPage.entra' }] : []),
+    ...(platform?.ai_enabled ? [{ key: 'ai', labelKey: 'integrationsPage.ai' }] : []),
+  ]
+  // Første udbudte integration som standard — 'entra' må ikke være hardcodet,
+  // for platformen kan udbyde AI uden Entra.
+  const effective = selected ?? available[0]?.key ?? ''
 
   return (
-    <OperiaPage title={t('nav.configureIntegrations')} subtitle={t('companyEntra.subtitle')}>
+    <OperiaPage title={t('nav.configureIntegrations')} subtitle={t('integrationsPage.companySubtitle')}>
       {isPending || !companyId ? (
         <Skeleton className="h-40 w-full" />
       ) : available.length === 0 ? (
@@ -42,7 +47,7 @@ function Page() {
         <div className="flex flex-col gap-6">
           <div className="flex max-w-xl flex-col gap-2">
             <Label className="text-label">{t('integrationsPage.integration')}</Label>
-            <Select value={selected} onValueChange={setSelected}>
+            <Select value={effective} onValueChange={setSelected}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -55,7 +60,8 @@ function Page() {
               </SelectContent>
             </Select>
           </div>
-          {selected === 'entra' && <CompanyEntraFields companyId={companyId} />}
+          {effective === 'entra' && <CompanyEntraFields companyId={companyId} />}
+          {effective === 'ai' && <CompanyAiFields companyId={companyId} />}
         </div>
       )}
     </OperiaPage>

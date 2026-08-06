@@ -16,6 +16,28 @@
     <string name="login_failed">Sign-in failed: %1$s</string>
     <string name="err_no_company">Your user is not linked to a company.\nThe handheld terminal is for company parcel staff — contact your administrator.</string>
 
+    <!-- biometric sign-in (fingerprint/face — the device decides; NOT the device PIN,
+         see Biometrics.kt: a shared terminal's screen-lock code is usually common knowledge) -->
+    <string name="biometric_toggle">Sign in with fingerprint</string>
+    <string name="biometric_toggle_sub">Unlock the terminal with your fingerprint or face</string>
+    <string name="biometric_prompt_title">Unlock Operia</string>
+    <string name="biometric_prompt_subtitle">Confirm it\'s you</string>
+    <string name="biometric_enroll_subtitle">Confirm to enable fingerprint sign-in</string>
+    <string name="biometric_locked_body">Operia is locked.\nUnlock to continue.</string>
+    <string name="biometric_unlock">Unlock</string>
+    <string name="biometric_failed">Unlock failed. Try again, or sign out and use your password.</string>
+    <string name="or_divider">or</string>
+    <string name="biometric_login_title">Sign in to Operia</string>
+    <string name="biometric_login_as">Sign in as %1$s</string>
+    <string name="biometric_login_generic">the saved user</string>
+    <string name="biometric_forget">Forget fingerprint sign-in on this device</string>
+    <string name="biometric_login_expired">Fingerprint sign-in has expired. Sign in with your password and enable it again.</string>
+    <string name="biometric_login_not_allowed">Biometric sign-in is disabled for your company. Sign in with email and password.</string>
+    <string name="biometric_offer_title">Sign in with fingerprint?</string>
+    <string name="biometric_offer_body">Next time you can sign in to this terminal with your fingerprint or face instead of a password. You can turn it off again at the bottom of the home screen.</string>
+    <string name="biometric_offer_accept">Turn on</string>
+    <string name="biometric_offer_decline">Not now</string>
+
     <!-- home -->
     <string name="greeting_morning">Good morning</string>
     <string name="greeting_day">Good afternoon</string>
@@ -100,6 +122,14 @@
     <string name="receive_photo_title">Condition photo</string>
     <string name="receive_photo_upload_failed">%1$d photo(s) could not be uploaded — add them via Condition</string>
     <string name="receive_photo_offline">%1$d photo(s) were not saved (offline) — add them via Condition once the parcels have synced</string>
+    <string name="receive_ai_button">📷 Read label with AI</string>
+    <string name="receive_ai_reading">Reading label…</string>
+    <string name="receive_ai_done">Label read — fields filled in</string>
+    <string name="receive_ai_no_fields">No fields could be read from the label</string>
+    <string name="receive_ai_no_receiver">Receiver “%1$s” was not found in the employee directory</string>
+    <string name="receive_ai_failed">Label reading failed — try again</string>
+    <string name="receive_ai_not_configured">AI is not set up for your company — choose a model under Configure → Integrations</string>
+    <string name="receive_ai_no_vision">The selected AI model cannot read images — choose a vision model</string>
     <string name="receive_dup_title">Already registered</string>
     <string name="receive_dup_body">%1$s already exists as an open parcel. It has been added to the list — remove it again?</string>
     <string name="receive_dup_confirm">Remove from list</string>
@@ -310,4 +340,26 @@
     <string name="asset_search_failed">Search failed</string>
     <string name="asset_status_written_off">Written off</string>
     <string name="asset_move_written_off">The asset is written off and cannot be moved</string>
+    <string name="tile_asset_new">New asset</string>
+    <string name="tile_asset_new_sub">Create on the spot</string>
+    <string name="asset_new_title">New asset</string>
+    <string name="asset_new_scan_label">Scan the barcode for the new asset</string>
+    <string name="asset_new_name_label">Name</string>
+    <string name="asset_new_name_placeholder">E.g. Dell 5540 laptop, pallet truck</string>
+    <string name="asset_new_barcode_label">Barcode (optional)</string>
+    <string name="asset_new_barcode_placeholder">Scan or type</string>
+    <string name="asset_new_barcode_url_warning">The code looks like a web address — e.g. a QR code with a link. Correct it if it is not the asset\'s barcode.</string>
+    <string name="asset_new_serial_label">Serial no. (optional)</string>
+    <string name="asset_new_serial_placeholder">Manufacturer serial number</string>
+    <string name="asset_new_category_label">Category (optional)</string>
+    <string name="asset_new_location_label">Location (optional)</string>
+    <string name="asset_new_button">Create asset</string>
+    <string name="asset_new_created">Asset created</string>
+    <string name="asset_new_last_created">Last created</string>
+    <string name="asset_new_tag_prefix">Asset no.: %1$s</string>
+    <string name="asset_new_document">Document the asset</string>
+    <string name="asset_new_name_required">The asset needs a name</string>
+    <string name="asset_new_barcode_taken">That barcode is already used by another asset</string>
+    <string name="asset_new_no_access">You do not have permission to create assets</string>
+    <string name="asset_new_failed">Could not create the asset</string>
 </resources>

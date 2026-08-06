@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import com.dcalogic.operia.AppViewModel
 import com.dcalogic.operia.R
+import com.dcalogic.operia.data.AiLabelFields
 import com.dcalogic.operia.data.LocalStore
 import com.dcalogic.operia.data.Parcel
 import com.dcalogic.operia.data.ParcelInsert
@@ -156,6 +158,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     val msgCameraDenied = stringResource(R.string.condition_camera_denied)
     val msgPhotoUploadFailed = stringResource(R.string.receive_photo_upload_failed)
     val msgPhotoOffline = stringResource(R.string.receive_photo_offline)
+    val msgAiDone = stringResource(R.string.receive_ai_done)
+    val msgAiNoFields = stringResource(R.string.receive_ai_no_fields)
+    val msgAiNoReceiver = stringResource(R.string.receive_ai_no_receiver)
+    val msgAiFailed = stringResource(R.string.receive_ai_failed)
+    val msgAiNotConfigured = stringResource(R.string.receive_ai_not_configured)
+    val msgAiNoVision = stringResource(R.string.receive_ai_no_vision)
 
     // Ingen modtager kræves for at scanne — som på webben kan pakker
     // registreres uden modtager (bliver 'unassigned'); det bekræftes ved
@@ -244,6 +252,121 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
         if (granted) launchCamera() else requestCamera.launch(Manifest.permission.CAMERA)
+    }
+
+    // ----- AI-label-læsning: fotografér labelen, lad AI'en udfylde felterne -----
+
+    // Vises kun når AI er sat op for virksomheden (platformens udvalg + kundens
+    // valg af vision-model). Serveren genchecker alligevel; dette styrer kun UI.
+    var aiAvailable by remember { mutableStateOf(false) }
+    var aiBusy by remember { mutableStateOf(false) }
+    var aiPendingUri by remember { mutableStateOf<Uri?>(null) }
+    LaunchedEffect(vm.companyId) {
+        aiAvailable = vm.companyId
+            ?.let { runCatching { Repository.aiLabelAvailable(it) }.getOrDefault(false) }
+            ?: false
+    }
+
+    // Udfyld formularfelterne fra de udtrukne label-felter. Modtager sættes FØR
+    // stregkoden tilføjes, så den scannede post snapshotter den rigtige
+    // modtager (commitScan læser empId/deptId).
+    fun applyAiFields(f: AiLabelFields) {
+        // Tælles undervejs: beskeden til sidst skal afspejle, hvad der FAKTISK
+        // blev sat i formularen — også et transportør-match alene. Ellers
+        // meldes "intet aflæst", mens transportør-feltet netop skiftede værdi.
+        var applied = false
+        f.sender_name?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            sender = it
+            applied = true
+        }
+        f.carrier?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
+            vm.carriers.firstOrNull {
+                it.name.contains(name, ignoreCase = true) || name.contains(it.name, ignoreCase = true)
+            }?.let {
+                carrierId = it.id
+                applied = true
+            }
+        }
+        var unmatchedReceiver: String? = null
+        if (showEmp) {
+            f.receiver_name?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
+                val matches = vm.employees.filter {
+                    it.full_name.contains(name, ignoreCase = true) ||
+                        name.contains(it.full_name, ignoreCase = true)
+                }
+                // Kun ét entydigt match må vælge modtager — et gæt blandt flere
+                // kandidater ville sende pakken (og beskeden) til en forkert.
+                if (matches.size == 1) {
+                    empId = matches.first().id
+                    applied = true
+                } else unmatchedReceiver = name
+            }
+        }
+        val tracking = f.tracking_number?.trim()?.takeIf { it.isNotEmpty() }
+        tracking?.let {
+            addScan(it)
+            applied = true
+        }
+        when {
+            unmatchedReceiver != null -> toast.show("info", msgAiNoReceiver.format(unmatchedReceiver))
+            !applied -> toast.show("info", msgAiNoFields)
+            else -> toast.show("ok", msgAiDone)
+        }
+        focusStamp = System.currentTimeMillis()
+    }
+
+    fun readLabel(uri: Uri?) {
+        if (uri == null) return
+        val bytes = readScaledJpeg(ctx, uri)
+        if (bytes == null) {
+            toast.show("err", msgPhotoFailed)
+            return
+        }
+        aiBusy = true
+        scope.launch {
+            try {
+                val result = Repository.aiReadLabel(bytes)
+                val fields = result.fields
+                if (fields != null) {
+                    applyAiFields(fields)
+                } else {
+                    // Maskin-læsbar årsag fra serveren → brugbar besked frem for
+                    // en rå fejlkode. Ukendte årsager falder tilbage til generisk.
+                    val msg = when (result.reason) {
+                        "integration_disabled", "not_configured", "not_allowed" -> msgAiNotConfigured
+                        "model_no_vision" -> msgAiNoVision
+                        else -> msgAiFailed
+                    }
+                    toast.show("err", msg)
+                }
+            } catch (e: Exception) {
+                toast.show("err", msgAiFailed)
+            }
+            aiBusy = false
+        }
+    }
+
+    val takeLabelPicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        if (ok) readLabel(aiPendingUri)
+    }
+    val pickLabelImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        readLabel(uri)
+    }
+
+    fun launchLabelCamera() {
+        val uri = newCaptureUri(ctx)
+        aiPendingUri = uri
+        takeLabelPicture.launch(uri)
+    }
+
+    val requestCameraForAi = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchLabelCamera() else toast.show("err", msgCameraDenied)
+    }
+
+    fun onScanLabel() {
+        val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) launchLabelCamera() else requestCameraForAi.launch(Manifest.permission.CAMERA)
     }
 
     // Upload pr.-pakke-fotos efter en vellykket gemning. Pakkerne ER gemt på
@@ -585,6 +708,29 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     onSelect = { locationId = it; focusStamp = System.currentTimeMillis(); collapse() },
                     embedded = true,
                 )
+            }
+        }
+
+        // AI-label-læsning: fotografér labelen (eller vælg et billede), og lad
+        // AI'en udfylde modtager, afsender, fragtfirma og stregkode. Manuel
+        // scanning/indtastning nedenfor virker uændret ved siden af.
+        if (aiAvailable) {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                GhostButton(
+                    if (aiBusy) {
+                        stringResource(R.string.receive_ai_reading)
+                    } else {
+                        stringResource(R.string.receive_ai_button)
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { if (!aiBusy) onScanLabel() }
+                GhostButton(
+                    stringResource(R.string.condition_pick_gallery),
+                    modifier = Modifier.weight(1f),
+                ) { if (!aiBusy) pickLabelImage.launch("image/*") }
             }
         }
 

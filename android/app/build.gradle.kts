@@ -23,8 +23,8 @@ android {
         applicationId = "com.dcalogic.operia"
         minSdk = 26 // håndterminaler (Zebra/Honeywell m.fl.) kører typisk ældre Android
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.1.4"
+        versionCode = 6
+        versionName = "0.1.5"
 
         // Supabase-forbindelse — anon key er offentlig by design (RLS beskytter data).
         // Overstyr i en build-variant hvis der kommer separate dev/prod-projekter.
@@ -86,6 +86,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.security.crypto)
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)

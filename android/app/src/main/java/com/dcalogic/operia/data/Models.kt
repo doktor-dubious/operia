@@ -36,6 +36,18 @@ data class CompanyNotifyRow(
     val parcel_arrival_enabled: Boolean? = null,
 )
 
+/** Tilladte login-metoder. Læses både fra platform_settings (standard) og
+ *  companies (override, null = arv). Effektiv værdi = platform AND
+ *  coalesce(firma, true) — et firma kan indsnævre, aldrig udvide. */
+@Serializable
+data class LoginMethodsRow(
+    val login_password_enabled: Boolean? = null,
+    val login_biometric_enabled: Boolean? = null,
+    /** Minutters inaktivitet før terminalen kræver login igen. 0 = aldrig;
+     *  null på firma-rækken = arv platformens værdi. */
+    val handheld_reauth_minutes: Int? = null,
+)
+
 /** Platformens standard-udløb for udlån (platform_settings, singleton).
  *  null = udlån uden udløb (og dermed uden påmindelser). */
 @Serializable
@@ -258,6 +270,13 @@ data class Asset(
 )
 
 @Serializable
+data class AssetCategory(val id: String, val name: String)
+
+/** Retur fra create_asset_handheld: aktivets id + det servertildelte Aktiv-nr. */
+@Serializable
+data class CreatedAsset(val id: String, val asset_tag: String? = null)
+
+@Serializable
 data class AssetDocument(
     val id: String,
     // Nullable i modsætning til pakkernes: en post kan være en ren note.
@@ -298,3 +317,36 @@ data class ParcelEvent(
     val to_status: String? = null,
     val created_at: String,
 )
+
+// ---------- AI-label-læsning ----------
+
+/** Felterne edge-funktionen ai-read-label kan udtrække af en pakkelabel.
+ *  Spejler LABEL_SCHEMA i supabase/functions/ai-read-label/index.ts. */
+@Serializable
+data class AiLabelFields(
+    val receiver_name: String? = null,
+    val receiver_address: String? = null,
+    val receiver_phone: String? = null,
+    val sender_name: String? = null,
+    val sender_address: String? = null,
+    val sender_phone: String? = null,
+    val carrier: String? = null,
+    val service: String? = null,
+    val tracking_number: String? = null,
+    val reference: String? = null,
+    val weight_kg: Double? = null,
+    val label_date: String? = null,
+)
+
+/** Svar fra ai-read-label: felter ved succes, ellers en maskin-læsbar årsag. */
+data class AiLabelResult(val fields: AiLabelFields?, val reason: String?)
+
+@Serializable
+data class PlatformAiRow(
+    val ai_enabled: Boolean? = null,
+    val ai_providers: List<String>? = null,
+    val ai_models: List<String>? = null,
+)
+
+@Serializable
+data class CompanyAiRow(val provider: String? = null, val model: String? = null)

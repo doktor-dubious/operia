@@ -3,6 +3,7 @@ import {
   Archive,
   Bell,
   Boxes,
+  CirclePlus,
   ClipboardList,
   Handshake,
   Inbox,
@@ -64,6 +65,7 @@ export const HANDHELD_ICONS: HandheldIcon[] = [
   { key: 'route', emoji: '🧭', icon: RouteIcon }, // nav: routes
   { key: 'boxes', emoji: '📚', icon: Boxes }, // nav: inventoryItems
   { key: 'search', emoji: '🔎', icon: Search }, // skrivebordets søgeknap
+  { key: 'plus', emoji: '➕', icon: CirclePlus }, // nav: assetNew
   { key: 'parcel-in', emoji: '📦', icon: Package },
   { key: 'parcel-out', emoji: '📤', icon: Upload },
   { key: 'map', emoji: '🗺️', icon: MapIcon },
@@ -115,6 +117,7 @@ export const HANDHELD_TILES: HandheldTile[] = [
   { key: 'asset_move', feature: 'hh_asset_move', labelKey: 'tile_asset_move', subKey: 'tile_asset_move_sub', icon: 'truck' },
   { key: 'asset_document', feature: 'hh_asset_document', labelKey: 'tile_asset_document', subKey: 'tile_asset_document_sub', icon: 'scan' },
   { key: 'asset_search', feature: 'hh_asset_search', labelKey: 'tile_asset_search', subKey: 'tile_asset_search_sub', icon: 'search' },
+  { key: 'asset_new', feature: 'hh_asset_new', labelKey: 'tile_asset_new', subKey: 'tile_asset_new_sub', icon: 'plus' },
   // Gruppe-/mappeflise: åbner en underside med pakke-fliserne. `children` gør den
   // til en gruppe — appen viser den kun hvis mindst ét barn er tilgængeligt, og
   // navigerer til en underskærm i stedet for en enkelt funktion. Ingen `feature`:
@@ -131,7 +134,7 @@ export const HANDHELD_TILES: HandheldTile[] = [
     labelKey: 'tile_asset_group',
     subKey: 'tile_asset_group_sub',
     icon: 'stock',
-    children: ['asset_checkout', 'asset_checkin', 'asset_move', 'asset_document', 'asset_search'],
+    children: ['asset_checkout', 'asset_checkin', 'asset_move', 'asset_document', 'asset_search', 'asset_new'],
   },
 ]
 

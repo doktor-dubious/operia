@@ -16,6 +16,7 @@ object LocalStore {
     private const val PREFS = "operia_local"
     private const val KEY_PENDING = "pending_receives"
     private const val KEY_HANDHELD = "handheld_design"
+    private const val KEY_BIOMETRIC = "biometric_login"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -83,5 +84,60 @@ object LocalStore {
         prefs(ctx).edit()
             .putString(KEY_HANDHELD, json.encodeToString(HandheldConfig.serializer(), cfg))
             .apply()
+    }
+
+    // ---------- biometrisk login ----------
+
+    /**
+     * Har brugeren slået biometrisk oplåsning til PÅ DENNE ENHED?
+     *
+     * Gemmes pr. bruger (nøgle + user-id) og enhedslokalt. Begge dele er
+     * bevidste: valget hører til kombinationen af konto OG enhed — dens sensor
+     * og dens gemte session — så samme bruger tager stilling igen på en anden
+     * terminal.
+     *
+     * Pr. bruger, fordi håndterminaler deles: var flaget fælles, ville næste
+     * bruger arve den forriges lås (og skulle bruge enhedens fingeraftryk for
+     * at komme til sin egen session). Omvendt må et log ud/ind IKKE nulstille
+     * ens eget valg — derfor ikke bare "ryd ved logout".
+     */
+    fun biometricEnabled(ctx: Context, userId: String): Boolean =
+        prefs(ctx).getBoolean(userKey(userId), false)
+
+    fun setBiometricEnabled(ctx: Context, userId: String, on: Boolean) {
+        prefs(ctx).edit().putBoolean(userKey(userId), on).apply()
+    }
+
+    private fun userKey(userId: String) = "${KEY_BIOMETRIC}_$userId"
+
+    // ---------- gen-login efter inaktivitet ----------
+
+    /** Vinduet caches lokalt, fordi det skal kunne håndhæves ved appstart —
+     *  altså FØR bootstrap har været på nettet, og også helt uden dækning. */
+    fun reauthMinutes(ctx: Context): Int = prefs(ctx).getInt("reauth_minutes", 0)
+
+    fun cacheReauthMinutes(ctx: Context, minutes: Int) {
+        prefs(ctx).edit().putInt("reauth_minutes", minutes).apply()
+    }
+
+    /** Hvornår var appen sidst i brug? Bruges kun til at måle inaktivitet.
+     *  elapsedRealtime ville nulstilles ved genstart af enheden, så der gemmes
+     *  vægur-tid; en bruger, der stiller uret tilbage, får blot et ekstra
+     *  gen-login (fail-safe frem for fail-open). */
+    fun lastActiveAt(ctx: Context): Long = prefs(ctx).getLong("last_active_at", 0L)
+
+    fun touchLastActive(ctx: Context, now: Long) {
+        prefs(ctx).edit().putLong("last_active_at", now).apply()
+    }
+
+    /** Er brugeren blevet spurgt, om de vil slå fingeraftryk-login til på denne
+     *  enhed? Der spørges kun ÉN gang pr. bruger pr. enhed — et nej skal ikke
+     *  møde dem igen ved hvert login; de kan altid selv slå det til på
+     *  startskærmen. */
+    fun biometricOfferSeen(ctx: Context, userId: String): Boolean =
+        prefs(ctx).getBoolean("${KEY_BIOMETRIC}_asked_$userId", false)
+
+    fun setBiometricOfferSeen(ctx: Context, userId: String) {
+        prefs(ctx).edit().putBoolean("${KEY_BIOMETRIC}_asked_$userId", true).apply()
     }
 }

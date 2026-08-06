@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SYNC_INTERVALS } from '@/lib/integrations'
+import { AI_MODELS, AI_PROVIDERS, aiModelsFor } from '@/lib/ai'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { supabase } from '@/lib/supabase'
 
@@ -28,14 +29,29 @@ export const Route = createFileRoute('/_app/operia/integrations')({
   component: IntegrationsPage,
 })
 
-// Foreløbig kun én integration. Listen er bevidst formet som skabelon-vælgeren
-// på Operia → Skabeloner, så flere kan komme til uden at siden skal laves om.
-const INTEGRATIONS = [{ key: 'entra', labelKey: 'integrationsPage.entra' }]
+// Listen er bevidst formet som skabelon-vælgeren på Operia → Skabeloner, så
+// flere kan komme til uden at siden skal laves om.
+const INTEGRATIONS = [
+  { key: 'entra', labelKey: 'integrationsPage.entra' },
+  { key: 'ai', labelKey: 'integrationsPage.ai' },
+]
 
 type Form = {
   enabled: boolean
   anonymizeRetired: boolean
   intervalMinutes: number
+  aiEnabled: boolean
+  aiProviders: string[]
+  aiModels: string[]
+}
+
+// Holder arrays i katalog-orden, så dirty-sammenligningen (JSON.stringify)
+// ikke ser forskel på samme udvalg i forskellig klikkerækkefølge.
+function toggleKey(list: string[], key: string, order: string[]): string[] {
+  const next = new Set(list)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  return order.filter((k) => next.has(k))
 }
 
 function IntegrationsPage() {
@@ -47,6 +63,9 @@ function IntegrationsPage() {
     enabled: false,
     anonymizeRetired: false,
     intervalMinutes: 1440,
+    aiEnabled: false,
+    aiProviders: [],
+    aiModels: [],
   })
   const [saving, setSaving] = useState(false)
 
@@ -55,6 +74,9 @@ function IntegrationsPage() {
         enabled: data.entra_enabled,
         anonymizeRetired: data.entra_anonymize_retired,
         intervalMinutes: data.entra_sync_interval_minutes,
+        aiEnabled: data.ai_enabled,
+        aiProviders: data.ai_providers ?? [],
+        aiModels: data.ai_models ?? [],
       }
     : null
 
@@ -74,6 +96,9 @@ function IntegrationsPage() {
         entra_enabled: form.enabled,
         entra_anonymize_retired: form.anonymizeRetired,
         entra_sync_interval_minutes: form.intervalMinutes,
+        ai_enabled: form.aiEnabled,
+        ai_providers: form.aiProviders,
+        ai_models: form.aiModels,
       })
       .eq('id', true)
       .select('id')
@@ -174,6 +199,111 @@ function IntegrationsPage() {
                 </Select>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {t('integrationsPage.syncIntervalHint')}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {selected === 'ai' && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={form.aiEnabled}
+                    onCheckedChange={(v) => set({ aiEnabled: v === true })}
+                  />
+                  <span>
+                    <span className="text-[13px] font-[450]">{t('integrationsPage.aiEnable')}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {t('integrationsPage.aiEnableDesc')}
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="rounded-md border p-4">
+                <Label className="text-label">{t('integrationsPage.aiProviders')}</Label>
+                <p className="mb-3 mt-1 text-xs text-muted-foreground">
+                  {t('integrationsPage.aiProvidersDesc')}
+                </p>
+                <div className="flex flex-col gap-2">
+                  {AI_PROVIDERS.map((p) => (
+                    <label key={p.key} className="flex cursor-pointer items-center gap-3">
+                      <Checkbox
+                        checked={form.aiProviders.includes(p.key)}
+                        onCheckedChange={() =>
+                          set({
+                            aiProviders: toggleKey(
+                              form.aiProviders,
+                              p.key,
+                              AI_PROVIDERS.map((x) => x.key),
+                            ),
+                          })
+                        }
+                      />
+                      <span className="text-[13px] font-[450]">{p.label}</span>
+                      {aiModelsFor(p.key).length === 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {t('integrationsPage.aiNoModelsYet')}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-md border p-4">
+                <Label className="text-label">{t('integrationsPage.aiModels')}</Label>
+                <p className="mb-3 mt-1 text-xs text-muted-foreground">
+                  {t('integrationsPage.aiModelsDesc')}
+                </p>
+                <div className="flex flex-col gap-4">
+                  {AI_PROVIDERS.filter((p) => aiModelsFor(p.key).length > 0).map((p) => {
+                    const providerOn = form.aiProviders.includes(p.key)
+                    return (
+                      <div key={p.key}>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {p.label}
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          {aiModelsFor(p.key).map((m) => (
+                            <label
+                              key={m.key}
+                              className={
+                                'flex items-center gap-3 ' +
+                                (providerOn ? 'cursor-pointer' : 'cursor-not-allowed opacity-50')
+                              }
+                            >
+                              <Checkbox
+                                disabled={!providerOn}
+                                checked={form.aiModels.includes(m.key)}
+                                onCheckedChange={() =>
+                                  set({
+                                    aiModels: toggleKey(
+                                      form.aiModels,
+                                      m.key,
+                                      AI_MODELS.map((x) => x.key),
+                                    ),
+                                  })
+                                }
+                              />
+                              <span className="text-[13px] font-[450]">{m.label}</span>
+                              {!m.vision && (
+                                <span className="text-xs text-muted-foreground">
+                                  {t('integrationsPage.aiNoVision')}
+                                </span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="mt-3 flex gap-2 rounded-md bg-muted/60 p-3 text-xs text-foreground-light">
+                  <Info className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+                  <span>{t('integrationsPage.aiVisionExplainer')}</span>
                 </p>
               </div>
             </div>

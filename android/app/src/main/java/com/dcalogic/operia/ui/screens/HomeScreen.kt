@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddBox
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.CheckCircle
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warehouse
 import androidx.compose.material.icons.outlined.AddBox
+import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AssignmentTurnedIn
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -59,10 +61,27 @@ import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material.icons.outlined.Warehouse
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
+import com.dcalogic.operia.data.Biometrics
+import com.dcalogic.operia.data.findFragmentActivity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -119,6 +138,7 @@ private val CATALOG = listOf(
     Tile("asset_move", "truck", R.string.tile_asset_move, R.string.tile_asset_move_sub, "asset_move", "hh_asset_move"),
     Tile("asset_document", "scan", R.string.tile_asset_document, R.string.tile_asset_document_sub, "asset_document", "hh_asset_document"),
     Tile("asset_search", "search", R.string.tile_asset_search, R.string.tile_asset_search_sub, "asset_search", "hh_asset_search"),
+    Tile("asset_new", "plus", R.string.tile_asset_new, R.string.tile_asset_new_sub, "asset_new", "hh_asset_new"),
     // Gruppe-/mappefliser: åbner en underside med gruppens fliser. Ingen feature —
     // GROUP_CHILDREN afgør synligheden (mindst ét tilgængeligt barn). Matcher
     // parcel_group/asset_group i web/src/lib/handheld-tiles.ts.
@@ -129,7 +149,9 @@ private val CATALOG = listOf(
 // Gruppe-fliser: nøgle → børne-fliser vist på undersiden (i denne rækkefølge).
 private val GROUP_CHILDREN = mapOf(
     "parcel_group" to listOf("receive", "handout", "move", "condition", "search"),
-    "asset_group" to listOf("asset_checkout", "asset_checkin", "asset_move", "asset_document", "asset_search"),
+    "asset_group" to listOf(
+        "asset_checkout", "asset_checkin", "asset_move", "asset_document", "asset_search", "asset_new",
+    ),
 )
 
 // Rollemodel v2: hver flise kræver sin håndterminal-rolle (managers ser alt).
@@ -147,6 +169,7 @@ private val TILE_ROLES = mapOf(
     "asset_move" to "handheld_asset_handler",
     "asset_document" to "handheld_asset_handler",
     "asset_search" to "handheld_asset_handler",
+    "asset_new" to "handheld_asset_handler",
 )
 
 /**
@@ -186,6 +209,7 @@ private val ICONS = mapOf(
     "handover" to IconSpec("🤝", Icons.Outlined.Handshake, Icons.Filled.Handshake, R.drawable.ic_lucide_handover),
     "list" to IconSpec("📋", Icons.Outlined.ListAlt, Icons.Filled.ListAlt, R.drawable.ic_lucide_list),
     "bell" to IconSpec("🔔", Icons.Outlined.Notifications, Icons.Filled.Notifications, R.drawable.ic_lucide_bell),
+    "plus" to IconSpec("➕", Icons.Outlined.AddCircle, Icons.Filled.AddCircle, R.drawable.ic_lucide_plus),
 )
 
 private val FALLBACK_ICON =
@@ -312,17 +336,30 @@ internal fun resolveGroupChildren(
     hasRole: (String) -> Boolean,
 ): List<Pair<Tile, HandheldTileCfg?>> {
     if (!GROUP_CHILDREN.containsKey(groupKey)) return emptyList()
+    val defaults = GROUP_CHILDREN[groupKey] ?: emptyList()
     // Gemt underside-layout (rækkefølge + fjernede + overstyringer) vinder;
     // uden ét (gammelt design) bruges katalogets standardbørn.
     val childCfgs = cfg.firstOrNull { it.key == groupKey }?.children
     if (!childCfgs.isNullOrEmpty()) {
-        return childCfgs.mapNotNull { c ->
-            if (c.enabled == false) return@mapNotNull null
-            if (!childAccessible(c.key, has, hasRole)) return@mapNotNull null
-            CATALOG.firstOrNull { it.key == c.key }?.let { it to c }
+        val seen = mutableSetOf<String>()
+        val out = mutableListOf<Pair<Tile, HandheldTileCfg?>>()
+        for (c in childCfgs) {
+            if (!seen.add(c.key)) continue // dublet
+            if (c.enabled == false) continue // fjernet i designet
+            if (!childAccessible(c.key, has, hasRole)) continue
+            CATALOG.firstOrNull { it.key == c.key }?.let { out += it to c }
         }
+        // Katalogbørn, det gemte layout ikke kendte (en flise tilføjet siden
+        // designet blev gemt), føjes til sidst — som resolveTiles gør det på
+        // startskærmen og normalizeChildTiles i webben. Uden dette ville en ny
+        // flise være usynlig på undersiden, indtil nogen gemte designet igen.
+        for (key in defaults) {
+            if (key in seen) continue
+            if (!childAccessible(key, has, hasRole)) continue
+            CATALOG.firstOrNull { it.key == key }?.let { out += it to null }
+        }
+        return out
     }
-    val defaults = GROUP_CHILDREN[groupKey] ?: emptyList()
     return defaults.mapNotNull { key ->
         if (!childAccessible(key, has, hasRole)) return@mapNotNull null
         CATALOG.firstOrNull { it.key == key }?.let { it to null }
@@ -403,6 +440,7 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
     // sæt buckets (timeGreeting), så standard-undertitlen og token ikke hilser
     // forskelligt på samme klokkeslæt.
     val greeting = timeGreeting(hour)
+    var accountOpen by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(C.bg)) {
         Column(Modifier.fillMaxSize()) {
@@ -411,7 +449,7 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
                 // Brandbjælke: valgfrit logo fra designet foran navnet — som
                 // mock-up'en i Operia → Handheld-design viser den.
                 Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -428,6 +466,12 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                     )
+                    Spacer(Modifier.weight(1f))
+                    // Konto-knap: sjældne handlinger (biometri, log ud) hører
+                    // ikke til i bundlinjen, hvor de stjal plads fra fliserne —
+                    // det daglige arbejde. Åbner en bundsheet, som er lettere at
+                    // ramme med én hånd/handsker end en lille dropdown.
+                    AccountAvatar(vm.userName) { accountOpen = true }
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
             }
@@ -548,19 +592,191 @@ fun HomeScreen(vm: AppViewModel, onNavigate: (String) -> Unit) {
 
             }
 
-            // "Log ud" fast i bunden af skærmen (uden for scroll-området), så
-            // den altid er synlig uanset antal fliser.
-            Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(C.bg)
-                    .navigationBarsPadding()
-                    .padding(16.dp),
-            ) {
-                GhostButton(stringResource(R.string.sign_out)) { vm.logout() }
-            }
+            // Bundlinjen er bevidst tom: log ud og biometri er sjældne
+            // handlinger og ligger nu bag konto-knappen i headeren, så hele
+            // skærmen tilhører fliserne.
+            Spacer(Modifier.navigationBarsPadding())
         }
         ToastOverlay(toast)
+        BiometricSetupOffer(vm)
+        if (accountOpen) AccountSheet(vm) { accountOpen = false }
+    }
+}
+
+/** Rund knap med brugerens initialer — indgangen til konto-sheeten. */
+@Composable
+private fun AccountAvatar(userName: String, onClick: () -> Unit) {
+    val initials = userName.split(' ', '@', '.')
+        .filter { it.isNotBlank() }
+        .take(2)
+        .map { it.first().uppercaseChar() }
+        .joinToString("")
+        .ifBlank { "?" }
+    Box(
+        Modifier
+            .size(38.dp)
+            .clip(RoundedCornerShape(19.dp))
+            .background(C.panel2)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(initials, color = C.txt, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * Konto-sheet: brugeren, biometri-kontakten og log ud. Bundsheet frem for en
+ * dropdown i toppen — på en høj skærm er bunden dét, en hånd (med handske) kan
+ * nå, og rækkerne kan være store.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountSheet(vm: AppViewModel, onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = C.panel,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = C.muted) },
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+                Text(
+                    vm.userName.ifBlank { stringResource(R.string.biometric_login_generic) },
+                    color = C.txt,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                // Kun brugerens EGEN gemte email: på en delt terminal kan
+                // enheden huske en tidligere brugers legitimation, og dennes
+                // email under et andet navn ville både vise forkert identitet
+                // og udlevere en kollegas email.
+                vm.ownBiometricCredential?.email?.takeIf { it.isNotBlank() && it != vm.userName }
+                    ?.let { Text(it, color = C.muted, fontSize = 14.sp) }
+            }
+            Box(Modifier.fillMaxWidth().padding(vertical = 12.dp).height(1.dp).background(C.line))
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                BiometricLoginRow(vm)
+                GhostButton(stringResource(R.string.sign_out)) {
+                    onDismiss()
+                    vm.logout()
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Tilbud om at slå fingeraftryk-login til, vist én gang pr. bruger pr. enhed
+ * efter et almindeligt login. Uden det skulle brugeren selv opdage kontakten
+ * nederst på startskærmen — og de fleste ville aldrig få funktionen i brug.
+ *
+ * "Ja" kræver en godkendt prompt med det samme, samme regel som kontakten:
+ * ingen enhed låses bag en sensor, brugeren ikke kan betjene.
+ */
+@Composable
+private fun BiometricSetupOffer(vm: AppViewModel) {
+    if (!vm.offerBiometricSetup) return
+    val ctx = LocalContext.current
+    val activity = ctx.findFragmentActivity() ?: return
+    val scope = rememberCoroutineScope()
+    val title = stringResource(R.string.biometric_prompt_title)
+    val subtitle = stringResource(R.string.biometric_enroll_subtitle)
+    val cancelText = stringResource(R.string.cancel)
+
+    AlertDialog(
+        onDismissRequest = { vm.dismissBiometricOffer() },
+        icon = { Icon(Icons.Filled.Fingerprint, contentDescription = null, tint = C.blue) },
+        title = { Text(stringResource(R.string.biometric_offer_title), color = C.txt) },
+        text = { Text(stringResource(R.string.biometric_offer_body), color = C.muted) },
+        containerColor = C.panel,
+        confirmButton = {
+            TextButton(onClick = {
+                scope.launch {
+                    if (Biometrics.prompt(activity, title, subtitle, cancelText)
+                        is Biometrics.Result.Success
+                    ) {
+                        vm.updateBiometricLogin(true)
+                    }
+                    // Uanset udfaldet: spørg ikke igen — kontakten står der.
+                    vm.dismissBiometricOffer()
+                }
+            }) { Text(stringResource(R.string.biometric_offer_accept), color = C.blue) }
+        },
+        dismissButton = {
+            TextButton(onClick = { vm.dismissBiometricOffer() }) {
+                Text(stringResource(R.string.biometric_offer_decline), color = C.muted)
+            }
+        },
+    )
+}
+
+/**
+ * "Log ind med fingeraftryk" — enhedslokal indstilling i bundlinjen over Log ud.
+ *
+ * Vises når admin tillader metoden (platform + virksomhed) OG enheden faktisk
+ * kan biometri/enheds-PIN; ellers ville kontakten love noget, den ikke kan
+ * holde. Ved tilvalg kræves en godkendt prompt med det samme, så en enhed
+ * aldrig låses bag en sensor, brugeren ikke kan betjene.
+ *
+ * MEN er låsen allerede slået til, vises rækken ALTID — også når admin har
+ * slået metoden fra, eller sensoren er forsvundet. Ellers ville selve
+ * fra-knappen forsvinde i præcis de situationer, hvor brugeren har brug for
+ * den (og `biometricAllowed` er desuden null ved et fejlet opslag).
+ */
+@Composable
+private fun BiometricLoginRow(vm: AppViewModel) {
+    val ctx = LocalContext.current
+    val activity = ctx.findFragmentActivity()
+    val scope = rememberCoroutineScope()
+    var available by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { available = Biometrics.available(ctx) }
+
+    if (activity == null) return
+    if (!vm.biometricEnabled && (vm.biometricAllowed != true || !available)) return
+
+    val title = stringResource(R.string.biometric_prompt_title)
+    val subtitle = stringResource(R.string.biometric_enroll_subtitle)
+    val cancelText = stringResource(R.string.cancel)
+
+    // Fra må altid kunne slås fra. Til kræver både at metoden er tilladt, at
+    // enheden kan svare, OG en godkendt prompt — ellers kunne rækken (som nu
+    // også vises i "kan ikke"-tilstande) låse enheden bag en sensor, der ikke
+    // virker.
+    val toggle: () -> Unit = {
+        if (vm.biometricEnabled) {
+            vm.updateBiometricLogin(false)
+        } else if (vm.biometricAllowed == true && available) {
+            scope.launch {
+                if (Biometrics.prompt(activity, title, subtitle, cancelText) is Biometrics.Result.Success) {
+                    vm.updateBiometricLogin(true)
+                }
+            }
+        }
+    }
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable(onClick = toggle),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Fingerprint, contentDescription = null, tint = C.muted, modifier = Modifier.size(22.dp))
+        Column(Modifier.weight(1f).padding(start = 12.dp, end = 12.dp)) {
+            Text(
+                stringResource(R.string.biometric_toggle),
+                color = C.txt,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+            )
+            Text(stringResource(R.string.biometric_toggle_sub), color = C.muted, fontSize = 13.sp)
+        }
+        Switch(
+            checked = vm.biometricEnabled,
+            onCheckedChange = { toggle() },
+            // Kan metoden ikke slås til (admin har lukket den, eller sensoren
+            // svarer ikke), er kontakten kun aktiv til at slå FRA.
+            enabled = vm.biometricEnabled || (vm.biometricAllowed == true && available),
+            colors = SwitchDefaults.colors(checkedTrackColor = C.blue),
+        )
     }
 }

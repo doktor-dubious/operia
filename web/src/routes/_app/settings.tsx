@@ -10,6 +10,7 @@ import { PasswordInput } from '@/components/password-input'
 import { useTheme } from '@/components/theme-provider'
 import { useUiSettings, type NavMode } from '@/components/ui-settings-provider'
 import { useSession } from '@/hooks/use-session'
+import { PasskeySection } from '@/components/passkey-section'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -427,6 +428,11 @@ function SettingsPage() {
           </div>
         </Panel>
       </section>
+
+      {/* Biometrisk login: tilmeld/fjern enheder (passkeys). Skjuler sig selv
+          når metoden er slået fra (platform/firma) eller browseren ikke kan
+          WebAuthn. */}
+      <PasskeySection Panel={Panel} PanelRow={PanelRow} SectionHeader={SectionHeader} />
 
       {/* Håndterminal-appen: QR-koden der installerer APK'en (stabil URL, så
           koden peger altid på nyeste version). Samme billede som på

@@ -49,6 +49,7 @@ import { Route as AppOperiaProductsRouteImport } from './routes/_app/operia.prod
 import { Route as AppOperiaNotificationsRouteImport } from './routes/_app/operia.notifications'
 import { Route as AppOperiaMapsRouteImport } from './routes/_app/operia.maps'
 import { Route as AppOperiaLogsRouteImport } from './routes/_app/operia.logs'
+import { Route as AppOperiaLoginSecurityRouteImport } from './routes/_app/operia.login-security'
 import { Route as AppOperiaLogDrainsRouteImport } from './routes/_app/operia.log-drains'
 import { Route as AppOperiaLocalizationRouteImport } from './routes/_app/operia.localization'
 import { Route as AppOperiaIntegrationsRouteImport } from './routes/_app/operia.integrations'
@@ -71,6 +72,7 @@ import { Route as AppConfigureTemplatesRouteImport } from './routes/_app/configu
 import { Route as AppConfigureShippingRouteImport } from './routes/_app/configure.shipping'
 import { Route as AppConfigureProductsRouteImport } from './routes/_app/configure.products'
 import { Route as AppConfigureNotificationsRouteImport } from './routes/_app/configure.notifications'
+import { Route as AppConfigureLoginSecurityRouteImport } from './routes/_app/configure.login-security'
 import { Route as AppConfigureLogDrainsRouteImport } from './routes/_app/configure.log-drains'
 import { Route as AppConfigureLocalizationRouteImport } from './routes/_app/configure.localization'
 import { Route as AppConfigureIntegrationsRouteImport } from './routes/_app/configure.integrations'
@@ -296,6 +298,11 @@ const AppOperiaLogsRoute = AppOperiaLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaLoginSecurityRoute = AppOperiaLoginSecurityRouteImport.update({
+  id: '/login-security',
+  path: '/login-security',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaLogDrainsRoute = AppOperiaLogDrainsRouteImport.update({
   id: '/log-drains',
   path: '/log-drains',
@@ -405,6 +412,12 @@ const AppConfigureNotificationsRoute =
   AppConfigureNotificationsRouteImport.update({
     id: '/notifications',
     path: '/notifications',
+    getParentRoute: () => AppConfigureRoute,
+  } as any)
+const AppConfigureLoginSecurityRoute =
+  AppConfigureLoginSecurityRouteImport.update({
+    id: '/login-security',
+    path: '/login-security',
     getParentRoute: () => AppConfigureRoute,
   } as any)
 const AppConfigureLogDrainsRoute = AppConfigureLogDrainsRouteImport.update({
@@ -572,6 +585,7 @@ export interface FileRoutesByFullPath {
   '/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/configure/localization': typeof AppConfigureLocalizationRoute
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
+  '/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
@@ -594,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/operia/localization': typeof AppOperiaLocalizationRoute
   '/operia/log-drains': typeof AppOperiaLogDrainsRoute
+  '/operia/login-security': typeof AppOperiaLoginSecurityRoute
   '/operia/logs': typeof AppOperiaLogsRoute
   '/operia/maps': typeof AppOperiaMapsRoute
   '/operia/notifications': typeof AppOperiaNotificationsRoute
@@ -659,6 +674,7 @@ export interface FileRoutesByTo {
   '/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/configure/localization': typeof AppConfigureLocalizationRoute
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
+  '/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
@@ -681,6 +697,7 @@ export interface FileRoutesByTo {
   '/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/operia/localization': typeof AppOperiaLocalizationRoute
   '/operia/log-drains': typeof AppOperiaLogDrainsRoute
+  '/operia/login-security': typeof AppOperiaLoginSecurityRoute
   '/operia/logs': typeof AppOperiaLogsRoute
   '/operia/maps': typeof AppOperiaMapsRoute
   '/operia/notifications': typeof AppOperiaNotificationsRoute
@@ -749,6 +766,7 @@ export interface FileRoutesById {
   '/_app/configure/integrations': typeof AppConfigureIntegrationsRoute
   '/_app/configure/localization': typeof AppConfigureLocalizationRoute
   '/_app/configure/log-drains': typeof AppConfigureLogDrainsRoute
+  '/_app/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/_app/configure/notifications': typeof AppConfigureNotificationsRoute
   '/_app/configure/products': typeof AppConfigureProductsRoute
   '/_app/configure/shipping': typeof AppConfigureShippingRoute
@@ -771,6 +789,7 @@ export interface FileRoutesById {
   '/_app/operia/integrations': typeof AppOperiaIntegrationsRoute
   '/_app/operia/localization': typeof AppOperiaLocalizationRoute
   '/_app/operia/log-drains': typeof AppOperiaLogDrainsRoute
+  '/_app/operia/login-security': typeof AppOperiaLoginSecurityRoute
   '/_app/operia/logs': typeof AppOperiaLogsRoute
   '/_app/operia/maps': typeof AppOperiaMapsRoute
   '/_app/operia/notifications': typeof AppOperiaNotificationsRoute
@@ -839,6 +858,7 @@ export interface FileRouteTypes {
     | '/configure/integrations'
     | '/configure/localization'
     | '/configure/log-drains'
+    | '/configure/login-security'
     | '/configure/notifications'
     | '/configure/products'
     | '/configure/shipping'
@@ -861,6 +881,7 @@ export interface FileRouteTypes {
     | '/operia/integrations'
     | '/operia/localization'
     | '/operia/log-drains'
+    | '/operia/login-security'
     | '/operia/logs'
     | '/operia/maps'
     | '/operia/notifications'
@@ -926,6 +947,7 @@ export interface FileRouteTypes {
     | '/configure/integrations'
     | '/configure/localization'
     | '/configure/log-drains'
+    | '/configure/login-security'
     | '/configure/notifications'
     | '/configure/products'
     | '/configure/shipping'
@@ -948,6 +970,7 @@ export interface FileRouteTypes {
     | '/operia/integrations'
     | '/operia/localization'
     | '/operia/log-drains'
+    | '/operia/login-security'
     | '/operia/logs'
     | '/operia/maps'
     | '/operia/notifications'
@@ -1015,6 +1038,7 @@ export interface FileRouteTypes {
     | '/_app/configure/integrations'
     | '/_app/configure/localization'
     | '/_app/configure/log-drains'
+    | '/_app/configure/login-security'
     | '/_app/configure/notifications'
     | '/_app/configure/products'
     | '/_app/configure/shipping'
@@ -1037,6 +1061,7 @@ export interface FileRouteTypes {
     | '/_app/operia/integrations'
     | '/_app/operia/localization'
     | '/_app/operia/log-drains'
+    | '/_app/operia/login-security'
     | '/_app/operia/logs'
     | '/_app/operia/maps'
     | '/_app/operia/notifications'
@@ -1360,6 +1385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaLogsRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/login-security': {
+      id: '/_app/operia/login-security'
+      path: '/login-security'
+      fullPath: '/operia/login-security'
+      preLoaderRoute: typeof AppOperiaLoginSecurityRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/log-drains': {
       id: '/_app/operia/log-drains'
       path: '/log-drains'
@@ -1512,6 +1544,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/configure/notifications'
       preLoaderRoute: typeof AppConfigureNotificationsRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/login-security': {
+      id: '/_app/configure/login-security'
+      path: '/login-security'
+      fullPath: '/configure/login-security'
+      preLoaderRoute: typeof AppConfigureLoginSecurityRouteImport
       parentRoute: typeof AppConfigureRoute
     }
     '/_app/configure/log-drains': {
@@ -1701,6 +1740,7 @@ interface AppConfigureRouteChildren {
   AppConfigureIntegrationsRoute: typeof AppConfigureIntegrationsRoute
   AppConfigureLocalizationRoute: typeof AppConfigureLocalizationRoute
   AppConfigureLogDrainsRoute: typeof AppConfigureLogDrainsRoute
+  AppConfigureLoginSecurityRoute: typeof AppConfigureLoginSecurityRoute
   AppConfigureNotificationsRoute: typeof AppConfigureNotificationsRoute
   AppConfigureProductsRoute: typeof AppConfigureProductsRoute
   AppConfigureShippingRoute: typeof AppConfigureShippingRoute
@@ -1717,6 +1757,7 @@ const AppConfigureRouteChildren: AppConfigureRouteChildren = {
   AppConfigureIntegrationsRoute: AppConfigureIntegrationsRoute,
   AppConfigureLocalizationRoute: AppConfigureLocalizationRoute,
   AppConfigureLogDrainsRoute: AppConfigureLogDrainsRoute,
+  AppConfigureLoginSecurityRoute: AppConfigureLoginSecurityRoute,
   AppConfigureNotificationsRoute: AppConfigureNotificationsRoute,
   AppConfigureProductsRoute: AppConfigureProductsRoute,
   AppConfigureShippingRoute: AppConfigureShippingRoute,
@@ -1742,6 +1783,7 @@ interface AppOperiaRouteChildren {
   AppOperiaIntegrationsRoute: typeof AppOperiaIntegrationsRoute
   AppOperiaLocalizationRoute: typeof AppOperiaLocalizationRoute
   AppOperiaLogDrainsRoute: typeof AppOperiaLogDrainsRoute
+  AppOperiaLoginSecurityRoute: typeof AppOperiaLoginSecurityRoute
   AppOperiaLogsRoute: typeof AppOperiaLogsRoute
   AppOperiaMapsRoute: typeof AppOperiaMapsRoute
   AppOperiaNotificationsRoute: typeof AppOperiaNotificationsRoute
@@ -1766,6 +1808,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaIntegrationsRoute: AppOperiaIntegrationsRoute,
   AppOperiaLocalizationRoute: AppOperiaLocalizationRoute,
   AppOperiaLogDrainsRoute: AppOperiaLogDrainsRoute,
+  AppOperiaLoginSecurityRoute: AppOperiaLoginSecurityRoute,
   AppOperiaLogsRoute: AppOperiaLogsRoute,
   AppOperiaMapsRoute: AppOperiaMapsRoute,
   AppOperiaNotificationsRoute: AppOperiaNotificationsRoute,

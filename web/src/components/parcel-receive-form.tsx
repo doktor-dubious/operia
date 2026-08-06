@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { Camera, Layers, Printer, Wand2, X } from 'lucide-react'
 import { looksLikeUrl } from '@/lib/barcode-rules'
+import { AiLabelScan, type AiLabelFields } from '@/components/ai-label-scan'
 import { BarcodeUrlDialog } from '@/components/barcode-url-dialog'
 import { useCompany } from '@/components/company-provider'
 import { EmployeePicker, type PickedEmployee } from '@/components/employee-picker'
@@ -266,6 +267,74 @@ export function ParcelReceiveForm({
   const pickReceiver = (employee: PickedEmployee | null) => {
     setReceiver(employee)
     if (employee?.department_id) setDepartmentId(employee.department_id)
+  }
+
+  // Udfyld formularen fra AI-læste label-felter (AiLabelScan). Modtageren
+  // matches server-side mod medarbejderlisten — kun ét entydigt match må vælge
+  // modtager; et gæt blandt flere kandidater ville sende pakken (og beskeden)
+  // til en forkert.
+  const applyAiFields = async (f: AiLabelFields) => {
+    // Tælles undervejs: beskeden til sidst skal afspejle, hvad der FAKTISK
+    // blev sat i formularen — også et transportør-match alene. Ellers meldes
+    // "intet aflæst", mens fx transportør-feltet netop har skiftet værdi.
+    let applied = false
+    if (f.sender_name?.trim()) {
+      setSender(f.sender_name.trim())
+      applied = true
+    }
+    const carrierName = f.carrier?.trim()
+    if (carrierName && master) {
+      const match = master.carriers.find(
+        (c) =>
+          c.name.toLowerCase().includes(carrierName.toLowerCase()) ||
+          carrierName.toLowerCase().includes(c.name.toLowerCase()),
+      )
+      if (match) {
+        setCarrierId(match.id)
+        applied = true
+      }
+    }
+    const code = normalizeScan(f.tracking_number ?? '')
+    if (code) {
+      setBarcode(code)
+      void checkDuplicate(code)
+      applied = true
+    }
+    let receiverUnmatched: string | null = null
+    const receiverName = f.receiver_name?.trim()
+    if (receiverName) {
+      const { data } = await supabase
+        .from('employees')
+        .select('id, full_name, initials, email, phone, department_id, department:departments (name)')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        // LIKE-jokertegn i OCR-støj (%, _) skal matche som tegn, ikke jokere —
+        // et "entydigt" jokermatch kunne ellers vælge en forkert modtager.
+        .ilike('full_name', `%${receiverName.replace(/[\\%_]/g, '\\$&')}%`)
+        .limit(2)
+      if (data?.length === 1) {
+        const e = data[0]
+        pickReceiver({
+          id: e.id,
+          full_name: e.full_name,
+          initials: e.initials,
+          email: e.email,
+          phone: e.phone,
+          department_id: e.department_id,
+          department_name: e.department?.name ?? null,
+        })
+        applied = true
+      } else {
+        receiverUnmatched = receiverName
+      }
+    }
+    if (receiverUnmatched) {
+      toast.info(t('receive.aiReceiverUnmatched', { name: receiverUnmatched }))
+    } else if (!applied) {
+      toast.info(t('receive.aiNoFields'))
+    } else {
+      toast.success(t('receive.aiApplied'))
+    }
   }
 
   // Står koden allerede som en åben pakke? (duplikat-scan er uafklaret i spec —
@@ -641,6 +710,7 @@ export function ParcelReceiveForm({
               <Printer className="size-3.5" />
               {t('receive.printLabel')}
             </Button>
+            <AiLabelScan companyId={companyId} onFields={applyAiFields} />
             <span className="text-xs text-muted-foreground">{t('receive.unreadableHint')}</span>
           </div>
         )}

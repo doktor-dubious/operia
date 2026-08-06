@@ -215,6 +215,7 @@ export const configureConfigSections: ConfigNavSection[] = [
     labelKey: 'sectionAccount',
     items: [
       { labelKey: 'configureUsers', href: '/configure/users' },
+      { labelKey: 'configureLoginSecurity', href: '/configure/login-security' },
       { labelKey: 'configureProducts', href: '/configure/products' },
       { labelKey: 'configureBilling', href: '/configure/billing' },
       { labelKey: 'configureShipping', href: '/configure/shipping' },
@@ -300,6 +301,7 @@ export const operiaConfigSections: ConfigNavSection[] = [
     labelKey: 'sectionPlatform',
     items: [
       { labelKey: 'operiaGeneral', href: '/operia/general' },
+      { labelKey: 'operiaLoginSecurity', href: '/operia/login-security' },
       { labelKey: 'operiaBilling', href: '/operia/billing' },
     ],
   },

@@ -1,13 +1,22 @@
 package com.dcalogic.operia.data
 
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 /**
@@ -121,6 +130,51 @@ object Repository {
                 ),
             ) { limit(1) }
             .decodeList<PlatformNotifyRow>().firstOrNull()
+
+    /** Er biometrisk login tilladt for brugerens virksomhed? Platformens
+     *  hovedafbryder AND virksomhedens override (null = arv). Fejler et af
+     *  opslagene, er svaret null = ukendt, og kalderen lader indstillingen
+     *  stå urørt frem for at slå funktionen fra ved et netværksudfald. */
+    suspend fun biometricLoginAllowed(companyId: String): Boolean? =
+        loginPolicy(companyId)?.biometricAllowed
+
+    /** Effektiv login-politik: platformens værdier med firmaets override
+     *  (null = arv). Ét opslag, så biometri-tilladelse og gen-login-vinduet
+     *  ikke koster to rundture ved hver bootstrap. */
+    suspend fun loginPolicy(companyId: String): LoginPolicy? {
+        val platform = runCatching {
+            supabase.from("platform_settings")
+                .select(
+                    Columns.list(
+                        "login_password_enabled", "login_biometric_enabled",
+                        "handheld_reauth_minutes",
+                    ),
+                ) { limit(1) }
+                .decodeList<LoginMethodsRow>().firstOrNull()
+        }.getOrNull() ?: return null
+        val company = runCatching {
+            supabase.from("companies")
+                .select(
+                    Columns.list(
+                        "login_password_enabled", "login_biometric_enabled",
+                        "handheld_reauth_minutes",
+                    ),
+                ) {
+                    filter { eq("id", companyId) }
+                    limit(1)
+                }
+                .decodeList<LoginMethodsRow>().firstOrNull()
+        }.getOrNull()
+        return LoginPolicy(
+            biometricAllowed = (platform.login_biometric_enabled ?: true) &&
+                (company?.login_biometric_enabled ?: true),
+            reauthMinutes = company?.handheld_reauth_minutes
+                ?: platform.handheld_reauth_minutes
+                ?: 0,
+        )
+    }
+
+    data class LoginPolicy(val biometricAllowed: Boolean, val reauthMinutes: Int)
 
     /** Alle feature-rækker for virksomheden — gyldighed (valid_until) afgøres af kalderen. */
     suspend fun featureRows(companyId: String): List<CompanyFeature> =
@@ -462,6 +516,14 @@ object Repository {
             .select(Columns.list("id", "name")) { filter { eq("company_id", companyId) } }
             .decodeList()
 
+    /** Aktiv-kategorier (stamdata) — valgfri ved oprettelse af et nyt aktiv. */
+    suspend fun assetCategories(companyId: String): List<AssetCategory> =
+        supabase.from("asset_categories")
+            .select(Columns.list("id", "name")) {
+                filter { eq("company_id", companyId) }
+                order("name", Order.ASCENDING)
+            }.decodeList()
+
     // ---------- aktiver ----------
     //
     // Flow-handlingerne (tjek ud/ind, flyt, udlån) går gennem SECURITY
@@ -491,6 +553,30 @@ object Repository {
                 order("name", Order.ASCENDING)
                 limit(10)
             }.decodeList()
+
+    /** Opret et nyt aktiv fra terminalen. Går gennem create_asset_handheld
+     *  (SECURITY DEFINER), fordi selve registeret er manager-territorium:
+     *  RPC'en kan KUN oprette, og gentjekker flow-rollerne server-side.
+     *  Aktiv-nr. tildeles af serveren og kommer retur, så skærmen kan vise det. */
+    suspend fun createAsset(
+        companyId: String,
+        name: String,
+        serialNo: String?,
+        barcode: String?,
+        categoryId: String?,
+        locationId: String?,
+    ): CreatedAsset? =
+        supabase.postgrest.rpc(
+            "create_asset_handheld",
+            buildJsonObject {
+                put("p_company_id", companyId)
+                put("p_name", name)
+                if (!serialNo.isNullOrBlank()) put("p_serial_no", serialNo)
+                if (!barcode.isNullOrBlank()) put("p_barcode", barcode)
+                if (categoryId != null) put("p_category_id", categoryId)
+                if (locationId != null) put("p_location_id", locationId)
+            },
+        ).decodeList<CreatedAsset>().firstOrNull()
 
     /** Tjek ud: fast tildeling til en medarbejder (in_stock → assigned). */
     suspend fun checkoutAsset(assetId: String, employeeId: String, note: String?) {
@@ -587,6 +673,70 @@ object Repository {
                 }
                 order("name", Order.ASCENDING)
             }.decodeList()
+
+    // ---------- AI-label-læsning ----------
+
+    /** Modeller der kan læse billeder — spejler `vision` i web/src/lib/ai.ts og
+     *  kataloget i edge-funktionen ai-read-label. Bruges kun til at afgøre om
+     *  AI-knappen vises; serveren genchecker alligevel. */
+    private val AI_VISION_MODELS = setOf(
+        "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5", "claude-fable-5",
+        "gemini-3.6-flash", "gemini-3.5-flash",
+        "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview",
+    )
+
+    /**
+     * Er AI-label-scanning tilgængelig for virksomheden? Kræver platformens
+     * hovedafbryder, at kundens valg ligger i platformens udvalg, og at den
+     * valgte model kan læse billeder. Fejler et opslag (offline), er svaret
+     * false — knappen skjules frem for at fejle ved tryk.
+     */
+    suspend fun aiLabelAvailable(companyId: String): Boolean {
+        val platform = runCatching {
+            supabase.from("platform_settings")
+                .select(Columns.list("ai_enabled", "ai_providers", "ai_models")) { limit(1) }
+                .decodeList<PlatformAiRow>().firstOrNull()
+        }.getOrNull() ?: return false
+        if (platform.ai_enabled != true) return false
+        val cfg = runCatching {
+            supabase.from("company_ai_config")
+                .select(Columns.list("provider", "model")) {
+                    filter { eq("company_id", companyId) }
+                    limit(1)
+                }
+                .decodeList<CompanyAiRow>().firstOrNull()
+        }.getOrNull() ?: return false
+        val provider = cfg.provider ?: return false
+        val model = cfg.model ?: return false
+        return model in AI_VISION_MODELS &&
+            provider in platform.ai_providers.orEmpty() &&
+            model in platform.ai_models.orEmpty()
+    }
+
+    private val aiJson = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Læs en pakkelabel med kundens valgte AI-model. Selve AI-kaldet sker i
+     * edge-funktionen ai-read-label (API-nøglen findes kun på serveren);
+     * appen sender blot et nedskaleret JPEG som base64.
+     */
+    suspend fun aiReadLabel(jpeg: ByteArray): AiLabelResult {
+        val b64 = android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP)
+        val response = supabase.functions.invoke("ai-read-label") {
+            setBody(
+                buildJsonObject {
+                    put("image", b64)
+                    put("mediaType", "image/jpeg")
+                },
+            )
+            contentType(ContentType.Application.Json)
+        }
+        val obj = aiJson.parseToJsonElement(response.bodyAsText()).jsonObject
+        val ok = obj["ok"]?.jsonPrimitive?.content == "true"
+        if (!ok) return AiLabelResult(fields = null, reason = obj["reason"]?.jsonPrimitive?.content)
+        val fields = obj["fields"]?.let { aiJson.decodeFromJsonElement<AiLabelFields>(it) }
+        return AiLabelResult(fields = fields, reason = null)
+    }
 
     private fun nowIso(): String =
         java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).toString()

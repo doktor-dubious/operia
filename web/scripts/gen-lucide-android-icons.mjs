@@ -28,6 +28,7 @@ const MAP = {
   handover: 'handshake',
   list: 'clipboard-list',
   bell: 'bell',
+  plus: 'circle-plus', // nav.ts: assetNew
 }
 
 const num = (v) => Number(v)
