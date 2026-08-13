@@ -219,7 +219,8 @@
       "maps": "Maps & routes",
       "imports": "Import & Export",
       "log": "Log",
-      "other": "Other"
+      "other": "Other",
+      "ai": "AI"
     },
     "eventType": "Action",
     "live": "Live",
@@ -250,7 +251,8 @@
       "reasonSmsNotConfigured": "SMS is not configured",
       "reasonEmailError": "The email could not be sent",
       "reasonSmsError": "The SMS could not be sent",
-      "loginUnknownEmail": "Unknown account"
+      "loginUnknownEmail": "Unknown account",
+      "aiFields": "{{count}} field(s) read"
     },
     "rawJson": "Raw JSON",
     "copyJson": "Copy JSON",
@@ -558,7 +560,12 @@
     "notifyCostsHint": "Unit price per sent message — drives the amounts on the customers’ Usage tab (Platform → Customers). 0 = the channel is not billed.",
     "costPerEmail": "Cost per email",
     "costPerSms": "Cost per SMS",
-    "costUnit": "DKK each"
+    "costUnit": "DKK each",
+    "aiCosts": "AI label prices",
+    "aiCostsHint": "Unit price per AI reading of a parcel label, per model. Only the providers and models enabled under Operia → Integrations can be priced. 0 = the model is not billed.",
+    "aiCostsEmpty": "No models are enabled. Pick providers and models under Operia → Integrations.",
+    "aiCostsDisabled": "The AI integration is turned off under Operia → Integrations.",
+    "aiCostUnit": "DKK per read"
   },
   "operiaMapsPage": {
     "title": "Maps & routes",
@@ -1073,6 +1080,12 @@
     "aiApplied": "Label read — fields filled in",
     "aiNoFields": "No fields could be read from the label",
     "aiReceiverUnmatched": "Receiver “{{name}}” was not found in the employee directory",
+    "aiReceiverAmbiguous": "“{{name}}” could not be matched unambiguously — pick the receiver from the suggestions",
+    "aiDidYouMean": "Did you mean:",
+    "aiUseSender": "Use “{{name}}”",
+    "aiRawLabel": "The label said: {{text}}",
+    "aiFilledHint": "Fields with a purple border were filled in by the AI reading — check them before saving. The border disappears once you edit the field yourself.",
+    "clearForm": "Clear form",
     "batchMode": "Batch mode",
     "batchModeHint": "Scan several parcels for one recipient — one message is sent.",
     "batchItems": "Scanned parcels ({{count}})",
@@ -1093,7 +1106,8 @@
     "batchSaved": "Batch {{code}} created with {{count}} parcel(s)",
     "batchListTitle": "Batches this session",
     "batchListCount": "{{count}} parcel(s)",
-    "printBatchLabel": "Print batch label"
+    "printBatchLabel": "Print batch label",
+    "aiScanDisclosure": "The entire label photo — including receiver and sender name, address and phone — is sent to {{vendor}} in {{country}} to be read. The reading is logged."
   },
   "carriersPage": {
     "name": "Name",
@@ -2407,7 +2421,7 @@
     "integration": "Integration",
     "companySubtitle": "Your company's own integrations and their setup.",
     "entra": "Microsoft Active Directory (AD)",
-    "ai": "AI",
+    "ai": "AI Label Reader",
     "aiEnable": "Enable the AI integration",
     "aiEnableDesc": "When disabled, AI is hidden from all customers.",
     "aiProviders": "Providers",
@@ -2435,13 +2449,15 @@
   },
   "companyAi": {
     "noneOffered": "No AI providers are available for your company.",
-    "intro": "Choose which AI your company uses — e.g. for reading parcel labels with the camera at intake. AI calls go through Operia's servers; API keys are managed by DCA Logic.",
+    "intro": "Choose which AI should read your parcel labels on intake. The reading runs through Operia’s servers using DCA Logic’s own API keys — you do not need your own subscription with the vendor. The label photo contains personal data and is sent to the vendor you pick here, so read the disclosure below before enabling it.",
     "provider": "Provider",
     "providerPlaceholder": "Choose provider",
     "model": "Model",
     "noModels": "No models available for this provider.",
     "noVision": "— cannot read images",
     "noVisionExplainer": "The selected model cannot read images, so camera label scanning will not work. Choose a vision model (e.g. Claude Haiku) to use label scanning.",
+    "matchTitle": "Interpret the names read",
+    "matchHint": "Compare what the AI reads against your own data, so small spelling errors and missing Danish characters still land correctly: “AAse Østergård”, “Åse Ostergård” and “Åse Østegård” all find Åse Østergård, and “PostNorb” finds PostNord. Only a single unambiguous match is filled in automatically — otherwise suggestions are shown for a person to choose from. Tracking numbers are never corrected.",
     "scanFailed_integration_disabled": "The AI integration is not enabled by Operia.",
     "scanFailed_not_configured": "No AI model is selected. Choose one under Configure → Integrations.",
     "scanFailed_not_allowed": "The selected AI model is no longer offered. Choose another under Configure → Integrations.",
@@ -2460,7 +2476,28 @@
     "scanFailed_forbidden": "Your user is not linked to a company. Pick a company at the top, or sign in as a company user.",
     "scanFailed_unauthorized": "Your session has expired. Sign in again.",
     "scanFailed_empty_response": "The AI responded with no content. Try again.",
-    "scanFailed_generic": "Label scanning failed. Try again."
+    "scanFailed_generic": "Label scanning failed. Try again.",
+    "country": {
+      "us": "the United States",
+      "cn": "China",
+      "fr": "France"
+    },
+    "disclosureTitle": "What leaves your organisation",
+    "disclosureBody": "When an employee reads a label with AI, the entire label photo is sent to {{vendor}} in {{country}}, which reads the text and returns the fields. {{vendor}} is a processor for Operia (a sub-processor for you) and processes the image only to answer that single reading.",
+    "disclosureSent": "What is sent is everything printed on the label — receiver and sender name, address and phone number, plus carrier, service, tracking number, reference, weight and date.",
+    "disclosureTransfer": "The transfer goes to {{country}}, i.e. outside the EU/EEA. See DCA Logic’s sub-processor list for the transfer basis.",
+    "disclosureTransferEu": "The reading takes place in {{country}}, i.e. inside the EU/EEA — the label photo is not transferred to a third country. See DCA Logic’s sub-processor list.",
+    "disclosureStorage": "Operia stores neither the photo nor the AI response. Only the fields the employee approves are saved on the parcel as ordinary parcel data. What the vendor itself stores follows from the vendor’s terms.",
+    "disclosureLog": "Every reading is written to the audit trail with company, user, vendor, model, outcome and timestamp — never the content read or the image.",
+    "acceptLabel": "I understand and enable AI label reading",
+    "acceptHint": "The confirmation is given by a manager on behalf of the company and is your documented instruction to DCA Logic to send label photos to the selected vendor. It can be withdrawn at any time.",
+    "acceptedOn": "Confirmed {{date}} — recorded in the audit trail.",
+    "notAcceptedWarning": "The setup is saved, but label reading stays off until the confirmation above is ticked. The “Read label with AI” button is hidden from employees, and the server rejects readings.",
+    "confirmTitle": "Enable AI label reading?",
+    "confirmBody": "You are about to instruct DCA Logic to send parcel label photos — containing personal data — to {{vendor}} in {{country}}.",
+    "confirmInstruction": "The confirmation is recorded with user and timestamp in the audit trail as the company’s instruction. It can be withdrawn again by clearing the checkbox.",
+    "confirmAccept": "I understand and enable",
+    "scanFailed_not_accepted": "AI label reading has not been confirmed for your company. A manager must accept the disclosure under Configure → Integrations."
   },
   "companyEntra": {
     "subtitle": "Connect your Microsoft Entra ID (Active Directory) as the source for the employee directory.",
@@ -2534,7 +2571,7 @@
   },
   "usage": {
     "tabLabel": "Usage",
-    "subtitle": "Notifications sent and amounts based on the unit prices (Operia → General).",
+    "subtitle": "Notifications sent, AI label readings and amounts based on the unit prices (Operia → General).",
     "timeframe": {
       "thisMonth": "This month",
       "lastMonth": "Last month",
@@ -2549,6 +2586,7 @@
     "sms": "SMS",
     "total": "Total",
     "breakdown": "Of which {{parcelCount}} parcel notifications and {{assetCount}} asset reminders.",
-    "notes": "Only completed sends are counted (accepted by the provider); test sends are excluded."
+    "notes": "Only completed sends and AI readings are counted (accepted by the provider); test sends and rejected readings are excluded.",
+    "aiRead": "AI reading · {{model}}"
   }
 }

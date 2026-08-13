@@ -788,6 +788,12 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          disclosure_accepted: boolean
+          disclosure_accepted_at: string | null
+          disclosure_accepted_by: string | null
+          disclosure_provider: string | null
+          disclosure_version: string | null
+          match_enabled: boolean
           model: string | null
           provider: string | null
           updated_at: string
@@ -795,6 +801,12 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string
+          disclosure_accepted?: boolean
+          disclosure_accepted_at?: string | null
+          disclosure_accepted_by?: string | null
+          disclosure_provider?: string | null
+          disclosure_version?: string | null
+          match_enabled?: boolean
           model?: string | null
           provider?: string | null
           updated_at?: string
@@ -802,6 +814,12 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string
+          disclosure_accepted?: boolean
+          disclosure_accepted_at?: string | null
+          disclosure_accepted_by?: string | null
+          disclosure_provider?: string | null
+          disclosure_version?: string | null
+          match_enabled?: boolean
           model?: string | null
           provider?: string | null
           updated_at?: string
@@ -1209,8 +1227,10 @@ export type Database = {
           external_id: string | null
           first_name: string | null
           full_name: string
+          full_name_folded: string | null
           id: string
           initials: string | null
+          initials_folded: string | null
           is_active: boolean
           is_manual: boolean
           language: string
@@ -1232,8 +1252,10 @@ export type Database = {
           external_id?: string | null
           first_name?: string | null
           full_name: string
+          full_name_folded?: string | null
           id?: string
           initials?: string | null
+          initials_folded?: string | null
           is_active?: boolean
           is_manual?: boolean
           language?: string
@@ -1255,8 +1277,10 @@ export type Database = {
           external_id?: string | null
           first_name?: string | null
           full_name?: string
+          full_name_folded?: string | null
           id?: string
           initials?: string | null
+          initials_folded?: string | null
           is_active?: boolean
           is_manual?: boolean
           language?: string
@@ -2270,6 +2294,7 @@ export type Database = {
       platform_settings: {
         Row: {
           ai_enabled: boolean
+          ai_model_costs: Json
           ai_models: string[]
           ai_providers: string[]
           asset_no_length: number | null
@@ -2336,6 +2361,7 @@ export type Database = {
         }
         Insert: {
           ai_enabled?: boolean
+          ai_model_costs?: Json
           ai_models?: string[]
           ai_providers?: string[]
           asset_no_length?: number | null
@@ -2402,6 +2428,7 @@ export type Database = {
         }
         Update: {
           ai_enabled?: boolean
+          ai_model_costs?: Json
           ai_models?: string[]
           ai_providers?: string[]
           asset_no_length?: number | null
@@ -2794,6 +2821,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_ai_disclosure: {
+        Args: { p_company_id: string; p_provider: string; p_version: string }
+        Returns: undefined
+      }
       admin_platform_admins: {
         Args: never
         Returns: {
@@ -2823,6 +2854,24 @@ export type Database = {
           user_id: string
         }[]
       }
+      ai_disclosure_version: { Args: never; Returns: string }
+      ai_label_usage: {
+        Args: { p_company_id: string; p_from?: string; p_to?: string }
+        Returns: {
+          model: string
+          reads: number
+        }[]
+      }
+      ai_match_label_fields: {
+        Args: {
+          p_carrier?: string
+          p_company_id: string
+          p_receiver?: string
+          p_sender?: string
+        }
+        Returns: Json
+      }
+      ai_model_costs_valid: { Args: { p: Json }; Returns: boolean }
       anonymize_asset_loan: {
         Args: { p_label?: string; p_loan_id: string }
         Returns: undefined
@@ -2899,6 +2948,7 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: boolean
       }
+      fold_name: { Args: { p_text: string }; Returns: string }
       generate_batch_code: { Args: { p_company_id: string }; Returns: string }
       generate_parcel_barcode: {
         Args: { p_company_id: string }
@@ -2977,6 +3027,9 @@ export type Database = {
         Args: { p_asset_id: string; p_location_id: string; p_note?: string }
         Returns: undefined
       }
+      name_score: { Args: { p_a: string; p_b: string }; Returns: number }
+      name_score_folded: { Args: { p_a: string; p_b: string }; Returns: number }
+      name_similarity: { Args: { p_a: string; p_b: string }; Returns: number }
       next_asset_no: { Args: { p_company_id: string }; Returns: string }
       next_asset_no_unchecked: {
         Args: { p_company_id: string }
@@ -3004,6 +3057,20 @@ export type Database = {
           to_s: Database["public"]["Enums"]["parcel_status"]
         }
         Returns: boolean
+      }
+      record_ai_label_read: {
+        Args: {
+          p_actor: string
+          p_company_id: string
+          p_duration_ms?: number
+          p_fields_found?: number
+          p_image_bytes?: number
+          p_model: string
+          p_outcome: string
+          p_provider: string
+          p_source?: string
+        }
+        Returns: undefined
       }
       record_audit: {
         Args: {

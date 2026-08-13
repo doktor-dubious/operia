@@ -2,10 +2,10 @@
 // lad kundens valgte AI-model (Konfigurér → Integrationer) udfylde felterne.
 // Selve AI-kaldet sker i edge-funktionen ai-read-label — API-nøglerne findes
 // kun på serveren, og serveren genchecker platformens udvalg og kundens valg.
-// Knappen vises kun når AI er sat op med en vision-model (spejler
-// Repository.aiLabelAvailable på håndterminalen).
+// Knappen vises kun når AI er sat op med en vision-model OG virksomheden har
+// bekræftet oplysningen om hvad der sendes hvorhen (spejler
+// Repository.aiLabelSetup på håndterminalen).
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Sparkles } from 'lucide-react'
@@ -19,8 +19,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { PhotoCapture } from '@/components/photo-capture'
+import { useCompanyAiConfig } from '@/hooks/use-company-ai-config'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
-import { AI_MODELS } from '@/lib/ai'
+import { AI_MODELS, aiProvider } from '@/lib/ai'
 import { supabase } from '@/lib/supabase'
 
 /** Felterne ai-read-label kan udtrække — spejler LABEL_SCHEMA i funktionen. */
@@ -61,6 +62,7 @@ const KNOWN_REASONS = new Set([
   'network',
   'forbidden',
   'unauthorized',
+  'not_accepted',
 ])
 
 /** Fejlkoden i en non-2xx-krop (fx 413 image_too_large), hvis den kan læses. */
@@ -159,22 +161,13 @@ export function AiLabelScan({
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [reading, setReading] = useState(false)
 
-  const { data: cfg } = useQuery({
-    queryKey: ['company-ai', companyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('company_ai_config')
-        .select('provider, model')
-        .eq('company_id', companyId)
-        .maybeSingle()
-      if (error) throw error
-      return data
-    },
-  })
+  const { data: cfg } = useCompanyAiConfig(companyId)
 
-  // Samme kæde som serveren: hovedafbryder → udvalg → kundens valg → vision.
-  // Serveren genchecker alligevel; dette styrer kun om knappen vises.
+  // Samme kæde som serveren: hovedafbryder → udvalg → kundens valg → vision →
+  // kundens bekræftelse af oplysningen. Serveren genchecker alligevel; dette
+  // styrer kun om knappen vises.
   const model = AI_MODELS.find((m) => m.key === cfg?.model)
+  const provider = aiProvider(cfg?.provider ?? '')
   const available =
     !!platform?.ai_enabled &&
     !!cfg?.provider &&
@@ -182,7 +175,8 @@ export function AiLabelScan({
     model.vision &&
     model.provider === cfg.provider &&
     (platform.ai_providers ?? []).includes(cfg.provider) &&
-    (platform.ai_models ?? []).includes(model.key)
+    (platform.ai_models ?? []).includes(model.key) &&
+    !!cfg.disclosure_accepted
 
   if (!available) return null
 
@@ -195,7 +189,9 @@ export function AiLabelScan({
       const { data, error } = await supabase.functions.invoke('ai-read-label', {
         // companyId bruges kun af serveren når kalderen er platform-admin (og
         // dermed ikke har en egen virksomhed); for kunde-brugere ignoreres den.
-        body: { image, mediaType: scaled.mediaType, companyId },
+        // source ender i revisionssporet (ai.label_read) — så kan en aflæsning
+        // henføres til webben eller håndterminalen.
+        body: { image, mediaType: scaled.mediaType, companyId, source: 'web' },
       })
       if (error) throw error
       if (!data?.ok) {
@@ -248,6 +244,17 @@ export function AiLabelScan({
             <DialogTitle>{t('receive.aiScanTitle')}</DialogTitle>
             <DialogDescription>{t('receive.aiScanBody')}</DialogDescription>
           </DialogHeader>
+          {/* Én linje til den der trykker: hvem fotoet sendes til, og at det
+              indeholder personoplysninger. Den fulde oplysning står på
+              Konfigurér → Integrationer, hvor virksomheden bekræftede den. */}
+          {provider && (
+            <p className="text-xs text-muted-foreground">
+              {t('receive.aiScanDisclosure', {
+                vendor: provider.vendor,
+                country: t(`companyAi.country.${provider.country}`),
+              })}
+            </p>
+          )}
           <PhotoCapture photo={photo} onPhoto={setPhoto} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={reading}>

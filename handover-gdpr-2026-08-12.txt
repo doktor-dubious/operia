@@ -1,0 +1,203 @@
+HANDOVER — Operia GDPR review (2026-08-12)
+============================================
+Context for a fresh model session. Produced at the end of a GDPR review
+conversation in the Operia repo (/home/rune/workspace/projects/operia).
+Read docs/compliance-map.md before acting — it is the engineering-level
+living compliance map (last fully reviewed 2026-07-20, partial updates
+through 2026-08-04; known-stale rows listed below).
+
+WHAT THIS CONVERSATION DID
+--------------------------
+1. Full GDPR status review of Operia: requirements, selling points,
+   implemented coverage, omissions, deliberate omissions, documentation plan.
+2. A code audit of everything compliance-relevant built AFTER the map's
+   last review (2026-07-20), chiefly the AI label-reading feature.
+3. Deliverable written: ~/Downloads/"Operia GDPR-review 2026-08-12.docx"
+   (source markdown: was in session scratchpad, regenerate from the docx or
+   this file if needed). The docx contains the full 8-section report incl.
+   a 12-step prioritized work plan.
+4. Follow-up Q&A on fixing the AI label reader (user's 3-step proposal,
+   assessed below).
+
+ROLE FRAMING (drives everything)
+--------------------------------
+DCA Logic = PROCESSOR (Art. 28) for customer companies (= controllers).
+DCA is CONTROLLER only for its own processing (platform admins, feedback,
+repo contents). Sub-processors currently receiving personal data:
+Supabase (EU, core), Resend (US, email: name+email+barcode), Postmark
+(US, inbound HR CSVs), GatewayAPI (DK, phone numbers), Anthropic (US, AI
+label photos), Google (US: Gemini label photos + Maps/Geocoding addresses),
+OpenRouteService (addresses), customer-configured log drains.
+Headline: THE ENGINEERING IS WELL AHEAD OF THE PAPERWORK. No DPA,
+sub-processor register, ROPA (Art. 30(2)), TOMs doc, breach procedure
+(Art. 33(2)), or transfer mechanism/TIA exists anywhere in the repo.
+
+THREE URGENT FINDINGS (from the post-07-20 audit)
+-------------------------------------------------
+1. GEMINI FREE TIER: ai-read-label sends the FULL label photo (receiver +
+   sender name/address/phone) to Google Gemini on the free tier
+   (migration comment in 20260806193000_ai_gemini_lite_models.sql confirms
+   free tier). Free-tier terms allow Google to use content for product
+   improvement -> indefensible for customer personal data. Decide: paid
+   tier or disable the Gemini path.
+2. REAL PERSONAL DATA IN GIT: docs/labels/ has 13 real parcel-label
+   images; 5 are COMMITTED (label-1.jpeg etc.) showing real private
+   individuals' names, addresses, phones (verified by opening label-1.jpeg:
+   PostNord label, real sender/receiver in Aabenraa/Hjallerup). DCA is
+   controller, no legal basis. Replace with synthetic labels; git history
+   rewrite or documented acceptance (repo is private).
+   (docs/samples/ import CSVs were checked: synthetic, fine.)
+3. AI READS LEAVE NO AUDIT TRAIL + NOTICE INADEQUATE: no record_audit call
+   in supabase/functions/ai-read-label/index.ts (only config changes are
+   audited: ai.config_updated etc.). The i18n notice (companyAi.intro in
+   web/src/i18n/locales/da.json) says only "AI-kaldet sker via Operias
+   servere" — never names Anthropic/Google, US transfer, or that the photo
+   contains personal data.
+
+AI LABEL FEATURE — VERIFIED FACTS
+---------------------------------
+- Edge fn supabase/functions/ai-read-label/index.ts: Anthropic via
+  npm:@anthropic-ai/sdk (key env CLAUDE_API), Gemini via raw fetch
+  generativelanguage.googleapis.com (key env GEMINI_API). DeepSeek/openai/
+  xai are in catalog/constraints but NOT implemented (deepseek vision:false).
+- Sends full label photo base64 (web downscales to <=1600px JPEG q0.8 in
+  ai-label-scan.tsx; android Repository.aiReadLabel). Fixed Danish prompt
+  extracts 12 fields incl. receiver/sender name/address/phone.
+- GOOD: keys server-side only; JWT + company re-verified server-side;
+  platform switch + provider/model allowlist re-checked server-side;
+  image and AI response NOT stored server-side (no bucket write, no table);
+  extracted values only persist as ordinary parcel fields after user
+  applies them; matching layer ai_match_label_fields (migration
+  20260807132720, uncommitted) is pure in-DB fuzzy match, SECURITY INVOKER,
+  RLS applies.
+- BAD: no audit event per read; android leaves captured photos in
+  context.cacheDir/captures (FileProvider) without deletion — same pattern
+  as condition photos; notice text thin (see urgent #3).
+- Opt-in structure ALREADY two-level: platform_settings.ai_enabled
+  (default false) + customer must pick provider/model in Konfigurér ->
+  Integrationer (company_ai_config row; no row = feature invisible).
+- Config tables: platform_settings.ai_enabled/ai_providers/ai_models;
+  company_ai_config (company_id PK, provider, model, match_enabled).
+  No personal data in AI tables; tenant-cascade erasure suffices.
+
+USER'S 3-STEP FIX PROPOSAL + ASSESSMENT (last exchange)
+-------------------------------------------------------
+User proposed: (1) comprehensive logging trail, (2) paid model from
+Anthropic OR MISTRAL, (3) explicit config opt-in disclosing that labels
+go to an AI. Assessment given:
+- (1) Yes: add ai.label_read audit event (company, user, provider, model,
+  outcome) BUT never log extracted personal data or image into audit_log —
+  it is immutable and forwarded to log drains (same minimization rule as
+  the July sweep). IDs/metadata only.
+- (2) Anthropic paid = no-training default + DPA, zero code change, but
+  still US transfer -> needs DPF verification (or SCCs) + short TIA.
+  Mistral = EU, transfer question disappears, stronger commercial story
+  ("label never leaves the EU"), BUT is a new provider integration:
+  edge fn implements only Anthropic+Gemini; model catalog is deliberately
+  synced across 3 files + DB check constraints (see memory
+  ai-label-integration). Recommendation: Mistral if willing to fund the
+  work; Anthropic paid + DPF/TIA for a this-week fix.
+- (3) Opt-in exists; the fix is disclosure CONTENT: name vendor, country,
+  exactly what is sent, on the config screen + one-liner in the scan
+  dialog. An "I understand and enable" confirmation doubles as Art. 28
+  documented-instruction evidence.
+- Still NOT fixed by the 3 steps: sub-processor register/DPA paperwork,
+  android cache deletion, docs/labels cleanup.
+
+OTHER POST-07-20 CHANGES NOT IN THE COMPLIANCE MAP
+--------------------------------------------------
+- Google Maps active provider since 20260731100000: route-calc sends
+  employee/delivery addresses to Google Geocoding/Routes; browser loads
+  Maps JS API when configured; google_maps_browser_key readable by all
+  authenticated users (by design, browser key). Map's claim "web side is
+  clean: no external requests" is now stale for Google-configured platforms.
+- Impersonation (impersonate-user fn, audited fail-closed, masked) —
+  zero mentions in the map despite being the broadest access path.
+- parcels.sender free text now user-populated + suggestion RPC
+  (20260730150000, 20260802100000) — personal data on private shipments,
+  same un-scrubbed class as delivered_to.
+- Map's TOTP row is stale: config.toml now has TOTP enroll/verify enabled
+  (still no enrollment UI; hosted state unconfirmed — CLI config push
+  ignores some auth blocks, see memory biometric-login).
+
+STANDING GAPS (pre-existing, confirmed still open)
+--------------------------------------------------
+- No Art. 15 SAR export (bulk masterdata CSV cannot answer a SAR).
+- No per-company retention, no retention UI; audit/import/files windows
+  default NULL; NO windows at all for parcels, parcel_notifications
+  (recipient = literal email/MSISDN never cleared — unlike asset_loan
+  twin which clears on return), asset_loans, employees.
+- Free-text scrubbing undecided: delivered_to, delivered_note,
+  receiver_override_reason, removed_reason, sender — untouched by all
+  anonymization paths. Decide per field: scrub vs document as evidence.
+- Legacy PII in audit_log rows written before 2026-07-20 (names, invitee
+  emails, unmasked recipients); immutable, only age-purge can remove;
+  drained copies beyond reach. Decide audit_retention_days.
+- No tenant offboarding runbook (Art. 28(3)(g)); no breach procedure;
+  no MFA enrollment UI; handheld session token in plain SharedPreferences.
+
+DELIBERATE DECISIONS (document, don't "fix")
+--------------------------------------------
+parcel_events immutable + retention-exempt (chain of custody); evidence
+photos/signatures deletable by platform admins only; exception reasons
+copied verbatim into audit_log (the reason IS the audit trail, 2026-07-30);
+anonymize-never-delete, returning person = new employee (external_id
+cleared); hard delete platform-admin-only; NO consent machinery (legal
+basis = legitimate interest in employment context, consent invalid there —
+correct but currently written down nowhere); no biometric data ever stored
+(device trust only); log drains carry only minimized audit_log.
+
+DOCUMENTATION PLAN (agreed direction)
+-------------------------------------
+Two layers:
+1. docs/compliance-map.md stays the engineering living map. Needed updates:
+   add AI label reading, impersonation, Google Maps sections; fix TOTP row;
+   extend transfers row. Discipline: any migration touching personal data
+   updates the map in the same commit.
+2. NEW docs/gdpr/ formal set, build order: subprocessors.md (register —
+   build FIRST, forces transfer decisions) -> ropa.md (Art. 30(2)) ->
+   toms.md (Art. 32, distilled from the map) -> dpa/ based on Datatilsynet's
+   standard contractual provisions (Danish + English courtesy copy; annexes
+   A=processing description, B=sub-processors, C=TOMs) ->
+   retention-schedule.md -> incident-response.md -> data-subject-rights.md
+   -> tia/ (per US vendor) -> legal-basis-note.md + Art. 13 notice templates
+   + corrected AI notice text -> offboarding.md.
+DPO: not required at current scale; name an internal privacy owner.
+
+12-STEP WORK PLAN (from the docx, priority order)
+-------------------------------------------------
+1. Gemini decision (pay/disable) + verify DPF for Anthropic/Google/Resend/
+   Postmark  2. Replace docs/labels real labels with synthetic
+3. AI notice text + ai.label_read audit event + android cache deletion
+4. subprocessors.md + ropa.md + toms.md + compliance-map updates
+5. Datatilsynet standard DPA + annexes to customers
+6. incident-response.md + breach contacts
+7. Retention: per-company windows + UI; clear parcel_notifications.recipient
+   like asset loans; decide audit_retention_days
+8. SAR export (per-employee, then free-text name search) — also a selling pt
+9. Free-text scrubbing decisions per field
+10. Offboarding runbook + tenant data-return export
+11. MFA enrollment UI; Keystore-backed handheld session
+12. "Data & privacy" transparency screen; EU-only mode; compliance report
+    export (selling points; certification-track later)
+Steps 1-3 = this-week fixes.
+
+SELLING-POINT ANGLE (for prioritization debates)
+------------------------------------------------
+Market what exists: automatic anonymization lifecycle, immutable audit +
+log drains, EU residency, no-tracking web app, no-biometric-storage story.
+Differentiators to build: EU-only mode, one-click SAR export, customer-
+controlled retention, in-app transparency page, breach-notification SLA.
+
+REPO/ENV NOTES FOR THE NEXT SESSION
+-----------------------------------
+- Working tree has uncommitted AI-matching work (migration
+  20260807132720_ai_label_matching.sql, use-company-ai-config.ts,
+  ai-match.ts, form/screen changes) — don't assume HEAD == behavior.
+- Memory notes exist in the Claude memory dir for this project:
+  ai-label-integration, ai-label-matching, gdpr-anonymization (erasure
+  lives in server RPCs; keep PII out of audit_log) — consistent with above.
+- supabase db push caveats: see memory supabase-db-push-verify (psql via
+  EU pooler; check unique version prefixes).
+- Never read docs/operia.txt (passwords); never print service_role key.
+- This handover file is untracked; do not commit it.

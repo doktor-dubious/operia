@@ -181,11 +181,16 @@ fun FieldLabel(text: String, topPadding: Int = 0) {
 }
 
 @Composable
-fun operiaFieldColors() = OutlinedTextFieldDefaults.colors(
+fun operiaFieldColors(
+    // Feltet er udfyldt af AI-label-læsningen og markeres med lilla kant, indtil
+    // brugeren selv retter det. Kun den ufokuserede kant: skriver man i feltet,
+    // er værdien ikke længere AI'ens.
+    aiFilled: Boolean = false,
+) = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = C.panel,
     unfocusedContainerColor = C.panel,
     focusedBorderColor = C.blue,
-    unfocusedBorderColor = C.line,
+    unfocusedBorderColor = if (aiFilled) C.ai else C.line,
     focusedTextColor = C.txt,
     unfocusedTextColor = C.txt,
     cursorColor = C.blue,
@@ -420,6 +425,9 @@ fun FoldSection(
     // den igen. Uden den ville en indlejret LookupPicker blive stående åben efter
     // valget (dens egen luk-logik gælder kun den fritstående variant), og feltet
     // skulle lukkes manuelt på overskriften.
+    // Sektionens værdi kommer fra AI-label-læsningen: lilla kant på hovedet, så
+    // markeringen ses selv når sektionen er foldet sammen.
+    aiFilled: Boolean = false,
     content: @Composable (collapse: () -> Unit) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -428,7 +436,11 @@ fun FoldSection(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
-                .border(1.5.dp, if (expanded) C.blue else C.line, RoundedCornerShape(14.dp))
+                .border(
+                    1.5.dp,
+                    if (expanded) C.blue else if (aiFilled) C.ai else C.line,
+                    RoundedCornerShape(14.dp),
+                )
                 .background(C.panel, RoundedCornerShape(14.dp))
                 .clickable { expanded = !expanded }
                 .padding(horizontal = 14.dp),
@@ -473,6 +485,10 @@ fun LookupPicker(
     // udfoldning. Så skal vælgeren hverken gentage labelen eller lægge endnu et
     // sammenklappet lag ovenpå — listen vises direkte, når sektionen åbnes.
     embedded: Boolean = false,
+    // Valget kommer fra AI-label-læsningen — markeres med lilla kant. Kun den
+    // fritstående variant har en kant at markere; sidder vælgeren i en
+    // FoldSection, bærer sektionens hoved markeringen.
+    aiFilled: Boolean = false,
 ) {
     var open by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -485,7 +501,11 @@ fun LookupPicker(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
-                    .border(1.5.dp, if (open) C.blue else C.line, RoundedCornerShape(14.dp))
+                    .border(
+                        1.5.dp,
+                        if (open) C.blue else if (aiFilled) C.ai else C.line,
+                        RoundedCornerShape(14.dp),
+                    )
                     .background(C.panel, RoundedCornerShape(14.dp))
                     .clickable { open = !open }
                     .padding(horizontal = 14.dp),

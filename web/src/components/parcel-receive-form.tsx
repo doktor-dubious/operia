@@ -23,9 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Camera, Layers, Printer, Wand2, X } from 'lucide-react'
+import { Camera, Eraser, Layers, Printer, Sparkles, Wand2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { looksLikeUrl } from '@/lib/barcode-rules'
 import { AiLabelScan, type AiLabelFields } from '@/components/ai-label-scan'
+import { isCorrection, matchLabelFields, type MatchedEmployee } from '@/lib/ai-match'
+import { useCompanyAiConfig } from '@/hooks/use-company-ai-config'
 import { BarcodeUrlDialog } from '@/components/barcode-url-dialog'
 import { useCompany } from '@/components/company-provider'
 import { EmployeePicker, type PickedEmployee } from '@/components/employee-picker'
@@ -48,6 +51,16 @@ import { supabase } from '@/lib/supabase'
 // Genbruges på /parcels/receive (fuld side) og som popup på /parcels.
 
 const NONE = '__none__'
+
+// Felter AI-label-læsningen kan udfylde. Markeres i formularen med en lilla
+// kant, indtil brugeren selv retter feltet — en AI-aflæsning er et forslag, og
+// den der gemmer pakken skal kunne se hvad der ikke er tastet af et menneske.
+type AiField = 'barcode' | 'receiver' | 'department' | 'sender' | 'carrier'
+
+// Kant + svag glød i --ai-filled. Vinder over feltets egen border-klasse
+// (samme specificitet, senere i klasselisten via cn), men ikke over
+// focus-visible-ringen — det fokuserede felt ser stadig normalt ud.
+const AI_FIELD_CLASS = 'border-ai-filled ring-2 ring-ai-filled/25'
 
 // En pakke i batch-listen: koden + et valgfrit tilstandsfoto (fx hvis netop
 // dén pakke er beskadiget — resten af batchen deler de øvrige felter).
@@ -205,6 +218,8 @@ export function ParcelReceiveForm({
   const { data: senders } = useSenderSuggestions(companyId)
   const { data: platform } = usePlatformSettings()
   const { data: notifyCfg } = useArrivalNotifyConfig(companyId)
+  // match_enabled: skal AI-aflæsningen fortolkes mod virksomhedens egne data?
+  const { data: aiCfg } = useCompanyAiConfig(companyId)
   // Pakkelabelen (virksomhedens udgave, ellers platformens) — til print-knappen.
   const { data: labelDesign } = useParcelLabelDesign(companyId)
 
@@ -242,7 +257,37 @@ export function ParcelReceiveForm({
   // Remount-nøgle: EmployeePicker har intern skrivetilstand, som skal nulstilles
   // sammen med formularen — ellers står et forældet navn tilbage i feltet.
   const [formKey, setFormKey] = useState(0)
+  // Felter udfyldt af den seneste AI-label-læsning (se AI_FIELD_CLASS).
+  const [aiFilled, setAiFilled] = useState<Set<AiField>>(new Set())
+  // Hvad labelen SAGDE, når fortolkningslaget rettede det til noget andet.
+  // Vises under feltet: en rettelse skal kunne ses og forkastes, ikke ske i
+  // det skjulte.
+  const [aiRaw, setAiRaw] = useState<Partial<Record<AiField, string>>>({})
+  // Modtager-kandidater når navnet ikke kunne matches entydigt — vist som
+  // forslag under vælgeren. Et gæt her ville ramme den forkerte person.
+  const [receiverCandidates, setReceiverCandidates] = useState<MatchedEmployee[]>([])
+  // Labelens modtagernavn, sat som starttekst i vælgeren ved uklart match.
+  const [receiverQuery, setReceiverQuery] = useState('')
+  // Nært beslægtet, tidligere brugt afsender — tilbydes, snappes aldrig.
+  const [senderSuggestion, setSenderSuggestion] = useState<string | null>(null)
   const barcodeRef = useRef<HTMLInputElement>(null)
+
+  // Klasser til et felt, hvis AI'en udfyldte det.
+  const aiMark = (field: AiField) => (aiFilled.has(field) ? AI_FIELD_CLASS : undefined)
+
+  // Brugeren har rørt feltet — så er værdien ikke længere AI'ens, og hverken
+  // markering, label-tekst eller forslag hører til feltet mere.
+  const clearAiMark = (field: AiField) => {
+    setAiFilled((s) => {
+      if (!s.has(field)) return s
+      const next = new Set(s)
+      next.delete(field)
+      return next
+    })
+    setAiRaw((r) => (field in r ? { ...r, [field]: undefined } : r))
+    if (field === 'receiver') setReceiverCandidates([])
+    if (field === 'sender') setSenderSuggestion(null)
+  }
 
   // Punkt 3 i notifikationskravet: kan den valgte modtager slet ikke nås på
   // nogen af de aktiverede kanaler, meldes det ved modtagelsen — samme
@@ -269,66 +314,187 @@ export function ParcelReceiveForm({
     if (employee?.department_id) setDepartmentId(employee.department_id)
   }
 
-  // Udfyld formularen fra AI-læste label-felter (AiLabelScan). Modtageren
-  // matches server-side mod medarbejderlisten — kun ét entydigt match må vælge
-  // modtager; et gæt blandt flere kandidater ville sende pakken (og beskeden)
-  // til en forkert.
+  // Modtagervalg fra brugeren selv (AI-læsningen kalder pickReceiver direkte):
+  // fjerner AI-markeringen på både modtager og den afdeling, valget følger med.
+  const pickReceiverManually = (employee: PickedEmployee | null) => {
+    pickReceiver(employee)
+    clearAiMark('receiver')
+    if (employee?.department_id) clearAiMark('department')
+  }
+
+  // Udfyld formularen fra AI-læste label-felter (AiLabelScan).
+  //
+  // Navnene fra labelen fortolkes mod virksomhedens egne data i RPC'en
+  // ai_match_label_fields (dansk foldning + fuzzy-lighed), så "AAse
+  // Østergård"/"Åse Ostergård"/"Åse Østegård" alle finder Åse Østergård, og
+  // "PostNorb" finder PostNord. Serveren afgør hvad der er ET ENTYDIGT match
+  // (auto) og hvad der kun er forslag: et gæt blandt flere kandidater ville
+  // sende både pakken og ankomstbeskeden til den forkerte person.
+  //
+  // Kan kunden ikke lide fortolkningen, slås den fra pr. virksomhed
+  // (match_enabled) — så gælder den gamle regel: kun eksakte/entydige match.
   const applyAiFields = async (f: AiLabelFields) => {
+    // Felterne denne læsning sætter. Erstatter markeringen fra en tidligere
+    // læsning: står et felt tilbage fra sidste gang, uden at denne læsning
+    // satte det, er markeringen ikke længere sand.
+    const marks = new Set<AiField>()
+    const raw: Partial<Record<AiField, string>> = {}
     // Tælles undervejs: beskeden til sidst skal afspejle, hvad der FAKTISK
     // blev sat i formularen — også et transportør-match alene. Ellers meldes
     // "intet aflæst", mens fx transportør-feltet netop har skiftet værdi.
     let applied = false
-    if (f.sender_name?.trim()) {
-      setSender(f.sender_name.trim())
+
+    const matching = aiCfg?.match_enabled !== false
+    const matchResult = matching
+      ? await matchLabelFields(companyId, {
+          receiver: f.receiver_name,
+          carrier: f.carrier,
+          sender: f.sender_name,
+        })
+      : {}
+    // null = selve opslaget fejlede (ikke "intet match") → de gamle eksakte
+    // regler tager over, så en forbigående RPC-fejl ikke slår al udfyldning
+    // fra og melder falsk "modtageren findes ikke".
+    const match = matchResult ?? {}
+    const useMatch = matching && matchResult !== null
+
+    // ---- afsender: aldrig automatisk rettet ---------------------------------
+    // Afsender er fri tekst uden stamdata. At "rette" en ny afsender til en
+    // gammel ville stille slå to virksomheder sammen i statistikken — så
+    // labelens tekst vinder, og et nært forslag tilbydes i stedet.
+    //
+    // Ryd ALTID det gamle forslag først: en ny læsning uden læsbar afsender må
+    // ikke efterlade forrige labels forslag-knap, klar til at stemple den
+    // forkerte afsender på denne pakke.
+    setSenderSuggestion(null)
+    const senderName = f.sender_name?.trim()
+    if (senderName) {
+      setSender(senderName)
+      marks.add('sender')
       applied = true
+      setSenderSuggestion(match.sender?.candidates?.[0]?.name ?? null)
     }
+
+    // ---- fragtfirma ---------------------------------------------------------
     const carrierName = f.carrier?.trim()
     if (carrierName && master) {
-      const match = master.carriers.find(
-        (c) =>
-          c.name.toLowerCase().includes(carrierName.toLowerCase()) ||
-          carrierName.toLowerCase().includes(c.name.toLowerCase()),
-      )
-      if (match) {
-        setCarrierId(match.id)
+      const matched = match.carrier?.auto ? match.carrier.candidates[0] : null
+      // Uden fortolkningslag (fravalgt eller fejlet): den gamle delstreng-
+      // regel, så adfærden er uændret for kunder der har slået matchning fra.
+      const fallback = useMatch
+        ? null
+        : master.carriers.find(
+            (c) =>
+              c.name.toLowerCase().includes(carrierName.toLowerCase()) ||
+              carrierName.toLowerCase().includes(c.name.toLowerCase()),
+          )
+      const pick = matched ?? fallback
+      if (pick) {
+        setCarrierId(pick.id)
+        marks.add('carrier')
+        if (isCorrection(carrierName, pick.name)) raw.carrier = carrierName
         applied = true
       }
     }
+
+    // ---- stregkode: ALDRIG fuzzy ------------------------------------------
+    // Sporingsnummeret er pakkens identitet; et "rettet" ciffer gør pakken
+    // uopsporlig. Kun den strukturelle oprydning normalizeScan står for.
     const code = normalizeScan(f.tracking_number ?? '')
     if (code) {
       setBarcode(code)
       void checkDuplicate(code)
+      marks.add('barcode')
       applied = true
     }
+
+    // ---- modtager -----------------------------------------------------------
     let receiverUnmatched: string | null = null
+    let receiverAmbiguous: string | null = null
     const receiverName = f.receiver_name?.trim()
+    setReceiverCandidates([])
+    setReceiverQuery('')
     if (receiverName) {
-      const { data } = await supabase
-        .from('employees')
-        .select('id, full_name, initials, email, phone, department_id, department:departments (name)')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        // LIKE-jokertegn i OCR-støj (%, _) skal matche som tegn, ikke jokere —
-        // et "entydigt" jokermatch kunne ellers vælge en forkert modtager.
-        .ilike('full_name', `%${receiverName.replace(/[\\%_]/g, '\\$&')}%`)
-        .limit(2)
-      if (data?.length === 1) {
-        const e = data[0]
-        pickReceiver({
-          id: e.id,
-          full_name: e.full_name,
-          initials: e.initials,
-          email: e.email,
-          phone: e.phone,
-          department_id: e.department_id,
-          department_name: e.department?.name ?? null,
-        })
+      let picked: PickedEmployee | null = null
+      if (useMatch) {
+        const r = match.receiver
+        if (r?.auto && r.candidates[0]) {
+          const c = r.candidates[0]
+          picked = {
+            id: c.id,
+            full_name: c.full_name,
+            initials: c.initials,
+            email: c.email,
+            phone: c.phone,
+            department_id: c.department_id,
+            department_name: c.department_name,
+          }
+        } else if (r?.candidates?.length) {
+          // Flere mulige — labelens navn bliver stående i feltet, og
+          // kandidaterne vises som forslag under det.
+          setReceiverCandidates(r.candidates)
+          setReceiverQuery(receiverName)
+          receiverAmbiguous = receiverName
+        } else {
+          setReceiverQuery(receiverName)
+          receiverUnmatched = receiverName
+        }
+      } else {
+        // Uden fortolkningslag: eksakt/entydigt delstrengs-opslag som før.
+        const { data } = await supabase
+          .from('employees')
+          .select(
+            'id, full_name, initials, email, phone, department_id, department:departments (name)',
+          )
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          // LIKE-jokertegn i OCR-støj (%, _) skal matche som tegn, ikke jokere —
+          // et "entydigt" jokermatch kunne ellers vælge en forkert modtager.
+          .ilike('full_name', `%${receiverName.replace(/[\\%_]/g, '\\$&')}%`)
+          .limit(2)
+        if (data?.length === 1) {
+          const e = data[0]
+          picked = {
+            id: e.id,
+            full_name: e.full_name,
+            initials: e.initials,
+            email: e.email,
+            phone: e.phone,
+            department_id: e.department_id,
+            department_name: e.department?.name ?? null,
+          }
+        } else {
+          setReceiverQuery(receiverName)
+          receiverUnmatched = receiverName
+        }
+      }
+      if (picked) {
+        pickReceiver(picked)
+        marks.add('receiver')
+        if (isCorrection(receiverName, picked.full_name)) raw.receiver = receiverName
+        // pickReceiver auto-udfylder afdelingen fra medarbejderen — så er også
+        // dét felt udfyldt af aflæsningen og ikke af brugeren.
+        if (picked.department_id) marks.add('department')
         applied = true
       } else {
-        receiverUnmatched = receiverName
+        // Labelen NÆVNER en modtager, men den kunne ikke afgøres entydigt: en
+        // tidligere valgt modtager må ikke blive stående i feltet. Den ville
+        // både skjule kandidat-forslagene (de vises kun uden valgt modtager)
+        // og — værre — sende pakken og ankomstbeskeden til den forkerte, hvis
+        // der gemmes i tillid til toasten.
+        setReceiver(null)
       }
     }
-    if (receiverUnmatched) {
+
+    setAiFilled(marks)
+    setAiRaw(raw)
+    // Vælgeren har intern skrivetilstand: den skal remountes for at vise
+    // labelens navn (eller blive tømt), når aflæsningen ændrer den.
+    setFormKey((k) => k + 1)
+
+    if (receiverAmbiguous) {
+      toast.info(t('receive.aiReceiverAmbiguous', { name: receiverAmbiguous }))
+    } else if (receiverUnmatched) {
       toast.info(t('receive.aiReceiverUnmatched', { name: receiverUnmatched }))
     } else if (!applied) {
       toast.info(t('receive.aiNoFields'))
@@ -400,6 +566,7 @@ export function ParcelReceiveForm({
       return
     }
     setBarcode(code)
+    clearAiMark('barcode')
     void checkDuplicate(code)
   }
 
@@ -431,6 +598,7 @@ export function ParcelReceiveForm({
         return
       }
       setBarcode(code)
+      clearAiMark('barcode')
       checkDuplicate(code)
     },
   })
@@ -446,6 +614,7 @@ export function ParcelReceiveForm({
       })
       if (error) throw error
       setBarcode(data)
+      clearAiMark('barcode')
       setDuplicate(false)
       barcodeRef.current?.focus()
     } catch (error) {
@@ -483,9 +652,41 @@ export function ParcelReceiveForm({
     setLocationId(NONE)
     setNote('')
     setPhoto(null)
+    setAiFilled(new Set())
+    setAiRaw({})
+    setReceiverCandidates([])
+    setReceiverQuery('')
+    setSenderSuggestion(null)
     setFormKey((k) => k + 1)
     barcodeRef.current?.focus()
   }
+
+  // "Start forfra" — fx når AI'en læste den forkerte label, eller pakken viser
+  // sig at høre til en anden modtager. reset() alene rydder kun selve
+  // formularen: batch-listen og de ventende bekræftelser skal med, ellers står
+  // scannede koder tilbage og bliver gemt sammen med næste pakke.
+  const clearForm = () => {
+    setBatchItems([])
+    setBatchDupes(new Set())
+    setPendingUrls([])
+    setPendingDups([])
+    reset()
+  }
+
+  // Er der overhovedet noget at rydde? Knappen må ikke invitere til et klik,
+  // der intet gør. (Håndtering/placering tæller med — de er sat af brugeren,
+  // selv om AI-læsningen ikke rører dem.)
+  const hasInput =
+    !!barcode.trim() ||
+    !!receiver ||
+    !!sender.trim() ||
+    departmentId !== NONE ||
+    carrierId !== NONE ||
+    handlingId !== NONE ||
+    locationId !== NONE ||
+    !!note.trim() ||
+    !!photo ||
+    batchItems.length > 0
 
   // Uden matchet modtager bliver pakken 'unassigned' (DB-guarden). Det er en
   // gyldig, bevidst tilstand (spec Flow 1), men må ikke ske ved et uheld — så
@@ -667,7 +868,11 @@ export function ParcelReceiveForm({
           autoFocus
           autoComplete="off"
           placeholder={t('receive.barcodePlaceholder')}
-          onChange={(e) => setBarcode(e.target.value)}
+          className={aiMark('barcode')}
+          onChange={(e) => {
+            setBarcode(e.target.value)
+            clearAiMark('barcode')
+          }}
           onBlur={() => checkDuplicate(barcode)}
           onKeyDown={(e) => {
             // Scannere sender Enter — det må ikke gemme en halv formular.
@@ -715,6 +920,16 @@ export function ParcelReceiveForm({
           </div>
         )}
       </div>
+
+      {/* Forklaring på de lilla kanter — ellers er markeringen bare en farve.
+          Uden for batch-blokken ovenfor, så den ikke forsvinder hvis der
+          skiftes til batch-tilstand med markerede felter stående. */}
+      {aiFilled.size > 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-ai-filled">
+          <Sparkles className="size-3.5 shrink-0" />
+          {t('receive.aiFilledHint')}
+        </p>
+      )}
 
       {batchMode && (
         <div className="flex flex-col gap-2">
@@ -781,8 +996,45 @@ export function ParcelReceiveForm({
           key={formKey}
           companyId={companyId}
           value={receiver}
-          onChange={pickReceiver}
+          onChange={pickReceiverManually}
+          className={aiMark('receiver')}
+          initialQuery={receiverQuery}
         />
+        <AiRawHint raw={aiRaw.receiver} />
+        {/* Uklart match: labelens navn står i feltet, og de mulige
+            medarbejdere tilbydes her. Systemet vælger ikke selv — en forkert
+            modtager sender både pakken og ankomstbeskeden til den forkerte. */}
+        {!receiver && receiverCandidates.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">{t('receive.aiDidYouMean')}</span>
+            {receiverCandidates.map((c) => (
+              <Button
+                key={c.id}
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 border-ai-filled/60 text-xs"
+                onClick={() => {
+                  pickReceiver({
+                    id: c.id,
+                    full_name: c.full_name,
+                    initials: c.initials,
+                    email: c.email,
+                    phone: c.phone,
+                    department_id: c.department_id,
+                    department_name: c.department_name,
+                  })
+                  setReceiverCandidates([])
+                }}
+              >
+                {c.full_name}
+                {c.department_name && (
+                  <span className="text-muted-foreground">{c.department_name}</span>
+                )}
+              </Button>
+            ))}
+          </div>
+        )}
         {receiverUnreachable && (
           <p className="text-xs text-status-neutral-to-bad">
             {t('receive.noContactWarning')}
@@ -795,8 +1047,14 @@ export function ParcelReceiveForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label>{t('receive.department')}</Label>
-          <Select value={departmentId} onValueChange={setDepartmentId}>
-            <SelectTrigger className="w-full">
+          <Select
+            value={departmentId}
+            onValueChange={(v) => {
+              setDepartmentId(v)
+              clearAiMark('department')
+            }}
+          >
+            <SelectTrigger className={cn('w-full', aiMark('department'))}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -816,14 +1074,40 @@ export function ParcelReceiveForm({
           <SenderCombobox
             id="sender"
             value={sender}
-            onChange={setSender}
+            onChange={(v) => {
+              setSender(v)
+              clearAiMark('sender')
+            }}
             suggestions={senders ?? []}
+            className={aiMark('sender')}
           />
+          {/* Afsender rettes aldrig automatisk — en ny afsender må ikke stille
+              smelte sammen med en gammel. Nært beslægtet navn tilbydes her. */}
+          {senderSuggestion && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 w-fit border-ai-filled/60 text-xs"
+              onClick={() => {
+                setSender(senderSuggestion)
+                setSenderSuggestion(null)
+              }}
+            >
+              {t('receive.aiUseSender', { name: senderSuggestion })}
+            </Button>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <Label>{t('receive.carrier')}</Label>
-          <Select value={carrierId} onValueChange={setCarrierId}>
-            <SelectTrigger className="w-full">
+          <Select
+            value={carrierId}
+            onValueChange={(v) => {
+              setCarrierId(v)
+              clearAiMark('carrier')
+            }}
+          >
+            <SelectTrigger className={cn('w-full', aiMark('carrier'))}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -835,6 +1119,7 @@ export function ParcelReceiveForm({
               ))}
             </SelectContent>
           </Select>
+          <AiRawHint raw={aiRaw.carrier} />
         </div>
         <div className="flex flex-col gap-2">
           <Label>{t('receive.handling')}</Label>
@@ -885,7 +1170,17 @@ export function ParcelReceiveForm({
           rows={2}
         />
       </div>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-muted-foreground hover:text-foreground"
+          disabled={saving || !hasInput}
+          onClick={clearForm}
+        >
+          <Eraser className="size-3.5" />
+          {t('receive.clearForm')}
+        </Button>
         {batchMode ? (
           <Button type="submit" disabled={saving || !receiver || batchItems.length === 0}>
             {saving ? t('common.loading') : t('receive.finishBatch', { count: batchItems.length })}
@@ -959,6 +1254,17 @@ export function ParcelReceiveForm({
       </DialogContent>
     </Dialog>
     </>
+  )
+}
+
+// Hvad der stod på labelen, når fortolkningslaget rettede det til noget andet.
+// En rettelse må aldrig være usynlig: den der gemmer pakken skal kunne se, at
+// "PostNorb" blev til PostNord, og forkaste det hvis labelen havde ret.
+function AiRawHint({ raw }: { raw?: string }) {
+  const { t } = useTranslation()
+  if (!raw) return null
+  return (
+    <p className="text-xs text-muted-foreground">{t('receive.aiRawLabel', { text: raw })}</p>
   )
 }
 

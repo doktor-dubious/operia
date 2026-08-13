@@ -69,6 +69,7 @@ const CATEGORIES = [
   'branding',
   'maps',
   'imports',
+  'ai',
   'log',
   'other',
 ] as const
@@ -262,13 +263,38 @@ function categoryOf(action: string): string {
     case 'log_drain':
     case 'retention':
       return 'log'
+    // AI-hændelser står for sig: det er dem en GDPR-gennemgang skal kunne
+    // trække ud alene (aflæsninger, opsætning, kundens bekræftelse).
+    case 'ai':
+      return 'ai'
     default:
       return 'other'
   }
 }
 
+// Udfald for en AI-aflæsning: systemet afviste med vilje (advarsel) vs. noget
+// gik teknisk galt (fejl). Spejler public.audit_level.
+const AI_READ_BLOCKED = new Set([
+  'integration_disabled',
+  'not_configured',
+  'not_allowed',
+  'not_accepted',
+  'model_no_vision',
+  'forbidden',
+  'refused',
+  'image_too_large',
+  'unsupported_media_type',
+  'rate_limited',
+])
+
 function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
   const a = r.action
+  if (a === 'ai.label_read') {
+    const outcome = String((r.detail as Record<string, unknown> | null)?.outcome ?? '')
+    if (outcome === 'ok') return 'success'
+    return AI_READ_BLOCKED.has(outcome) ? 'warning' : 'error'
+  }
+  if (a === 'ai.disclosure_withdrawn') return 'warning'
   // '*_failed'/'*_bounced' = teknisk fejl (import.failed, asset.reminder_bounced,
   // …). Spejler public.audit_level.
   // 'parcel.removed' = en registrering trukket tilbage: fejl-niveau, i modsætning
@@ -314,6 +340,19 @@ function message(r: LogRow, t: TFn) {
       table: (d.table as string) ?? '—',
       days: String(d.retention_days ?? '—'),
     })
+  }
+  // AI-label-aflæsning: metadataen ER hele posten (indholdet må aldrig logges),
+  // så den vises som én linje frem for at ligge gemt i detaljeruden.
+  if (r.action === 'ai.label_read') {
+    return [
+      d.model,
+      d.outcome,
+      d.source,
+      d.fields_found != null ? t('logsPage.msg.aiFields', { count: Number(d.fields_found) }) : '',
+      d.duration_ms != null ? `${(Number(d.duration_ms) / 1000).toFixed(1)} s` : '',
+    ]
+      .filter(Boolean)
+      .join('   ·   ')
   }
   // Fejlet login / nulstillings-anmodning på en email uden konto: markér
   // eksplicit som ukendt konto — der er ingen aktør/virksomhed at vise.

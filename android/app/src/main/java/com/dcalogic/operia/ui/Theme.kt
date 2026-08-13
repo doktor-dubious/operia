@@ -76,6 +76,10 @@ object C {
     val red = Color(0xFFEF4444)
     val greenInk = Color(0xFF04210F)
     val placeholder = Color(0xFF5B6B8A)
+    // Kant om felter udfyldt af AI-label-læsningen. Lilla — bevidst uden for
+    // statusfarverne, så markeringen ikke læses som en advarsel eller en fejl.
+    // Samme rolle som webbens --ai-filled.
+    val ai = Color(0xFF9F80DC)
 }
 
 /** Brandfarve fra product_appearance ("#RRGGBB") med sikkert fallback. */

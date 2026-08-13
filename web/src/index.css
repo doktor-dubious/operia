@@ -60,6 +60,8 @@
     --color-status-bad: var(--status-bad);
     /* Switch/toggle tændt-farve — Supabase-brandgrøn (#3ecf8e) */
     --color-switch-on: var(--switch-on);
+    /* Markering af AI-udfyldte felter (label-læsning) */
+    --color-ai-filled: var(--ai-filled);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
@@ -114,6 +116,10 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
     --table-row-hover: oklch(0.16 0.0022 159 / 4.4%);
+    /* AI-udfyldte felter markeres med en kant i diagrampalettens lilla — den
+       hører ikke til statuspaletten, så markeringen kan ikke forveksles med en
+       advarsel (orange/rød) eller et fejlfelt (destructive). */
+    --ai-filled: #6b4fa7;
     --status-good: #25693e;
     --status-good-to-neutral: #49844c;
     --status-neutral: #d9bb70;
@@ -161,6 +167,7 @@
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
     --table-row-hover: oklch(0.95 0.00275 159 / 5%);
+    --ai-filled: #977ad0; /* lysere step, så kanten ses mod #131413 */
     --status-good: #25693e;
     --status-good-to-neutral: #49844c;
     --status-neutral: #d9bb70;

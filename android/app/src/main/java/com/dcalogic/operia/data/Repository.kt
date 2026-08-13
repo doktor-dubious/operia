@@ -683,35 +683,76 @@ object Repository {
         "claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5", "claude-fable-5",
         "gemini-3.6-flash", "gemini-3.5-flash",
         "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview",
+        "mistral-ocr-latest",
     )
 
     /**
-     * Er AI-label-scanning tilgængelig for virksomheden? Kræver platformens
-     * hovedafbryder, at kundens valg ligger i platformens udvalg, og at den
-     * valgte model kan læse billeder. Fejler et opslag (offline), er svaret
-     * false — knappen skjules frem for at fejle ved tryk.
+     * Virksomhedens AI-opsætning. Kæden er den samme som serverens: platformens
+     * hovedafbryder → kundens valg inden for udvalget → vision-model → kundens
+     * bekræftelse af oplysningen om hvad der sendes hvorhen (GDPR; edge-
+     * funktionen afviser ellers med 'not_accepted').
+     *
+     * Fejler et opslag (offline), er svaret "ikke tilgængelig" — knappen skjules
+     * frem for at fejle ved tryk — mens fortolkningslaget antages TIL, samme
+     * standard som kolonnen, så en netværksfejl ikke stille slår hjælpen fra.
      */
-    suspend fun aiLabelAvailable(companyId: String): Boolean {
+    suspend fun aiLabelSetup(companyId: String): AiSetup {
+        val off = AiSetup(available = false, matchEnabled = true, provider = null)
         val platform = runCatching {
             supabase.from("platform_settings")
                 .select(Columns.list("ai_enabled", "ai_providers", "ai_models")) { limit(1) }
                 .decodeList<PlatformAiRow>().firstOrNull()
-        }.getOrNull() ?: return false
-        if (platform.ai_enabled != true) return false
+        }.getOrNull() ?: return off
         val cfg = runCatching {
             supabase.from("company_ai_config")
-                .select(Columns.list("provider", "model")) {
+                .select(
+                    Columns.list("provider", "model", "match_enabled", "disclosure_accepted"),
+                ) {
                     filter { eq("company_id", companyId) }
                     limit(1)
                 }
                 .decodeList<CompanyAiRow>().firstOrNull()
-        }.getOrNull() ?: return false
-        val provider = cfg.provider ?: return false
-        val model = cfg.model ?: return false
-        return model in AI_VISION_MODELS &&
+        }.getOrNull() ?: return off
+        val provider = cfg.provider
+        val model = cfg.model
+        val available = platform.ai_enabled == true &&
+            provider != null &&
+            model != null &&
+            model in AI_VISION_MODELS &&
             provider in platform.ai_providers.orEmpty() &&
-            model in platform.ai_models.orEmpty()
+            model in platform.ai_models.orEmpty() &&
+            cfg.disclosure_accepted
+        return AiSetup(available = available, matchEnabled = cfg.match_enabled, provider = provider)
     }
+
+    /**
+     * Fortolk de AI-aflæste navne mod virksomhedens egne data: dansk foldning
+     * (æ/ø/å) + fuzzy-lighed, så "AAse Østergård" og "Åse Ostergård" finder
+     * Åse Østergård, og "PostNorb" finder PostNord.
+     *
+     * Reglerne ligger i databasen (RPC ai_match_label_fields), IKKE her —
+     * webben og terminalen skal træffe præcis samme valg. Fejler kaldet,
+     * returneres null — IKKE et tomt resultat: et tomt resultat betyder "intet
+     * match, udfyld ikke", mens en fejl betyder "fald tilbage til de gamle
+     * eksakte regler". Blandes de to, slår en forbigående netværksfejl al
+     * auto-udfyldning fra.
+     */
+    suspend fun matchLabelFields(
+        companyId: String,
+        receiver: String?,
+        carrier: String?,
+        sender: String?,
+    ): LabelMatch? = runCatching {
+        supabase.postgrest.rpc(
+            "ai_match_label_fields",
+            buildJsonObject {
+                put("p_company_id", companyId)
+                if (!receiver.isNullOrBlank()) put("p_receiver", receiver.trim())
+                if (!carrier.isNullOrBlank()) put("p_carrier", carrier.trim())
+                if (!sender.isNullOrBlank()) put("p_sender", sender.trim())
+            },
+        ).decodeAs<LabelMatch>()
+    }.getOrNull()
 
     private val aiJson = Json { ignoreUnknownKeys = true }
 
@@ -719,6 +760,9 @@ object Repository {
      * Læs en pakkelabel med kundens valgte AI-model. Selve AI-kaldet sker i
      * edge-funktionen ai-read-label (API-nøglen findes kun på serveren);
      * appen sender blot et nedskaleret JPEG som base64.
+     *
+     * Serveren logger hver aflæsning (ai.label_read) med virksomhed, bruger,
+     * udbyder, model og udfald — "source" fortæller at den kom herfra.
      */
     suspend fun aiReadLabel(jpeg: ByteArray): AiLabelResult {
         val b64 = android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP)
@@ -727,6 +771,7 @@ object Repository {
                 buildJsonObject {
                     put("image", b64)
                     put("mediaType", "image/jpeg")
+                    put("source", "handheld")
                 },
             )
             contentType(ContentType.Application.Json)

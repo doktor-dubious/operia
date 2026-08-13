@@ -43,7 +43,9 @@ import androidx.core.content.ContextCompat
 import com.dcalogic.operia.AppViewModel
 import com.dcalogic.operia.R
 import com.dcalogic.operia.data.AiLabelFields
+import com.dcalogic.operia.data.LabelMatch
 import com.dcalogic.operia.data.LocalStore
+import com.dcalogic.operia.data.MatchedEmployee
 import com.dcalogic.operia.data.Parcel
 import com.dcalogic.operia.data.ParcelInsert
 import com.dcalogic.operia.data.Repository
@@ -73,6 +75,10 @@ private data class ScannedItem(
     // uploades efter gemning; offline droppes det med en henvisning til
     // Tilstand-fanen (fotoet kan ikke hægtes på en pakke, serveren ikke har).
     val photo: ByteArray? = null,
+    // Koden kom fra AI-label-læsningen (OCR), ikke fra en scanning eller
+    // indtastning — markeres i listen, så et fejllæst ciffer kan opdages før
+    // pakken gemmes.
+    val fromAi: Boolean = false,
 )
 
 // Spejler webbens notify-contact-regler (web/src/lib/notify-contact.ts), som
@@ -95,6 +101,22 @@ private fun hasValidMsisdn(phone: String?): Boolean {
 private val URL_LIKE = Regex("""^(https?://|www\.)""", RegexOption.IGNORE_CASE)
 
 /**
+ * Udbyder → den juridiske enhed labelfotoet overføres til, og landet. Bruges til
+ * oplysningslinjen ved scanne-knappen. Spejler AI_PROVIDERS i
+ * web/src/lib/ai.ts — hold dem i sync; en ukendt udbyder giver ingen linje
+ * frem for et gæt om hvor dataen havner.
+ */
+private fun aiVendorLabel(provider: String?): Pair<String, Int>? = when (provider) {
+    "mistral" -> "Mistral AI SAS" to R.string.ai_country_fr
+    "anthropic" -> "Anthropic PBC" to R.string.ai_country_us
+    "google" -> "Google LLC" to R.string.ai_country_us
+    "openai" -> "OpenAI, L.L.C." to R.string.ai_country_us
+    "xai" -> "xAI Corp." to R.string.ai_country_us
+    "deepseek" -> "DeepSeek" to R.string.ai_country_cn
+    else -> null
+}
+
+/**
  * Flow 1 — Modtag pakker: vælg modtager, scan én eller flere pakker, gem.
  * Uden net gemmes modtagelserne lokalt og synkroniseres senere.
  */
@@ -112,6 +134,11 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     var sender by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<ScannedItem>>(emptyList()) }
+    // Felter udfyldt af den seneste AI-label-læsning ("receiver"/"sender"/
+    // "carrier"). Markeres med lilla kant (C.ai), indtil brugeren selv retter
+    // feltet — en aflæsning er et forslag, og den der gemmer pakken skal kunne
+    // se hvad der ikke er tastet af et menneske. Samme markering som på webben.
+    var aiFields by remember { mutableStateOf<Set<String>>(emptySet()) }
     var confirmUnassignedOpen by remember { mutableStateOf(false) }
     // Scan-værn (samme warn-and-allow som webbens modtag-formular): URL-
     // lignende koder bekræftes før brug, og en kode der allerede står som åben
@@ -161,8 +188,10 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     val msgAiDone = stringResource(R.string.receive_ai_done)
     val msgAiNoFields = stringResource(R.string.receive_ai_no_fields)
     val msgAiNoReceiver = stringResource(R.string.receive_ai_no_receiver)
+    val msgAiReceiverAmbiguous = stringResource(R.string.receive_ai_receiver_ambiguous)
     val msgAiFailed = stringResource(R.string.receive_ai_failed)
     val msgAiNotConfigured = stringResource(R.string.receive_ai_not_configured)
+    val msgAiNotAccepted = stringResource(R.string.receive_ai_not_accepted)
     val msgAiNoVision = stringResource(R.string.receive_ai_no_vision)
 
     // Ingen modtager kræves for at scanne — som på webben kan pakker
@@ -174,7 +203,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     // baggrunden; står koden allerede som åben pakke, bekræftes den i en
     // dialog (behold/fjern). Offline fejler opslaget stille — serverens
     // dublet-regler gælder stadig ved synkroniseringen.
-    fun commitScan(code: String) {
+    fun commitScan(code: String, fromAi: Boolean = false) {
         if (items.any { it.barcode == code }) {
             toast.show("info", "$msgAlready: $code")
             return
@@ -185,6 +214,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 departmentId = if (showDept) deptId else null,
                 employeeId = if (showEmp) empId else null,
                 label = currentLabel(),
+                fromAi = fromAi,
             ),
         ) + items
         toast.show("ok", "$msgAdded: $code")
@@ -199,18 +229,19 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
     }
 
-    fun addScan(code: String) {
+    fun addScan(code: String, fromAi: Boolean = false) {
         if (items.any { it.barcode == code }) {
             toast.show("info", "$msgAlready: $code")
             return
         }
         // URL-lignende QR-koder (fx et link på en leverandørlabel) bekræftes
-        // først — samme warn-and-allow som på webben.
+        // først — samme warn-and-allow som på webben. (Bekræftelsen glemmer
+        // AI-markeringen; en aflæst URL som stregkode er en undtagelse.)
         if (URL_LIKE.containsMatchIn(code)) {
             if (code !in pendingUrls) pendingUrls = pendingUrls + code
             return
         }
-        commitScan(code)
+        commitScan(code, fromAi)
     }
 
     // ----- pr.-pakke-tilstandsfoto (samme kamera/galleri-flow som Tilstand) -----
@@ -261,53 +292,157 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     var aiAvailable by remember { mutableStateOf(false) }
     var aiBusy by remember { mutableStateOf(false) }
     var aiPendingUri by remember { mutableStateOf<Uri?>(null) }
+    // Fortolkningslaget (Konfigurér → Integrationer): match de aflæste navne
+    // mod virksomhedens egne data i stedet for at kræve eksakt stavning.
+    var aiMatchOn by remember { mutableStateOf(true) }
+    // Hvem labelfotoet sendes til — vises som én linje ved knappen, så den der
+    // trykker, ved at billedet (med navne, adresser og telefonnumre) forlader
+    // huset. Den fulde oplysning står på Konfigurér → Integrationer, hvor
+    // virksomheden bekræftede den.
+    var aiProvider by remember { mutableStateOf<String?>(null) }
+    // Modtager-kandidater når navnet ikke kunne matches entydigt. Vises som
+    // forslag — appen vælger ikke selv, for en forkert modtager sender både
+    // pakken og ankomstbeskeden til den forkerte person.
+    var receiverCandidates by remember { mutableStateOf<List<MatchedEmployee>>(emptyList()) }
+    // Nært beslægtet, tidligere brugt afsender. Tilbydes, snappes aldrig.
+    var senderSuggestion by remember { mutableStateOf<String?>(null) }
+    // Hvad labelen SAGDE, når fortolkningen rettede det til noget andet.
+    var rawReceiver by remember { mutableStateOf<String?>(null) }
+    var rawCarrier by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(vm.companyId) {
-        aiAvailable = vm.companyId
-            ?.let { runCatching { Repository.aiLabelAvailable(it) }.getOrDefault(false) }
-            ?: false
+        val setup = vm.companyId?.let {
+            runCatching { Repository.aiLabelSetup(it) }.getOrNull()
+        }
+        aiAvailable = setup?.available ?: false
+        aiMatchOn = setup?.matchEnabled ?: true
+        aiProvider = setup?.provider
     }
 
     // Udfyld formularfelterne fra de udtrukne label-felter. Modtager sættes FØR
     // stregkoden tilføjes, så den scannede post snapshotter den rigtige
     // modtager (commitScan læser empId/deptId).
-    fun applyAiFields(f: AiLabelFields) {
+    // Navnene fortolkes mod virksomhedens egne data i RPC'en
+    // ai_match_label_fields (dansk foldning + fuzzy) — samme regler som webben,
+    // fordi de bor i databasen og ikke i klienten. Serveren afgør hvad der er
+    // ET ENTYDIGT match; alt andet er forslag.
+    suspend fun applyAiFields(f: AiLabelFields) {
+        // Felterne DENNE læsning sætter. Erstatter markeringen fra en tidligere
+        // læsning: står et felt tilbage fra sidste gang, uden at denne læsning
+        // satte det, er markeringen ikke længere sand.
+        val marks = mutableSetOf<String>()
         // Tælles undervejs: beskeden til sidst skal afspejle, hvad der FAKTISK
         // blev sat i formularen — også et transportør-match alene. Ellers
         // meldes "intet aflæst", mens transportør-feltet netop skiftede værdi.
         var applied = false
+        receiverCandidates = emptyList()
+        senderSuggestion = null
+        rawReceiver = null
+        rawCarrier = null
+
+        val matchResult = if (aiMatchOn && vm.companyId != null) {
+            Repository.matchLabelFields(
+                vm.companyId!!,
+                f.receiver_name,
+                f.carrier,
+                f.sender_name,
+            )
+        } else {
+            LabelMatch()
+        }
+        // null = selve opslaget fejlede (ikke "intet match") → de gamle eksakte
+        // regler tager over, så en forbigående netværksfejl ikke slår al
+        // auto-udfyldning fra. Spejler webbens modtag-formular.
+        val match = matchResult ?: LabelMatch()
+        val useMatch = aiMatchOn && matchResult != null
+
+        // Afsender: labelens tekst vinder altid. At "rette" en ny afsender til
+        // en gammel ville stille slå to virksomheder sammen i statistikken.
         f.sender_name?.trim()?.takeIf { it.isNotEmpty() }?.let {
             sender = it
+            marks += "sender"
             applied = true
+            senderSuggestion = match.sender?.candidates?.firstOrNull()?.name
         }
+
         f.carrier?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
-            vm.carriers.firstOrNull {
-                it.name.contains(name, ignoreCase = true) || name.contains(it.name, ignoreCase = true)
-            }?.let {
-                carrierId = it.id
+            val matched = match.carrier?.takeIf { it.auto }?.candidates?.firstOrNull()
+            val chosen = if (matched != null) {
+                vm.carriers.firstOrNull { it.id == matched.id }?.id ?: matched.id
+            } else if (!useMatch) {
+                // Uden fortolkningslag: den gamle delstreng-regel, uændret.
+                vm.carriers.firstOrNull {
+                    it.name.contains(name, ignoreCase = true) ||
+                        name.contains(it.name, ignoreCase = true)
+                }?.id
+            } else {
+                null
+            }
+            if (chosen != null) {
+                carrierId = chosen
+                marks += "carrier"
                 applied = true
+                val chosenName = vm.carriers.firstOrNull { it.id == chosen }?.name
+                if (chosenName != null && !chosenName.equals(name, ignoreCase = true)) {
+                    rawCarrier = name
+                }
             }
         }
+
         var unmatchedReceiver: String? = null
+        var ambiguousReceiver: String? = null
         if (showEmp) {
             f.receiver_name?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
-                val matches = vm.employees.filter {
-                    it.full_name.contains(name, ignoreCase = true) ||
-                        name.contains(it.full_name, ignoreCase = true)
+                val picked = if (useMatch) {
+                    val r = match.receiver
+                    when {
+                        r?.auto == true -> r.candidates.firstOrNull()?.id
+                        !r?.candidates.isNullOrEmpty() -> {
+                            receiverCandidates = r!!.candidates
+                            ambiguousReceiver = name
+                            null
+                        }
+                        else -> null
+                    }
+                } else {
+                    // Kun ét entydigt match må vælge modtager — et gæt blandt
+                    // flere kandidater ville sende pakken til en forkert.
+                    val matches = vm.employees.filter {
+                        it.full_name.contains(name, ignoreCase = true) ||
+                            name.contains(it.full_name, ignoreCase = true)
+                    }
+                    if (matches.size == 1) matches.first().id else null
                 }
-                // Kun ét entydigt match må vælge modtager — et gæt blandt flere
-                // kandidater ville sende pakken (og beskeden) til en forkert.
-                if (matches.size == 1) {
-                    empId = matches.first().id
+                if (picked != null) {
+                    empId = picked
+                    marks += "receiver"
                     applied = true
-                } else unmatchedReceiver = name
+                    val pickedName = vm.employees.firstOrNull { it.id == picked }?.full_name
+                    if (pickedName != null && !pickedName.equals(name, ignoreCase = true)) {
+                        rawReceiver = name
+                    }
+                } else {
+                    if (ambiguousReceiver == null) unmatchedReceiver = name
+                    // Labelen NÆVNER en modtager, men den kunne ikke afgøres
+                    // entydigt: en tidligere valgt modtager må ikke blive
+                    // stående — den skjuler kandidat-forslagene (vises kun
+                    // uden valgt modtager) og sender pakke + ankomstbesked til
+                    // den forkerte, hvis der gemmes i tillid til toasten.
+                    empId = null
+                }
             }
         }
+
+        // Sporingsnummeret matches ALDRIG fuzzy: det er pakkens identitet, og
+        // et "rettet" ciffer gør pakken uopsporlig.
         val tracking = f.tracking_number?.trim()?.takeIf { it.isNotEmpty() }
         tracking?.let {
-            addScan(it)
+            addScan(it, fromAi = true)
             applied = true
         }
+        aiFields = marks
         when {
+            ambiguousReceiver != null ->
+                toast.show("info", msgAiReceiverAmbiguous.format(ambiguousReceiver))
             unmatchedReceiver != null -> toast.show("info", msgAiNoReceiver.format(unmatchedReceiver))
             !applied -> toast.show("info", msgAiNoFields)
             else -> toast.show("ok", msgAiDone)
@@ -334,6 +469,9 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     // en rå fejlkode. Ukendte årsager falder tilbage til generisk.
                     val msg = when (result.reason) {
                         "integration_disabled", "not_configured", "not_allowed" -> msgAiNotConfigured
+                        // Virksomheden har ikke (længere) bekræftet oplysningen om
+                        // hvad der sendes hvorhen — kun en manager kan sætte den.
+                        "not_accepted" -> msgAiNotAccepted
                         "model_no_vision" -> msgAiNoVision
                         else -> msgAiFailed
                     }
@@ -410,6 +548,21 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         }
     }
 
+    // Fælles oprydning efter gem/kø. De fire stier (gem/offline-kø × enkelt/
+    // batch) delte fire kopierede blokke, og AI-tilstanden var glemt i dem
+    // alle — så kunne et afsender-forslag eller modtager-kandidater fra pakke 1
+    // stadig vælges og lande på pakke 2.
+    fun clearAfterSave() {
+        items = emptyList()
+        sender = ""
+        note = ""
+        aiFields = emptySet()
+        senderSuggestion = null
+        receiverCandidates = emptyList()
+        rawReceiver = null
+        rawCarrier = null
+    }
+
     fun doSave() {
         confirmUnassignedOpen = false
         val rows = rowsFor(null)
@@ -422,9 +575,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 val inserted = Repository.insertParcels(rows)
                 lastCount = rows.size
                 toast.show("ok", msgSaved.format(rows.size))
-                items = emptyList()
-                sender = ""
-                note = ""
+                clearAfterSave()
                 uploadPhotos(inserted, photos)
             } catch (e: RestException) {
                 toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
@@ -437,9 +588,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 vm.refreshPending()
                 lastCount = rows.size
                 toast.show("info", msgQueued.format(rows.size))
-                items = emptyList()
-                sender = ""
-                note = ""
+                clearAfterSave()
                 // Fotos kan ikke hægtes på pakker serveren ikke har endnu —
                 // de droppes med en henvisning til Tilstand-fanen efter synk.
                 if (photos.isNotEmpty()) toast.show("info", msgPhotoOffline.format(photos.size))
@@ -473,9 +622,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 val inserted = Repository.insertParcels(rows)
                 lastCount = rows.size
                 toast.show("ok", msgBatchSaved.format(rows.size, batch.batch_code))
-                items = emptyList()
-                sender = ""
-                note = ""
+                clearAfterSave()
                 uploadPhotos(inserted, photos)
             } catch (e: RestException) {
                 toast.show("err", "$msgSaveFailed: ${e.message ?: ""}")
@@ -488,9 +635,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 vm.refreshPending()
                 lastCount = rows.size
                 toast.show("info", msgBatchOffline.format(rows.size))
-                items = emptyList()
-                sender = ""
-                note = ""
+                clearAfterSave()
                 // Fotos kan ikke hægtes på pakker serveren ikke har endnu.
                 if (photos.isNotEmpty()) toast.show("info", msgPhotoOffline.format(photos.size))
             }
@@ -579,8 +724,48 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     it.id to (it.full_name + (it.initials?.let { i -> " ($i)" } ?: ""))
                 },
                 selectedId = empId,
-                onSelect = { empId = it; focusStamp = System.currentTimeMillis() },
+                onSelect = {
+                    empId = it
+                    aiFields = aiFields - "receiver"
+                    receiverCandidates = emptyList()
+                    rawReceiver = null
+                    focusStamp = System.currentTimeMillis()
+                },
+                aiFilled = "receiver" in aiFields,
             )
+            AiRawHint(rawReceiver)
+            // Uklart match: de mulige medarbejdere tilbydes her. Appen vælger
+            // ikke selv — et gæt ville ramme den forkerte person.
+            if (empId == null && receiverCandidates.isNotEmpty()) {
+                AiSuggestionRow(
+                    label = stringResource(R.string.receive_ai_did_you_mean),
+                    options = receiverCandidates.map { c ->
+                        c.id to (c.full_name + (c.department_name?.let { " · $it" } ?: ""))
+                    },
+                    onPick = { id ->
+                        empId = id
+                        // AI-læsningen har allerede lagt sporingsnummeret i
+                        // listen med modtager-snapshot null (den kom før valget
+                        // her). I multidept gemmes posten med sit snapshot —
+                        // uden backfill ville pakken registreres uden den
+                        // modtager, der står valgt på skærmen, og
+                        // ankomstbeskeden aldrig blive sendt.
+                        val label = listOfNotNull(
+                            if (showDept) deptName(deptId) else null,
+                            empName(id),
+                        ).joinToString(" · ")
+                        items = items.map {
+                            if (it.fromAi && it.employeeId == null) {
+                                it.copy(employeeId = id, label = label)
+                            } else {
+                                it
+                            }
+                        }
+                        receiverCandidates = emptyList()
+                        focusStamp = System.currentTimeMillis()
+                    },
+                )
+            }
             // Ville ankomstbeskeden blive sendt, men modtageren kan ikke nås på
             // nogen aktiveret kanal (mangler gyldig e-mail/mobil)? Meldes her
             // ved modtagelsen — pakken kan stadig registreres.
@@ -630,13 +815,27 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
         FoldSection(
             title = stringResource(R.string.sender),
             summary = sender.trim().ifBlank { null },
+            aiFilled = "sender" in aiFields,
         ) { collapse ->
+            // Afsender rettes aldrig automatisk; et nært beslægtet, tidligere
+            // brugt navn tilbydes i stedet.
+            senderSuggestion?.let { suggestion ->
+                AiSuggestionRow(
+                    label = stringResource(R.string.receive_ai_did_you_mean),
+                    options = listOf(suggestion to suggestion),
+                    onPick = {
+                        sender = suggestion
+                        senderSuggestion = null
+                        collapse()
+                    },
+                )
+            }
             OutlinedTextField(
                 value = sender,
-                onValueChange = { sender = it },
+                onValueChange = { sender = it; aiFields = aiFields - "sender"; senderSuggestion = null },
                 placeholder = { Text(stringResource(R.string.receive_sender_placeholder)) },
                 singleLine = true,
-                colors = operiaFieldColors(),
+                colors = operiaFieldColors(aiFilled = "sender" in aiFields),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -661,7 +860,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                                 .padding(end = 6.dp)
                                 .border(1.dp, C.line, RoundedCornerShape(999.dp))
                                 .background(C.panel, RoundedCornerShape(999.dp))
-                                .clickable { sender = s; focusStamp = System.currentTimeMillis(); collapse() }
+                                .clickable {
+                                    sender = s
+                                    aiFields = aiFields - "sender"
+                                    focusStamp = System.currentTimeMillis()
+                                    collapse()
+                                }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
@@ -672,15 +876,23 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             FoldSection(
                 title = stringResource(R.string.carrier),
                 summary = vm.carriers.firstOrNull { it.id == carrierId }?.name,
+                aiFilled = "carrier" in aiFields,
             ) { collapse ->
                 LookupPicker(
                     title = stringResource(R.string.carrier),
                     items = vm.carriers.map { it.id to it.name },
                     selectedId = carrierId,
-                    onSelect = { carrierId = it; focusStamp = System.currentTimeMillis(); collapse() },
+                    onSelect = {
+                        carrierId = it
+                        aiFields = aiFields - "carrier"
+                        rawCarrier = null
+                        focusStamp = System.currentTimeMillis()
+                        collapse()
+                    },
                     embedded = true,
                 )
             }
+            AiRawHint(rawCarrier)
         }
         if (vm.handlingClasses.isNotEmpty()) {
             FoldSection(
@@ -732,9 +944,36 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     modifier = Modifier.weight(1f),
                 ) { if (!aiBusy) pickLabelImage.launch("image/*") }
             }
+            // Oplysning i én linje: hvem fotoet sendes til, og at det indeholder
+            // personoplysninger (GDPR). Står ved knappen, ikke gemt i en menu.
+            aiVendorLabel(aiProvider)?.let { (vendor, countryRes) ->
+                Text(
+                    stringResource(
+                        R.string.receive_ai_disclosure,
+                        vendor,
+                        stringResource(countryRes),
+                    ),
+                    color = C.muted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                )
+            }
+            // Forklaring på de lilla kanter — ellers er markeringen bare en farve.
+            if (aiFields.isNotEmpty() || items.any { it.fromAi }) {
+                Text(
+                    stringResource(R.string.receive_ai_filled_hint),
+                    color = C.ai,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                )
+            }
         }
 
-        ScanBox(label = stringResource(R.string.receive_scan_label), onScan = ::addScan, focusStamp = focusStamp)
+        ScanBox(
+            label = stringResource(R.string.receive_scan_label),
+            onScan = { code -> addScan(code) },
+            focusStamp = focusStamp,
+        )
 
         Row(
             Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
@@ -764,7 +1003,12 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = 6.dp)
-                    .border(1.dp, C.line, RoundedCornerShape(12.dp))
+                    // Lilla kant = koden er AI-aflæst (OCR), ikke scannet.
+                    .border(
+                        if (item.fromAi) 1.5.dp else 1.dp,
+                        if (item.fromAi) C.ai else C.line,
+                        RoundedCornerShape(12.dp),
+                    )
                     .background(C.panel, RoundedCornerShape(12.dp))
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -948,6 +1192,58 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
                     ) { photoTarget = null }
                 }
             }
+        }
+    }
+}
+
+/** Hvad labelen sagde, når fortolkningslaget rettede det til noget andet. En
+ *  rettelse må ikke være usynlig: den der gemmer pakken skal kunne se den. */
+@Composable
+private fun AiRawHint(raw: String?) {
+    if (raw.isNullOrBlank()) return
+    Text(
+        stringResource(R.string.receive_ai_raw_label, raw),
+        color = C.muted,
+        fontSize = 12.sp,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+    )
+}
+
+/** Forslag fra fortolkningslaget (modtager-kandidater, afsender): tryk vælger.
+ *  Lilla kant som de øvrige AI-markeringer — det er stadig et forslag, ikke et
+ *  valg systemet har truffet. */
+@Composable
+private fun AiSuggestionRow(
+    label: String,
+    options: List<Pair<String, String>>,
+    onPick: (String) -> Unit,
+) {
+    if (options.isEmpty()) return
+    Text(
+        label,
+        color = C.ai,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 4.dp),
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .horizontalScroll(rememberScrollState()),
+    ) {
+        options.forEach { (id, text) ->
+            Text(
+                text,
+                color = C.txt,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .padding(end = 6.dp)
+                    .border(1.dp, C.ai, RoundedCornerShape(999.dp))
+                    .background(C.panel, RoundedCornerShape(999.dp))
+                    .clickable { onPick(id) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
         }
     }
 }

@@ -15,11 +15,14 @@ export function SenderCombobox({
   value,
   onChange,
   suggestions,
+  className,
 }: {
   id?: string
   value: string
   onChange: (value: string) => void
   suggestions: string[]
+  // Ekstra klasser på selve inputtet (fx AI-markeringen på modtag-formularen).
+  className?: string
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -88,7 +91,7 @@ export function SenderCombobox({
         role="combobox"
         aria-expanded={open}
         placeholder={t('receive.senderPlaceholder')}
-        className="pr-8"
+        className={cn('pr-8', className)}
         onChange={(e) => {
           onChange(e.target.value)
           show(suggestions.length > 0)

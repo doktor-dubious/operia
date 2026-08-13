@@ -1,18 +1,33 @@
 // Fælles katalog for AI-integrationen (Operia → Integrationer og Konfigurér →
-// Integrationer). Nøglerne skal matche check-constraints i migrationen
-// 20260806163530_ai_integration.sql og kataloget i edge-funktionen
-// ai-read-label — en værdi der kun findes her, afvises af databasen/serveren.
+// Integrationer). Nøglerne skal matche check-constraints i migrationerne
+// 20260806163530_ai_integration.sql → 20260812150000_ai_mistral_ocr.sql og
+// kataloget i edge-funktionen ai-read-label — en værdi der kun findes her,
+// afvises af databasen/serveren.
 //
 // `vision` angiver om modellen kan læse billeder. Label-scanning kræver vision;
 // modeller uden vision kan stadig vælges til fremtidige tekst-funktioner, men
 // UI'et markerer at label-scanning ikke virker med dem.
 
-export type AiProviderKey = 'anthropic' | 'openai' | 'xai' | 'deepseek' | 'google'
+export type AiProviderKey = 'mistral' | 'anthropic' | 'openai' | 'xai' | 'deepseek' | 'google'
 
 export type AiProvider = {
   key: AiProviderKey
   /** Udbydernavne er egennavne — ens på alle sprog, derfor ingen i18n-nøgle. */
   label: string
+  /**
+   * Den juridiske enhed labelfotoet overføres TIL, og hvor den ligger. Bruges i
+   * oplysningsteksten på Konfigurér → Integrationer: kunden er dataansvarlig og
+   * skal kunne se hvilken databehandler og hvilket land de siger ja til.
+   * `country` er en i18n-nøgle under companyAi.country.
+   */
+  vendor: string
+  country: 'us' | 'cn' | 'fr'
+  /**
+   * Ligger udbyderen uden for EU/EØS? Afgør hvilken overførsels-sætning
+   * oplysningsteksten viser — en overførsel til tredjeland kræver et
+   * overførselsgrundlag, en behandling inden for EU/EØS gør ikke.
+   */
+  outsideEu: boolean
 }
 
 export type AiModel = {
@@ -24,14 +39,30 @@ export type AiModel = {
 }
 
 export const AI_PROVIDERS: AiProvider[] = [
-  { key: 'anthropic', label: 'Anthropic' },
-  { key: 'google', label: 'Google' },
-  { key: 'openai', label: 'OpenAI' },
-  { key: 'xai', label: 'xAI' },
-  { key: 'deepseek', label: 'DeepSeek' },
+  // Mistral står først, fordi den er den eneste udbyder hvor labelfotoet bliver
+  // i EU/EØS — det er det valg en dansk kunde skal møde først.
+  { key: 'mistral', label: 'Mistral AI', vendor: 'Mistral AI SAS', country: 'fr', outsideEu: false },
+  { key: 'anthropic', label: 'Anthropic', vendor: 'Anthropic PBC', country: 'us', outsideEu: true },
+  { key: 'google', label: 'Google', vendor: 'Google LLC', country: 'us', outsideEu: true },
+  { key: 'openai', label: 'OpenAI', vendor: 'OpenAI, L.L.C.', country: 'us', outsideEu: true },
+  { key: 'xai', label: 'xAI', vendor: 'xAI Corp.', country: 'us', outsideEu: true },
+  { key: 'deepseek', label: 'DeepSeek', vendor: 'DeepSeek', country: 'cn', outsideEu: true },
 ]
 
+// Versionen af oplysningsteksten kunden bekræfter bor i databasen alene
+// (public.ai_disclosure_version() — hæves i en migration når teksten ændres,
+// hvorefter alle godkendelser skal gives på ny). Klienten HENTER versionen
+// i stedet for at spejle den i en konstant: en konstant her ville drive fra
+// SQL'en ved en ensidig bump, og så kunne et almindeligt gem stille trække en
+// gyldig godkendelse tilbage (triggerens bevar-gren fejler på versionen).
+
+export const aiProvider = (key: string): AiProvider | undefined =>
+  AI_PROVIDERS.find((p) => p.key === key)
+
 export const AI_MODELS: AiModel[] = [
+  // Dedikeret dokument-/OCR-model, ikke en chatmodel: den læser labelen til
+  // tekst og udfylder skemaet i ét kald (document_annotation).
+  { key: 'mistral-ocr-latest', provider: 'mistral', label: 'Mistral OCR 4', vision: true },
   { key: 'claude-haiku-4-5', provider: 'anthropic', label: 'Claude Haiku', vision: true },
   { key: 'claude-sonnet-5', provider: 'anthropic', label: 'Claude Sonnet', vision: true },
   { key: 'claude-opus-5', provider: 'anthropic', label: 'Claude Opus', vision: true },

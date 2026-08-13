@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
+import { AI_MODELS } from '@/lib/ai'
 import { supabase } from '@/lib/supabase'
 
 // Forbrug (Platform → Kunder → Forbrug): antal sendte e-mails/SMS for kunden
@@ -18,6 +19,10 @@ import { supabase } from '@/lib/supabase'
 // parcel_notifications + asset_loan_notifications (kun status='sent';
 // "sent" = accepteret af udbyderen). Testsendinger fra status-testdialogen
 // (digest_key 'test-…') tælles ikke med.
+//
+// Dertil AI-labellæsning med ÉN RÆKKE PR. MODEL: modellerne har hver sin
+// stykpris, så de kan ikke lægges sammen. Kilden er revisionssporet
+// (RPC ai_label_usage → 'ai.label_read' med outcome='ok').
 
 const TIMEFRAMES = ['thisMonth', 'lastMonth', 'thisYear', 'all'] as const
 type Timeframe = (typeof TIMEFRAMES)[number]
@@ -62,6 +67,24 @@ async function countSent(
   return count ?? 0
 }
 
+/**
+ * AI-labelaflæsninger pr. model. Grupperingen sker i basen (RPC), så
+ * audit-rækkerne ikke skal hentes ud i browseren for at blive talt.
+ */
+async function countAiReads(
+  companyId: string,
+  bounds: { from: string | null; to: string | null },
+): Promise<{ model: string; reads: number }[]> {
+  const { data, error } = await supabase.rpc('ai_label_usage', {
+    p_company_id: companyId,
+    // Ingen grænse ⇒ udelad argumentet; funktionens default er null ("al tid").
+    p_from: bounds.from ?? undefined,
+    p_to: bounds.to ?? undefined,
+  })
+  if (error) throw error
+  return data ?? []
+}
+
 export function CompanyUsage({ companyId }: { companyId: string }) {
   const { t, i18n } = useTranslation()
   const [timeframe, setTimeframe] = useState<Timeframe>('thisMonth')
@@ -71,13 +94,14 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
     queryKey: ['company-usage', companyId, timeframe],
     queryFn: async () => {
       const bounds = timeframeBounds(timeframe)
-      const [parcelEmail, parcelSms, assetEmail, assetSms] = await Promise.all([
+      const [parcelEmail, parcelSms, assetEmail, assetSms, ai] = await Promise.all([
         countSent('parcel_notifications', companyId, 'email', bounds),
         countSent('parcel_notifications', companyId, 'sms', bounds),
         countSent('asset_loan_notifications', companyId, 'email', bounds),
         countSent('asset_loan_notifications', companyId, 'sms', bounds),
+        countAiReads(companyId, bounds),
       ])
-      return { parcelEmail, parcelSms, assetEmail, assetSms }
+      return { parcelEmail, parcelSms, assetEmail, assetSms, ai }
     },
   })
 
@@ -96,6 +120,25 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
   const smsUnit = platform?.cost_per_sms ?? 0
   const emailCost = emails * emailUnit
   const smsCost = sms * smsUnit
+
+  // Én række pr. model, aldrig en samlet "AI"-linje: priserne er forskellige.
+  // Modeller uden pris står med 0 — så er forbruget stadig synligt, og det er
+  // tydeligt at der mangler en stykpris på Operia → Generelt.
+  const modelPrices = (platform?.ai_model_costs ?? {}) as Record<string, number>
+  const aiRows = (counts?.ai ?? []).map((r) => {
+    const unit = modelPrices[r.model] ?? 0
+    return {
+      key: r.model,
+      // Modeller der senere fjernes fra kataloget skal stadig kunne faktureres,
+      // derfor fallback til den rå modelnøgle frem for at skjule rækken.
+      label: AI_MODELS.find((m) => m.key === r.model)?.label ?? r.model,
+      reads: r.reads,
+      unit,
+      cost: r.reads * unit,
+    }
+  })
+  const aiReads = aiRows.reduce((sum, r) => sum + r.reads, 0)
+  const aiCost = aiRows.reduce((sum, r) => sum + r.cost, 0)
 
   return (
     <div className="flex max-w-2xl flex-col gap-4">
@@ -145,12 +188,24 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{money.format(smsCost)}</td>
               </tr>
+              {aiRows.map((r) => (
+                <tr key={r.key} className="border-b">
+                  <td className="px-4 py-2.5">{t('usage.aiRead', { model: r.label })}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{nf.format(r.reads)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+                    {unitMoney.format(r.unit)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{money.format(r.cost)}</td>
+                </tr>
+              ))}
               <tr className="font-medium">
                 <td className="px-4 py-2.5">{t('usage.total')}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{nf.format(emails + sms)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {nf.format(emails + sms + aiReads)}
+                </td>
                 <td className="px-4 py-2.5" />
                 <td className="px-4 py-2.5 text-right tabular-nums">
-                  {money.format(emailCost + smsCost)}
+                  {money.format(emailCost + smsCost + aiCost)}
                 </td>
               </tr>
             </tbody>

@@ -2,7 +2,8 @@
 
 Where in the codebase NIS2 (security, access control, auditability, log management)
 and GDPR (personal-data protection, minimization, retention) are addressed.
-Last reviewed: 2026-07-20. Update this file when compliance-relevant code changes.
+Last reviewed: 2026-07-20; §11 (AI label reading) added 2026-08-12, Mistral (EU) same day.
+Update this file when compliance-relevant code changes.
 
 Legend: **N** = NIS2-relevant, **G** = GDPR-relevant.
 
@@ -304,6 +305,55 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
   settings. Web passkeys additionally require Dashboard → Authentication →
   Passkeys (see gaps).
 
+## 11. AI label reading (G, N)
+
+Added 2026-08-06, disclosure + audit trail 2026-08-12. This is the only feature that
+sends customer personal data to a general-purpose AI vendor, so it gets its own section.
+
+- **What leaves the building**: `supabase/functions/ai-read-label/index.ts` posts the
+  full label photo (base64) to the customer's chosen vendor — Anthropic (US) via
+  `npm:@anthropic-ai/sdk`, Google Gemini (US) via `generativelanguage.googleapis.com`,
+  or Mistral (FR) via `api.mistral.ai/v1/ocr`. The photo carries receiver **and**
+  sender name, address and phone. Both clients downscale to ≤1600 px JPEG first
+  (`ai-label-scan.tsx`, `PhotoHelpers.kt`).
+- **Mistral is the only vendor that keeps the photo inside the EU/EEA** (added
+  2026-08-12, `20260812150000_ai_mistral_ocr.sql`): Mistral AI SAS is French, hosted in
+  the EU and outside the US CLOUD Act, so no third-country transfer takes place. The
+  disclosure therefore has two transfer sentences, picked by `AiProvider.outsideEu`:
+  `companyAi.disclosureTransfer` (third country, needs a transfer basis) vs
+  `companyAi.disclosureTransferEu`. Its model `mistral-ocr-latest` is a document model,
+  not a chat model — the fields come back via `document_annotation_format`, and the
+  field *descriptions* carry the extraction rules (`FIELD_HINTS` in the edge function).
+- **Nothing is stored server-side**: no bucket write, no table. The extracted values
+  persist only as ordinary parcel fields, and only after a human applies them. The
+  matching layer (`20260807132720_ai_label_matching.sql`, `ai_match_label_fields()`)
+  is pure in-DB text comparison — `SECURITY INVOKER`, RLS applies, nothing leaves.
+- **Three-level opt-in**: `platform_settings.ai_enabled` (DCA, default false) →
+  `company_ai_config.provider/model` (customer) → `company_ai_config.disclosure_accepted`
+  (customer's confirmed disclosure). The edge function re-checks all three server-side
+  and returns `not_accepted` when the last is missing.
+- **The disclosure is the customer's documented instruction (Art. 28)**:
+  `20260812104500_ai_label_read_audit.sql` + `20260812120000_ai_disclosure_grant.sql`.
+  It can only be granted through `accept_ai_disclosure(company, provider, version)`,
+  which rejects a provider or text version other than the one shown; a plain table
+  write can only *keep* an unchanged acceptance or withdraw it, so a provider switch
+  (e.g. US → CN) always drops it. Timestamp, user and version are stamped by
+  `stamp_ai_disclosure()`, never by the client (column-level grants keep the evidence
+  columns server-owned). Events: `ai.disclosure_accepted` / `ai.disclosure_withdrawn`.
+  Text: `companyAi.disclosure*` in `web/src/i18n/locales/*.json`, vendor/country from
+  `AI_PROVIDERS` in `web/src/lib/ai.ts`, one-liner repeated in the scan dialog and on
+  the handheld's receive screen.
+- **Audit trail per read (Art. 30)**: every call — success, rejection and error alike —
+  writes `ai.label_read` via `record_ai_label_read()` (service-role only). Content
+  minimization is enforced by the function itself, not by convention: provider, model,
+  outcome and source must match narrow patterns or become `unknown`, numbers are
+  clamped, `summary`/`entity_id` stay empty. **The read fields, the image and the
+  vendor's error text are never logged** — `audit_log` is immutable and forwarded to
+  customer log drains, so anything personal written there can never be erased. The
+  vendor error text goes to the function's own (short-lived) log only.
+  Logs taxonomy: category `ai`, level from the outcome (`audit_level()`).
+- Fixtures: `supabase/tests/ai_label_audit.sql` (runs in a rolled-back transaction).
+
 ## Known gaps / roadmap
 
 | Gap | Status |
@@ -324,4 +374,5 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
 | Right of access (Art. 15) | **Open** — no per-employee data export. `import.export.tsx` is bulk masterdata for active employees only, so it cannot answer a subject access request. DCA is a processor and owes controllers assistance here (Art. 28(3)(e)). |
 | Consent / legal basis / opt-out | **Open** — no consent column, no legal-basis record, no per-employee notification preference or opt-out. Notification toggles exist only at platform and company level; the data subject has no control. |
 | Per-company retention | **Open** — retention windows live on `platform_settings` only, so the customer (the actual controller) cannot set its own. Nothing has a window for `parcels`, `parcel_events` (deliberately), notifications, `asset_loans` or `employees`. |
-| Processor agreements / transfers | **Open** — personal data leaves to Resend (name + email + barcode; US), Postmark (holds inbound HR CSVs; US), GatewayAPI (phone numbers; DK), OpenRouteService (addresses) and any customer-configured log drain. No DPA/subprocessor list or transfer mechanism is recorded in the repo. Web side is clean: no CDN, analytics or external fonts; only OSM tiles on the routes page. |
+| Processor agreements / transfers | **Open** — personal data leaves to Resend (name + email + barcode; US), Postmark (holds inbound HR CSVs; US), GatewayAPI (phone numbers; DK), OpenRouteService (addresses), Anthropic / Google Gemini (full label photos; US — §11; Mistral is the EU-internal alternative, same section), Google Maps/Geocoding where configured (employee + delivery addresses; US, active provider since `20260731100000`) and any customer-configured log drain. No DPA/subprocessor list or transfer mechanism is recorded in the repo. The web app loads no CDN, analytics or external fonts, but a Google-configured platform loads the Maps JS API in the browser — the earlier "no external requests" claim no longer holds for those tenants. |
+| Free AI tiers train on the data | **Open** — Gemini (`20260806193000_ai_gemini_lite_models.sql`) *and* Mistral's free "Experiment" plan both permit the vendor to use requests for model improvement. Indefensible for customer personal data. Either key must be on a paid plan before a customer is pointed at that provider; until then the free keys are for testing with synthetic labels only (`docs/labels/` holds real ones — do not use them for tier testing). Mistral additionally offers a DPA and Zero Data Retention on the paid plan. |

@@ -36,6 +36,7 @@ const MODELS: Record<string, { provider: string; vision: boolean }> = {
   'gemini-3-flash-preview': { provider: 'google', vision: true },
   'deepseek-chat': { provider: 'deepseek', vision: false },
   'deepseek-reasoner': { provider: 'deepseek', vision: false },
+  'mistral-ocr-latest': { provider: 'mistral', vision: true },
 }
 
 // Felterne modtagelses-formularen kan udfylde. Alle nullable — modellen skal
@@ -77,7 +78,7 @@ Regler:
 - weight_kg: vægt i kg som tal (dansk komma → punktum).
 - label_date: labelens dato som YYYY-MM-DD hvis muligt.`
 
-type Body = { image?: string; mediaType?: string; companyId?: string }
+type Body = { image?: string; mediaType?: string; companyId?: string; source?: string }
 
 const IMAGE_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
@@ -185,6 +186,78 @@ async function readWithGemini(model: string, mediaType: string, image: string): 
   return JSON.parse(text)
 }
 
+// Mistrals annotations-API tager ingen fri prompt: feltbeskrivelserne i skemaet
+// ER instruktionen. Reglerne fra PROMPT står derfor her igen, pr. felt — ændres
+// den ene, skal den anden med.
+const FIELD_HINTS: Record<string, string> = {
+  receiver_name: 'Modtagerens navn — feltet mærket To/Til/Modtager. Aldrig afsenderen.',
+  receiver_address: 'Modtagerens fulde adresse på én linje: vej, postnr., by.',
+  receiver_phone: 'Modtagerens telefonnummer.',
+  sender_name: 'Afsenderens navn — feltet mærket From/Fra/Afsender. Aldrig modtageren.',
+  sender_address: 'Afsenderens fulde adresse på én linje: vej, postnr., by.',
+  sender_phone: 'Afsenderens telefonnummer.',
+  carrier: 'Transportøren, fx PostNord, GLS, DAO, UPS, DHL, Bring — udled evt. af logo eller label-layout.',
+  service: 'Serviceproduktet, fx Erhvervspakke, MyPack Home, MyPack Collect.',
+  tracking_number:
+    'Pakkens sporingsnummer — typisk det lange tal under stregkoden mærket Shipment ID / Parcel-ID / Shipment Item ID. Udelad en foranstillet "(00)"-præfiks og alle mellemrum.',
+  reference: 'Afsenderens reference/ordrenummer på labelen.',
+  weight_kg: 'Vægten i kg som tal (dansk komma → punktum).',
+  label_date: 'Labelens dato som YYYY-MM-DD.',
+}
+
+/** LABEL_SCHEMA med feltbeskrivelser — kun Mistral-vejen bruger dem. */
+function annotationSchema() {
+  const properties = Object.fromEntries(
+    Object.entries(LABEL_SCHEMA.properties).map(([key, spec]) => [
+      key,
+      { ...spec, description: `${FIELD_HINTS[key]} Svar null hvis det ikke fremgår tydeligt — gæt aldrig.` },
+    ]),
+  )
+  return { ...LABEL_SCHEMA, properties }
+}
+
+// Mistral Document AI (OCR 4) via POST /v1/ocr. Til forskel fra chatmodellerne
+// læser den labelen til tekst og lader derefter en model udfylde skemaet — i ét
+// kald, når document_annotation_format er sat. Svaret ligger i
+// document_annotation som en JSON-STRENG, ikke som et objekt.
+//
+// Udbyderen er fransk og kører i EU/EØS; det er derfor den eneste vej her, hvor
+// labelfotoet ikke krydser en tredjelands-grænse (se web/src/lib/ai.ts).
+async function readWithMistral(model: string, mediaType: string, image: string): Promise<unknown> {
+  const apiKey = Deno.env.get('MISTRAL_API')
+  if (!apiKey) throw new ProviderError('provider_key_missing')
+  const res = await fetch('https://api.mistral.ai/v1/ocr', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      document: { type: 'image_url', image_url: `data:${mediaType};base64,${image}` },
+      // Vi skal kun bruge felterne — at få billed-udklip retur ville betyde
+      // persondata i svaret uden nogen nytte.
+      include_image_base64: false,
+      document_annotation_format: {
+        type: 'json_schema',
+        json_schema: { name: 'parcel_label', schema: annotationSchema(), strict: true },
+      },
+    }),
+  })
+  if (!res.ok) {
+    throw new ProviderError(reasonFromStatus(res.status), (await res.text()).slice(0, 500))
+  }
+  const data = await res.json()
+  const annotation = data.document_annotation
+  if (!annotation) throw new ProviderError('empty_response')
+  return typeof annotation === 'string' ? JSON.parse(annotation) : annotation
+}
+
+/** Antal felter modellen faktisk udfyldte — et tal, aldrig indholdet. */
+function countFields(fields: unknown): number {
+  if (!fields || typeof fields !== 'object') return 0
+  return Object.values(fields as Record<string, unknown>).filter(
+    (v) => v !== null && v !== undefined && v !== '',
+  ).length
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
@@ -202,14 +275,55 @@ Deno.serve(async (req) => {
   const image = (body.image ?? '').trim()
   const mediaType = body.mediaType ?? 'image/jpeg'
   if (!image) return json({ error: 'image_required' }, 400)
-  if (!IMAGE_MEDIA_TYPES.includes(mediaType)) return json({ error: 'unsupported_media_type' }, 400)
-  // Håndterminalen nedskalerer til ≤1600 px JPEG; alt væsentligt større er
-  // ikke vores klient. Base64 er ~4/3 af råstørrelsen — loftet svarer til ~6 MB.
-  if (image.length > 8_000_000) return json({ error: 'image_too_large' }, 413)
+
+  const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
+
+  // ── Revisionsspor (GDPR art. 30) ──────────────────────────────────────────
+  // Label-fotoet indeholder persondata og forlader huset. HVER aflæsning
+  // logges derfor — også dem der bliver afvist, for et afvist forsøg er lige
+  // så meget en del af historien som et gennemført.
+  //
+  // Kun metadata: virksomhed, bruger, udbyder, model, udfald, kilde, størrelse,
+  // svartid, ANTAL udfyldte felter. Aldrig de aflæste navne/adresser, aldrig
+  // billedet, aldrig udbyderens fejltekst (den kan citere vores forespørgsel) —
+  // audit_log er uforanderlig og videresendes til kundernes log-drains, så alt
+  // personligt der lander der, kan aldrig slettes igen. Databasefunktionen
+  // record_ai_label_read håndhæver det samme uafhængigt af denne fil.
+  const actorId = userData.user.id
+  const startedAt = Date.now()
+  const imageBytes = Math.round((image.length * 3) / 4)
+  const source = body.source === 'web' || body.source === 'handheld' ? body.source : null
+  let logCompanyId: string | null = null
+  let logProvider = ''
+  let logModel = ''
+  let fieldsFound = 0
+
+  async function logRead(outcome: string) {
+    const { error } = await admin.rpc('record_ai_label_read', {
+      p_company_id: logCompanyId,
+      p_actor: actorId,
+      p_provider: logProvider,
+      p_model: logModel,
+      p_outcome: outcome,
+      p_source: source,
+      p_image_bytes: imageBytes,
+      p_duration_ms: Date.now() - startedAt,
+      p_fields_found: fieldsFound,
+    })
+    // Kan sporet ikke skrives, skal det være synligt i funktionens log frem for
+    // at forsvinde — svaret til brugeren ændres ikke: overførslen er allerede
+    // sket, og at holde resultatet tilbage gør den ikke usket.
+    if (error) console.error('ai-read-label: audit failed', { outcome, detail: error.message })
+  }
+
+  /** Afvisning der SKAL efterlade et spor. */
+  async function reject(reason: string, status?: number) {
+    await logRead(reason)
+    return status ? json({ error: reason }, status) : json({ ok: false, reason })
+  }
 
   // Virksomheden udledes af kalderen — aldrig af request-body'en for
   // kunde-brugere.
-  const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
   const { data: appUser } = await admin
     .from('app_users')
     .select('company_id')
@@ -238,24 +352,35 @@ Deno.serve(async (req) => {
       companyId = company?.id
     }
   }
-  if (!companyId) return json({ error: 'forbidden' }, 403)
+  // Uden virksomhed er der ingen tenant at henføre overførslen til; hændelsen
+  // logges platform-globalt (company_id null) med aktøren, så forsøget stadig
+  // kan ses.
+  if (!companyId) return await reject('forbidden', 403)
+  logCompanyId = companyId
+
+  if (!IMAGE_MEDIA_TYPES.includes(mediaType)) return await reject('unsupported_media_type', 400)
+  // Håndterminalen nedskalerer til ≤1600 px JPEG; alt væsentligt større er
+  // ikke vores klient. Base64 er ~4/3 af råstørrelsen — loftet svarer til ~6 MB.
+  if (image.length > 8_000_000) return await reject('image_too_large', 413)
 
   // Hele kæden gencheckes her: platformens hovedafbryder og udvalg …
   const { data: platform } = await admin
     .from('platform_settings')
     .select('ai_enabled, ai_providers, ai_models')
     .maybeSingle()
-  if (!platform?.ai_enabled) return json({ ok: false, reason: 'integration_disabled' })
+  if (!platform?.ai_enabled) return await reject('integration_disabled')
 
   // … og kundens valg inden for udvalget.
   const { data: cfg } = await admin
     .from('company_ai_config')
-    .select('provider, model')
+    .select('provider, model, disclosure_accepted, disclosure_version')
     .eq('company_id', companyId)
     .maybeSingle()
   const provider = cfg?.provider ?? ''
   const model = cfg?.model ?? ''
-  if (!provider || !model) return json({ ok: false, reason: 'not_configured' })
+  logProvider = provider
+  logModel = model
+  if (!provider || !model) return await reject('not_configured')
   const catalog = MODELS[model]
   if (
     !catalog ||
@@ -263,9 +388,22 @@ Deno.serve(async (req) => {
     !(platform.ai_providers ?? []).includes(provider) ||
     !(platform.ai_models ?? []).includes(model)
   ) {
-    return json({ ok: false, reason: 'not_allowed' })
+    return await reject('not_allowed')
   }
-  if (!catalog.vision) return json({ ok: false, reason: 'model_no_vision' })
+  if (!catalog.vision) return await reject('model_no_vision')
+  // Kunden skal have bekræftet oplysningen om HVAD der sendes til HVEM
+  // (Konfigurér → Integrationer). Det er databehandlerens dokumenterede
+  // instruks (art. 28) — og browseren er utroværdig, så den afgørelse ligger
+  // her, ikke i UI'et. Triggeren stamp_ai_disclosure rydder flaget igen, hvis
+  // kunden skifter udbyder.
+  //
+  // Versionen tjekkes OGSÅ: hæves oplysningsteksten (ai_disclosure_version),
+  // gælder en gammel godkendelse ikke længere — læsningen skal stoppe her og
+  // nu, ikke først når kunden tilfældigt gemmer sin opsætning igen.
+  const { data: currentVersion } = await admin.rpc('ai_disclosure_version')
+  if (!cfg?.disclosure_accepted || cfg.disclosure_version !== currentVersion) {
+    return await reject('not_accepted')
+  }
 
   try {
     const fields =
@@ -273,15 +411,22 @@ Deno.serve(async (req) => {
         ? await readWithAnthropic(model, mediaType, image)
         : provider === 'google'
           ? await readWithGemini(model, mediaType, image)
-          // Rammes kun hvis kataloget udvides uden at funktionen følger med.
-          : (() => {
-              throw new ProviderError('provider_unsupported')
-            })()
+          : provider === 'mistral'
+            ? await readWithMistral(model, mediaType, image)
+            // Rammes kun hvis kataloget udvides uden at funktionen følger med.
+            : (() => {
+                throw new ProviderError('provider_unsupported')
+              })()
+    fieldsFound = countFields(fields)
+    await logRead('ok')
     return json({ ok: true, model, fields })
   } catch (e) {
     const reason = e instanceof ProviderError ? e.reason : 'provider_error'
     const detail = e instanceof Error ? e.message : String(e)
+    // detail hører KUN til i funktionens egen log (kortlivet, går ikke i
+    // audit_log/log-drains): en udbyderfejl kan citere vores forespørgsel.
     console.error('ai-read-label failed', { companyId, model, reason, detail })
+    await logRead(reason)
     return json({ ok: false, reason, detail })
   }
 })

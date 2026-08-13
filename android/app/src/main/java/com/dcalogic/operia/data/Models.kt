@@ -349,4 +349,59 @@ data class PlatformAiRow(
 )
 
 @Serializable
-data class CompanyAiRow(val provider: String? = null, val model: String? = null)
+data class CompanyAiRow(
+    val provider: String? = null,
+    val model: String? = null,
+    // Fortolkningslaget: skal AI-aflæste navne matches mod virksomhedens egne
+    // data (dansk foldning + fuzzy)? Slået fra ⇒ som før, kun entydige match.
+    val match_enabled: Boolean = true,
+    // Har virksomheden bekræftet oplysningen om hvad der sendes til hvilken
+    // udbyder (Konfigurér → Integrationer)? Uden den afviser edge-funktionen
+    // aflæsningen ('not_accepted'), så knappen skal heller ikke vises her.
+    val disclosure_accepted: Boolean = false,
+)
+
+/** Virksomhedens AI-opsætning som skærmene bruger den: kan vi scanne, skal
+ *  navnene fortolkes, og HVEM sendes labelfotoet til (oplysningslinjen). */
+data class AiSetup(
+    val available: Boolean,
+    val matchEnabled: Boolean,
+    val provider: String?,
+)
+
+// ---------- Fortolkningslag over AI-aflæsningen (RPC ai_match_label_fields) --
+
+/** Én medarbejder-kandidat med score 0–1. */
+@Serializable
+data class MatchedEmployee(
+    val id: String,
+    val full_name: String,
+    val initials: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val department_id: String? = null,
+    val department_name: String? = null,
+    val score: Double = 0.0,
+)
+
+@Serializable
+data class MatchedCarrier(val id: String, val name: String, val score: Double = 0.0)
+
+@Serializable
+data class MatchedSender(val name: String, val score: Double = 0.0)
+
+/** Ét felts resultat: `auto` = ét entydigt match klienten må udfylde direkte,
+ *  ellers er kandidaterne forslag et menneske skal vælge imellem. */
+@Serializable
+data class MatchField<T>(
+    val raw: String? = null,
+    val auto: Boolean = false,
+    val candidates: List<T> = emptyList(),
+)
+
+@Serializable
+data class LabelMatch(
+    val receiver: MatchField<MatchedEmployee>? = null,
+    val carrier: MatchField<MatchedCarrier>? = null,
+    val sender: MatchField<MatchedSender>? = null,
+)

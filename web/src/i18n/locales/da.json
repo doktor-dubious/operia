@@ -219,7 +219,8 @@
       "maps": "Kort & ruter",
       "imports": "Import & eksport",
       "log": "Log",
-      "other": "Andet"
+      "other": "Andet",
+      "ai": "AI"
     },
     "eventType": "Handling",
     "live": "Live",
@@ -250,7 +251,8 @@
       "reasonSmsNotConfigured": "SMS er ikke konfigureret",
       "reasonEmailError": "E-mailen kunne ikke sendes",
       "reasonSmsError": "SMS'en kunne ikke sendes",
-      "loginUnknownEmail": "Ukendt konto"
+      "loginUnknownEmail": "Ukendt konto",
+      "aiFields": "{{count}} felt(er) læst"
     },
     "rawJson": "Rå JSON",
     "copyJson": "Kopiér JSON",
@@ -558,7 +560,12 @@
     "notifyCostsHint": "Stykpris pr. sendt besked — driver beløbene på kundernes Forbrug-fane (Platform → Kunder). 0 = der faktureres ikke for kanalen.",
     "costPerEmail": "Pris pr. e-mail",
     "costPerSms": "Pris pr. SMS",
-    "costUnit": "kr. pr. stk."
+    "costUnit": "kr. pr. stk.",
+    "aiCosts": "AI-labelpriser",
+    "aiCostsHint": "Stykpris pr. AI-aflæsning af en pakkelabel, pr. model. Kun de udbydere og modeller, der er slået til på Operia → Integrationer, kan prissættes. 0 = modellen faktureres ikke.",
+    "aiCostsEmpty": "Ingen modeller er slået til. Vælg udbydere og modeller på Operia → Integrationer.",
+    "aiCostsDisabled": "AI-integrationen er slået fra på Operia → Integrationer.",
+    "aiCostUnit": "kr. pr. aflæsning"
   },
   "operiaMapsPage": {
     "title": "Kort & ruter",
@@ -1073,6 +1080,12 @@
     "aiApplied": "Label læst — felterne er udfyldt",
     "aiNoFields": "Ingen felter kunne læses fra labelen",
     "aiReceiverUnmatched": "Modtageren “{{name}}” blev ikke fundet i medarbejderlisten",
+    "aiReceiverAmbiguous": "“{{name}}” kunne ikke matches entydigt — vælg modtageren blandt forslagene",
+    "aiDidYouMean": "Mente du:",
+    "aiUseSender": "Brug “{{name}}”",
+    "aiRawLabel": "Labelen sagde: {{text}}",
+    "aiFilledHint": "Felterne med lilla kant er udfyldt af AI-aflæsningen — kontrollér dem før du gemmer. Kanten forsvinder, når du selv retter feltet.",
+    "clearForm": "Ryd formular",
     "batchMode": "Batch-tilstand",
     "batchModeHint": "Scan flere pakker til samme modtager — én besked sendes.",
     "batchItems": "Scannede pakker ({{count}})",
@@ -1093,7 +1106,8 @@
     "batchSaved": "Batch {{code}} oprettet med {{count}} pakke(r)",
     "batchListTitle": "Batches i denne session",
     "batchListCount": "{{count}} pakke(r)",
-    "printBatchLabel": "Print batch-label"
+    "printBatchLabel": "Print batch-label",
+    "aiScanDisclosure": "Hele labelfotoet — inkl. modtagers og afsenders navn, adresse og telefon — sendes til {{vendor}} i {{country}} for at blive læst. Aflæsningen logges."
   },
   "carriersPage": {
     "name": "Navn",
@@ -2407,7 +2421,7 @@
     "integration": "Integration",
     "companySubtitle": "Virksomhedens egne integrationer og deres opsætning.",
     "entra": "Microsoft Active Directory (AD)",
-    "ai": "AI",
+    "ai": "AI-labellæser",
     "aiEnable": "Aktivér AI-integrationen",
     "aiEnableDesc": "Når den er slået fra, er AI skjult for alle kunder.",
     "aiProviders": "Udbydere",
@@ -2435,13 +2449,15 @@
   },
   "companyAi": {
     "noneOffered": "Der er ingen AI-udbydere tilgængelige for din virksomhed.",
-    "intro": "Vælg hvilken AI der skal bruges til jeres virksomhed — fx til at læse pakkelabels med kameraet ved modtagelse. AI-kaldet sker via Operias servere; API-nøgler håndteres af DCA Logic.",
+    "intro": "Vælg hvilken AI der skal læse jeres pakkelabels ved modtagelse. Aflæsningen sker via Operias servere med DCA Logics egne API-nøgler — I skal ikke selv oprette et abonnement hos udbyderen. Labelfotoet indeholder personoplysninger og sendes til den udbyder, I vælger her, så læs oplysningen nedenfor før I aktiverer.",
     "provider": "Udbyder",
     "providerPlaceholder": "Vælg udbyder",
     "model": "Model",
     "noModels": "Ingen modeller tilgængelige for denne udbyder.",
     "noVision": "— kan ikke læse billeder",
     "noVisionExplainer": "Den valgte model kan ikke læse billeder, så label-scanning med kameraet vil ikke virke. Vælg en vision-model (fx Claude Haiku) for at bruge label-scanning.",
+    "matchTitle": "Fortolk aflæste navne",
+    "matchHint": "Sammenhold det AI'en læser med jeres egne data, så små stavefejl og manglende danske tegn stadig rammer rigtigt: “AAse Østergård”, “Åse Ostergård” og “Åse Østegård” finder alle Åse Østergård, og “PostNorb” finder PostNord. Kun ét entydigt match udfyldes automatisk — ellers vises forslag, som en medarbejder vælger imellem. Sporingsnumre rettes aldrig.",
     "scanFailed_integration_disabled": "AI-integrationen er ikke aktiveret af Operia.",
     "scanFailed_not_configured": "Der er ikke valgt en AI-model. Vælg en under Konfigurér → Integrationer.",
     "scanFailed_not_allowed": "Den valgte AI-model udbydes ikke længere. Vælg en anden under Konfigurér → Integrationer.",
@@ -2460,7 +2476,28 @@
     "scanFailed_forbidden": "Din bruger er ikke knyttet til en virksomhed. Vælg en virksomhed øverst, eller log ind som virksomhedsbruger.",
     "scanFailed_unauthorized": "Din session er udløbet. Log ind igen.",
     "scanFailed_empty_response": "AI'en svarede uden indhold. Prøv igen.",
-    "scanFailed_generic": "Label-scanningen fejlede. Prøv igen."
+    "scanFailed_generic": "Label-scanningen fejlede. Prøv igen.",
+    "country": {
+      "us": "USA",
+      "cn": "Kina",
+      "fr": "Frankrig"
+    },
+    "disclosureTitle": "Hvad sendes ud af huset",
+    "disclosureBody": "Når en medarbejder læser en label med AI, sendes hele labelfotoet til {{vendor}} i {{country}}, som læser teksten og returnerer felterne. {{vendor}} er databehandler for Operia (underdatabehandler for jer) og behandler kun billedet for at besvare den enkelte aflæsning.",
+    "disclosureSent": "Det sendte omfatter alt hvad der står på labelen — modtagers og afsenders navn, adresse og telefonnummer, samt fragtfirma, service, sporingsnummer, reference, vægt og dato.",
+    "disclosureTransfer": "Overførslen går til {{country}}, altså uden for EU/EØS. Se DCA Logics underdatabehandlerliste for overførselsgrundlag.",
+    "disclosureTransferEu": "Aflæsningen sker i {{country}} og dermed inden for EU/EØS — labelfotoet overføres ikke til et tredjeland. Se DCA Logics underdatabehandlerliste.",
+    "disclosureStorage": "Operia gemmer hverken fotoet eller AI-svaret. Kun de felter medarbejderen godkender, gemmes på pakken som helt almindelige pakkeoplysninger. Hvad udbyderen selv gemmer, fremgår af udbyderens vilkår.",
+    "disclosureLog": "Hver aflæsning logges i revisionssporet med virksomhed, bruger, udbyder, model, udfald og tidspunkt — aldrig med det aflæste indhold eller billedet.",
+    "acceptLabel": "Jeg forstår og aktiverer AI-labellæsningen",
+    "acceptHint": "Bekræftelsen gives af en manager på virksomhedens vegne og er jeres dokumenterede instruks til DCA Logic om at måtte sende labelfotos til den valgte udbyder. Den kan trækkes tilbage når som helst.",
+    "acceptedOn": "Bekræftet {{date}} — logget i revisionssporet.",
+    "notAcceptedWarning": "Opsætningen er gemt, men label-aflæsning er slået fra, indtil bekræftelsen ovenfor er sat. Knappen “Læs label med AI” vises ikke for medarbejderne, og serveren afviser aflæsninger.",
+    "confirmTitle": "Aktivér AI-labellæsning?",
+    "confirmBody": "I er ved at give DCA Logic instruks om at sende pakkelabelfotos — med personoplysninger — til {{vendor}} i {{country}}.",
+    "confirmInstruction": "Bekræftelsen registreres med bruger og tidspunkt i revisionssporet som virksomhedens instruks. Den kan trækkes tilbage igen ved at fjerne fluebenet.",
+    "confirmAccept": "Jeg forstår og aktiverer",
+    "scanFailed_not_accepted": "AI-labellæsning er ikke bekræftet for virksomheden. En manager skal godkende oplysningen under Konfigurér → Integrationer."
   },
   "companyEntra": {
     "subtitle": "Forbind virksomhedens Microsoft Entra ID (Active Directory) som kilde til medarbejderdirektoriet.",
@@ -2534,7 +2571,7 @@
   },
   "usage": {
     "tabLabel": "Forbrug",
-    "subtitle": "Sendte notifikationer og beløb ud fra stykpriserne (Operia → Generelt).",
+    "subtitle": "Sendte notifikationer, AI-labelaflæsninger og beløb ud fra stykpriserne (Operia → Generelt).",
     "timeframe": {
       "thisMonth": "Denne måned",
       "lastMonth": "Sidste måned",
@@ -2549,6 +2586,7 @@
     "sms": "SMS",
     "total": "I alt",
     "breakdown": "Heraf {{parcelCount}} pakkebeskeder og {{assetCount}} aktivpåmindelser.",
-    "notes": "Kun gennemførte afsendelser tælles (accepteret af udbyderen); testsendinger er fraregnet."
+    "notes": "Kun gennemførte afsendelser og AI-aflæsninger tælles (accepteret af udbyderen); testsendinger og afviste aflæsninger er fraregnet.",
+    "aiRead": "AI-aflæsning · {{model}}"
   }
 }

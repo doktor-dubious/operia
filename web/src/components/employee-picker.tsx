@@ -21,13 +21,22 @@ export function EmployeePicker({
   companyId,
   value,
   onChange,
+  className,
+  initialQuery,
 }: {
   companyId: string
   value: PickedEmployee | null
   onChange: (employee: PickedEmployee | null) => void
+  // Ekstra klasser på selve inputtet (fx AI-markeringen på modtag-formularen).
+  className?: string
+  // Starttekst i søgefeltet. Bruges når AI-aflæsningen fandt et navn, som ikke
+  // kunne matches entydigt: navnet fra labelen skal blive stående, så det kan
+  // sammenlignes med forslagene. Læses kun ved montering — modtag-formularen
+  // remounter vælgeren (formKey), når den skal skifte.
+  initialQuery?: string
 }) {
   const { t } = useTranslation()
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery ?? '')
   const [results, setResults] = useState<PickedEmployee[]>([])
   const [open, setOpen] = useState(false)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -95,6 +104,7 @@ export function EmployeePicker({
         onFocus={() => results.length > 0 && setOpen(true)}
         placeholder={t('receive.receiverPlaceholder')}
         autoComplete="off"
+        className={className}
       />
       {open && (
         <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
@@ -127,7 +137,12 @@ export function EmployeePicker({
           )}
         </ul>
       )}
-      {!value && query.trim() && !open && (
+      {/* Hintet står også mens listen er åben — den absolut placerede liste
+          dækker det alligevel. Gjaldt det kun lukket liste, VOKSEDE formularen
+          i det øjeblik listen lukkede, og alt nedenfor rykkede ~13 px ned
+          mellem museknappens tryk og slip: knapper under vælgeren (Ryd
+          formular, Modtag Pakke) tabte derfor det første klik. */}
+      {!value && query.trim() && (
         <p className="mt-1 text-xs text-status-neutral-to-bad">{t('receive.unassignedHint')}</p>
       )}
     </div>
