@@ -1,11 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
-import { StickyNote, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { StickyNote } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { DocumentDeleteButton } from '@/components/document-delete-button'
 import { useAccess } from '@/hooks/use-access'
 import { supabase } from '@/lib/supabase'
 
@@ -92,64 +90,6 @@ function DocumentEntry({
   )
 }
 
-// Platform-admin: slet en dokumentationspost (GDPR-sletteanmodning). Rækken
-// slettes først (RLS afgør retten og delete-triggeren logger hændelsen), så
-// fotoet — fejler filfjernelsen, er filen allerede utilgængelig via appen
-// (ingen række at signere fra) og fanges senest af en manuel oprydning.
-function DocumentDeleteButton({
-  docId,
-  storagePath,
-  assetId,
-}: {
-  docId: string
-  storagePath: string | null
-  assetId: string
-}) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
-
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 shrink-0 self-start text-muted-foreground hover:text-destructive"
-        title={t('assetFlow.documentDelete')}
-        aria-label={t('assetFlow.documentDelete')}
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 className="size-3.5" />
-      </Button>
-      <ConfirmDeleteDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={t('assetFlow.documentDeleteTitle')}
-        description={t('assetFlow.documentDeleteWarning')}
-        acknowledgeText={t('assetFlow.documentDeleteAcknowledge')}
-        confirmLabel={t('assetFlow.documentDelete')}
-        onConfirm={async () => {
-          const { data: deleted, error } = await supabase
-            .from('asset_documents')
-            .delete()
-            .eq('id', docId)
-            .select('id')
-          if (error) throw error
-          if (!deleted?.length) throw new Error(t('common.noPermission'))
-          if (storagePath) {
-            const { error: fileError } = await supabase.storage
-              .from('asset-photos')
-              .remove([storagePath])
-            if (fileError) console.error('Foto-fil kunne ikke fjernes:', fileError)
-          }
-          toast.success(t('assetFlow.documentDeletedToast'))
-          void queryClient.invalidateQueries({ queryKey: ['asset-documents', assetId] })
-        }}
-      />
-    </>
-  )
-}
-
 export function AssetDocumentList({ assetId }: { assetId: string }) {
   const { t } = useTranslation()
   const { data, isPending } = useAssetDocuments(assetId)
@@ -169,7 +109,7 @@ export function AssetDocumentList({ assetId }: { assetId: string }) {
           label={dateFormat.format(new Date(d.created_at))}
           action={
             access?.isPlatformAdmin ? (
-              <DocumentDeleteButton docId={d.id} storagePath={d.storage_path} assetId={assetId} />
+              <DocumentDeleteButton table="asset_documents" bucket="asset-photos" docId={d.id} storagePath={d.storage_path} i18nPrefix="assetFlow" invalidateKey={['asset-documents', assetId]} />
             ) : undefined
           }
         />
@@ -199,7 +139,7 @@ export function AssetDocumentBlock({ assetId }: { assetId: string }) {
             label={dateFormat.format(new Date(d.created_at))}
             action={
               access?.isPlatformAdmin ? (
-                <DocumentDeleteButton docId={d.id} storagePath={d.storage_path} assetId={assetId} />
+                <DocumentDeleteButton table="asset_documents" bucket="asset-photos" docId={d.id} storagePath={d.storage_path} i18nPrefix="assetFlow" invalidateKey={['asset-documents', assetId]} />
               ) : undefined
             }
           />

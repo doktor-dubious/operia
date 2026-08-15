@@ -161,6 +161,7 @@
     "inventoryImportItems": "Inventory items",
     "inventoryExportItems": "Inventory items",
     "configureLogDrains": "Log drains",
+    "configurePrivacy": "Data protection",
     "operiaLogDrains": "Log drains",
     "exportData": "Export",
     "condition": "Condition",
@@ -178,7 +179,9 @@
     "assetMove": "Move asset",
     "assetDocument": "Document asset",
     "assetSearch": "Search assets",
-    "assetNew": "New asset"
+    "assetNew": "New asset",
+    "configurePersonalData": "Personal data",
+    "operiaRetention": "Retention"
   },
   "operiaConfig": {
     "title": "Operia configuration",
@@ -220,7 +223,8 @@
       "imports": "Import & Export",
       "log": "Log",
       "other": "Other",
-      "ai": "AI"
+      "ai": "AI",
+      "compliance": "Data protection"
     },
     "eventType": "Action",
     "live": "Live",
@@ -956,7 +960,12 @@
     "intakePhoto": "Photo at intake",
     "documents": "Documentation",
     "noDocuments": "No documentation yet.",
-    "notRelocatable": "Cannot be moved while status is \"{{status}}\"."
+    "notRelocatable": "Cannot be moved while status is \"{{status}}\".",
+    "documentDelete": "Delete documentation",
+    "documentDeleteTitle": "Delete documentation entry",
+    "documentDeleteWarning": "The entry (photo and/or note) is permanently deleted. Deletion is the GDPR route for personal data in documentation and is logged in the parcel’s history.",
+    "documentDeleteAcknowledge": "I understand that the documentation is permanently deleted and cannot be restored.",
+    "documentDeletedToast": "Documentation deleted"
   },
   "employees": {
     "title": "Employees",
@@ -1019,6 +1028,7 @@
     "saveChanges": "Save Changes",
     "new": "New",
     "noPermission": "You don't have permission for this action.",
+    "documentFileDeleteFailed": "The entry was deleted, but the photo file could not be removed from storage — remove it manually or let the cleanup job catch it.",
     "delete": "Delete",
     "nameTaken": "This name is already in use.",
     "optional": "optional"
@@ -1429,6 +1439,7 @@
     "defaultCurrency": "Default currency",
     "currencyDefaultMarker": "Default currency — cannot be deselected.",
     "tabLogDrains": "Log drains",
+    "tabPrivacy": "Data protection",
     "logoNotImage": "The file must be an image.",
     "logoDropHint": "Drag an image here, or click to choose",
     "removeLogo": "Remove logo"
@@ -2430,6 +2441,8 @@
     "aiModelsDesc": "Which models customers can choose between. A model's provider must also be selected above.",
     "aiNoModelsYet": "— no models yet",
     "aiNoVision": "— cannot read images",
+    "aiFreeTier": "— has a free tier",
+    "aiFreeTierExplainer": "Mistral and Google offer a free tier whose terms let them use submitted content for model improvement. If DCA's key for one of them is on the free tier, that vendor may only be used for development and testing with synthetic labels — never with real customer labels. Before a vendor is made available to customers in production, its key must be on a paid plan with a data processing agreement (see docs/gdpr/subprocessors.md).",
     "aiVisionExplainer": "Label scanning on the handheld requires a model that can read images (vision). Models without vision can be selected, but only work for future text-based features.",
     "enable": "Enable the integration",
     "enableDesc": "While off, the AD integration is hidden from all customers.",
@@ -2446,6 +2459,29 @@
     "interval_720": "Every 12 hours",
     "interval_1440": "Daily",
     "interval_10080": "Weekly"
+  },
+  "companyPrivacy": {
+    "subtitle": "Contacts and data processing agreement",
+    "intro": "Your company is the controller of the personal data Operia processes; DCA Logic is the processor. The contacts here are the ones DCA writes to — name them so notices about new sub-processors and any security breach reach the right people.",
+    "privacyContact": "Data protection contact",
+    "privacyContactHint": "Receives notice when DCA intends to add or change a sub-processor (30 days, with a right to object), and is the entry point for access and erasure requests you forward.",
+    "securityContact": "Security contact",
+    "securityContactHint": "Receives notification of a personal data breach. DCA notifies within 24 hours of becoming aware — your own 72-hour deadline towards the supervisory authority starts when we tell you.",
+    "contactName": "Name",
+    "contactEmail": "Email",
+    "contactPhone": "Phone",
+    "contactPhoneAlways": "Phone (ideally 24/7)",
+    "noSecurityContactWarning": "No security contact is set. Without an email address a breach notification goes to the company's general contact and may be delayed.",
+    "dpa": "Data processing agreement",
+    "dpaHint": "The agreement between you and DCA Logic. The record is maintained by DCA.",
+    "dpaHintAdmin": "DCA's evidence that the agreement was in place BEFORE processing began (Art. 28(3)). A signature date requires both a version and a signatory.",
+    "dpaNone": "No signed data processing agreement is registered yet. Contact DCA Logic.",
+    "dpaVersion": "Version",
+    "dpaSignedAt": "Signed on",
+    "dpaSignedBy": "Signed by",
+    "dpaIncomplete": "A signature date requires both a version and a signatory.",
+    "noDpaWarning": "No data processing agreement registered for this customer. It must be signed before any real personal data is processed.",
+    "emailInvalid": "Invalid email address."
   },
   "companyAi": {
     "noneOffered": "No AI providers are available for your company.",
@@ -2588,5 +2624,86 @@
     "breakdown": "Of which {{parcelCount}} parcel notifications and {{assetCount}} asset reminders.",
     "notes": "Only completed sends and AI readings are counted (accepted by the provider); test sends and rejected readings are excluded.",
     "aiRead": "AI reading · {{model}}"
+  },
+  "personalData": {
+    "subtitle": "Retention periods and access requests",
+    "area": "Area",
+    "retention": "Retention",
+    "sar": "Access request"
+  },
+  "retention": {
+    "intro": "You decide how long Operia keeps your data. Leave a field empty to follow the platform default. If both are empty, data is kept until further notice.",
+    "daysUnit": "days",
+    "inherited": "Inherits {{days}} days",
+    "inheritedForever": "Inherits: kept until further notice",
+    "invalid": "{{category}}: enter a whole number of days greater than 0, or leave the field empty.",
+    "explainer": "The cleanup runs automatically every night. If you shorten a period, data already older than it is deleted on the next run — and deletion cannot be undone. Every cleanup is written to the audit log. Parcel event history deliberately has no window of its own: it follows the parcel.",
+    "cat": {
+      "parcels": {
+        "label": "Parcels and history",
+        "desc": "Closed parcels (delivered, rejected, returned, voided) and their event history. Open parcels are never deleted by a window."
+      },
+      "parcelFiles": {
+        "label": "Photos and signatures",
+        "desc": "Condition photos and handover signatures on closed parcels. Orphaned files are always removed, regardless of window."
+      },
+      "notifications": {
+        "label": "Message log",
+        "desc": "Log of emails and SMS sent (parcels and asset loans). The recipient address is already cleared when the parcel closes."
+      },
+      "audit": {
+        "label": "Audit log",
+        "desc": "The company event log. The log cannot be edited — only deleted by age — so this is the only way to remove old rows."
+      },
+      "imports": {
+        "label": "Imports and received files",
+        "desc": "Import runs and the record of received HR files. The CSV itself is always deleted after a successful import."
+      },
+      "assetLoans": {
+        "label": "Loan history",
+        "desc": "Completed asset loans. The borrower’s contact details are already cleared on return."
+      },
+      "employees": {
+        "label": "Former employees",
+        "desc": "Inactive employees are ANONYMIZED after the period — not deleted, because parcel history references the row. Only employees with no open parcels."
+      },
+      "routes": {
+        "label": "Route plans",
+        "desc": "Saved routes with addresses and coordinates."
+      }
+    },
+    "platformEmpty": "Kept until further notice",
+    "platformSubtitle": "Default periods for customers without their own setting",
+    "platformIntro": "The platform default retention periods. They apply only to customers who have not set their own under Configure → Personal data — retention is the customer’s decision as controller, and this is only the starting point. Empty field = keep until further notice.",
+    "platformExplainer": "A change here takes effect for EVERY customer without their own setting at the next nightly cleanup, and deletion cannot be undone. Agree the periods with the customer before setting them, and record them in Annex C.4 of the data processing agreement. Every change is written to the audit log."
+  },
+  "sar": {
+    "intro": "Collect everything Operia holds about one person — to answer a subject access request (GDPR Art. 15). Pick an employee, type a name, or do both.",
+    "employee": "Employee",
+    "employeeHint": "Follows the employee’s data: master data, parcels, history, messages, loans and user account.",
+    "query": "Name in free text",
+    "queryPlaceholder": "e.g. the name of someone who collected a parcel",
+    "queryHint": "Needed for people with no employee row — proxy collectors and private senders exist only as text in someone else’s parcel. The search is case-insensitive; æ, ø and å match ae, oe and aa.",
+    "run": "Create export",
+    "needSubject": "Pick an employee or type a name.",
+    "resultTitle": "Export",
+    "resultSubject": "{{subject}} — generated {{date}}",
+    "download": "Download JSON",
+    "truncated": "truncated at {{limit}}",
+    "noData": "No data found about this person.",
+    "limitations": "The export covers what Operia stores. Copies in backup and in your own log system (log drain) are not included, and the image files themselves are handed over manually — the export shows where they are. Every export is written to the audit log.",
+    "section": {
+      "asset_events_as_actor": "Asset actions the person performed",
+      "asset_loans": "Asset loans",
+      "audit_as_actor": "Audit trail with the person as actor",
+      "employee": "Employee master data",
+      "files": "Files (photos and signatures)",
+      "notifications": "Messages sent to the person",
+      "parcel_events_as_actor": "Actions the person performed",
+      "parcel_events_on_subject_parcels": "History on the person’s parcels",
+      "parcels_as_subject": "Parcels to/handed to the person",
+      "parcels_mentioning": "Parcels mentioning the person in free text",
+      "user_account": "User account"
+    }
   }
 }

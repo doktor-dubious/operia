@@ -177,6 +177,9 @@ fun AssetDocumentScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: Strin
     fun applyPhoto(uri: Uri?) {
         if (uri == null) return
         val bytes = assetReadScaledJpeg(ctx, uri)
+        // Billedet ligger nu i hukommelsen; cache-filen skal væk uanset udfaldet
+        // (aktivfotos kan vise personer og lokationer — samme regel som labels).
+        deleteCapture(ctx, uri)
         if (bytes == null) {
             toast.show("err", msgPhotoFailed)
             return
@@ -186,7 +189,7 @@ fun AssetDocumentScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: Strin
     }
 
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) applyPhoto(pendingUri)
+        if (ok) applyPhoto(pendingUri) else deleteCapture(ctx, pendingUri)
     }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         applyPhoto(uri)

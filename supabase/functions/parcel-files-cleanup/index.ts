@@ -6,10 +6,12 @@
 //   Forældreløse  — filens pakke findes ikke længere (pakken eller hele
 //                   virksomheden er slettet). Fjernes altid; filen kan ikke
 //                   længere dokumentere noget.
-//   For gamle     — ældre end platform_settings.parcel_files_retention_days.
-//                   NULL (standard) = behold for altid, så adfærden er uændret
-//                   indtil DCA aktivt sætter et vindue. Gælder KUN filer hvis
-//                   pakke er lukket (udleveret/afvist/returneret): en åben
+//   For gamle     — ældre end virksomhedens eget vindue for kategorien
+//                   'parcel_files' (company_retention, med platform_settings
+//                   som standard — opslag via RPC'en retention_days).
+//                   NULL begge steder = behold for altid, så adfærden er uændret
+//                   indtil et vindue aktivt sættes. Gælder KUN filer hvis
+//                   pakke er lukket (udleveret/afvist/returneret/fjernet): en åben
 //                   eller omtvistet pakke beholder sin kædedokumentation
 //                   uanset alder — vinduet må ikke kunne slette beviser for
 //                   noget systemet stadig sporer.
@@ -58,17 +60,50 @@ const isFolder = (e: Entry) => e.id === null
 
 export type CleanupCounts = { scanned: number; orphans: number; expired: number; feedback: number }
 
-// Slutstatusser — samme sæt som public.employee_has_open_parcels.
-const CLOSED_STATUSES = new Set(['delivered', 'rejected', 'returned'])
+// Slutstatusser — samme sæt som public.employee_has_open_parcels (inkl.
+// 'removed' siden 20260730120100) og run_retention_purges lukket-filter.
+const CLOSED_STATUSES = new Set(['delivered', 'rejected', 'returned', 'removed'])
+
+// Opbevaringsvinduet er kundens beslutning (company_retention), med platformens
+// som standard. Mappenavnet ER virksomhedens id, så vinduet slås op pr. mappe —
+// og caches, fordi de to spande gennemløbes efter hinanden.
+async function cutoffFor(
+  admin: SupabaseClient,
+  companyId: string,
+  cache: Map<string, Date | null>,
+): Promise<Date | null> {
+  const hit = cache.get(companyId)
+  if (hit !== undefined) return hit
+  const { data, error } = await admin.rpc('retention_days', {
+    p_company_id: companyId,
+    p_category: 'parcel_files',
+  })
+  if (error) {
+    // Et fejlet vindues-opslag (manglende grant, koldt skema-cache, fn
+    // udrullet før migrationen) må ikke vælte hele jobbet: forældreløse filer
+    // SKAL altid fjernes. Uden vindue slettes intet på alder — samme adfærd
+    // som "intet vindue sat" — og fejlen står i funktionsloggen.
+    console.error(`retention_days(${companyId}) fejlede: ${error.message}`)
+    cache.set(companyId, null)
+    return null
+  }
+  const days = typeof data === 'number' ? data : null
+  const cutoff = days ? new Date(Date.now() - days * 86_400_000) : null
+  cache.set(companyId, cutoff)
+  return cutoff
+}
 
 async function cleanupBucket(
   admin: SupabaseClient,
   bucket: string,
-  cutoff: Date | null,
+  cutoffs: Map<string, Date | null>,
   counts: CleanupCounts,
   doomed: string[],
 ) {
   for (const company of (await list(admin, bucket, '')).filter(isFolder)) {
+    // Ukendt mappenavn (ikke et virksomheds-id) ⇒ intet vindue; forældreløse
+    // filer fjernes stadig af reglen ovenfor.
+    const cutoff = UUID.test(company.name) ? await cutoffFor(admin, company.name, cutoffs) : null
     // Filer direkte i virksomhedsmappen + ét niveau ned (dokumentmapper).
     const level1 = await list(admin, bucket, company.name)
     const files: { path: string; created_at?: string | null }[] = []
@@ -121,6 +156,33 @@ async function cleanupBucket(
           doomed.push(`${bucket}:${p}`)
           counts.orphans++
         }
+      }
+    }
+
+    // Dokumentfiler (ét mappeniveau nede) skal have en parcel_documents-række.
+    // Er rækken væk mens pakken består (GDPR-sletning hvor selve filfjernelsen
+    // fejlede), er filen forældreløs, selv om pakke-tjekket ovenfor ikke fanger
+    // den. Et døgns frist dækker upload-før-række-vinduet ved oprettelse.
+    if (bucket === 'parcel-photos') {
+      const docFiles = files.filter((f) => f.path.split('/').length > 2)
+      const referenced = new Set<string>()
+      const docPaths = docFiles.map((f) => f.path)
+      for (let i = 0; i < docPaths.length; i += 200) {
+        const { data, error } = await admin
+          .from('parcel_documents')
+          .select('storage_path')
+          .in('storage_path', docPaths.slice(i, i + 200))
+        if (error) throw error
+        for (const row of data ?? []) referenced.add(String(row.storage_path))
+      }
+      const grace = new Date(Date.now() - 86_400_000)
+      const already = new Set(doomed)
+      for (const f of docFiles) {
+        if (referenced.has(f.path) || already.has(`${bucket}:${f.path}`)) continue
+        if (f.created_at && new Date(f.created_at) >= grace) continue
+        if (doomed.length >= MAX_DELETES) return
+        doomed.push(`${bucket}:${f.path}`)
+        counts.orphans++
       }
     }
     if (!cutoff) continue
@@ -184,17 +246,13 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  const { data: settings } = await admin
-    .from('platform_settings')
-    .select('parcel_files_retention_days')
-    .maybeSingle()
-  const days = settings?.parcel_files_retention_days ?? null
-  const cutoff = days ? new Date(Date.now() - days * 86_400_000) : null
+  // Ét vindue pr. virksomhed, slået op når mappen mødes (se cutoffFor).
+  const cutoffs = new Map<string, Date | null>()
 
   const counts: CleanupCounts = { scanned: 0, orphans: 0, expired: 0, feedback: 0 }
   const doomed: string[] = []
   try {
-    for (const bucket of BUCKETS) await cleanupBucket(admin, bucket, cutoff, counts, doomed)
+    for (const bucket of BUCKETS) await cleanupBucket(admin, bucket, cutoffs, counts, doomed)
     await cleanupFeedback(admin, counts, doomed)
   } catch (e) {
     return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500)

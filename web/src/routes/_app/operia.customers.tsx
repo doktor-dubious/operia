@@ -29,6 +29,7 @@ import {
 import { CopyButton } from '@/components/copy-button'
 import { CompanyDataTransferFields } from '@/components/company-data-transfer-fields'
 import { CompanyUsage } from '@/components/company-usage'
+import { CompanyPrivacyFields } from '@/components/company-privacy-fields'
 import { LogDrainsManager } from '@/components/log-drains/log-drains-manager'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -562,6 +563,7 @@ function CustomerDetailPane({
     { key: 'localization', label: t('customerDetail.tabLocalization') },
     { key: 'datatransfer', label: t('customerDetail.tabDataTransfer') },
     { key: 'logdrains', label: t('customerDetail.tabLogDrains') },
+    { key: 'privacy', label: t('customerDetail.tabPrivacy') },
     { key: 'usage', label: t('usage.tabLabel') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
@@ -653,6 +655,9 @@ function CustomerDetailPane({
         )}
         {tab === 'datatransfer' && <CompanyDataTransferFields companyId={row.id} admin />}
         {tab === 'logdrains' && <LogDrainsManager scope="company" companyId={row.id} />}
+        {/* admin: aftale-registreringen er DCA's kontraktdokumentation og kan
+            kun redigeres herfra (databasen håndhæver det samme). */}
+        {tab === 'privacy' && <CompanyPrivacyFields companyId={row.id} admin />}
         {tab === 'usage' && <CompanyUsage companyId={row.id} />}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">

@@ -175,3 +175,38 @@ export function maskRecipient(value: string | null | undefined): string | null {
   if (digits.length >= 4) return `${'*'.repeat(digits.length - 4)}${digits.slice(-4)}`
   return '****'
 }
+
+// Rens en fejltekst fra en udbyder, før den GEMMES.
+//
+// parcel_notifications.error / asset_loan_notifications.error / log_drains.
+// last_error indeholder det rå svar fra Resend, GatewayAPI eller kundens eget
+// logsystem — og et afvist forsøg citerer rutinemæssigt adressen der fejlede
+// ("550 5.1.1 <anna@firma.dk> unknown"). Rækken bevares som dokumentation for
+// forsøget, men modtageren har vi allerede besluttet ikke at opbevare i klar
+// tekst (se maskRecipient og trigger'en der rydder recipient ved lukning), og
+// så må den ikke smutte ind ad bagdøren i fejlteksten.
+//
+// Maskeringen sker HER, ved lagringen — ikke i selve afsenderen: det svar der
+// returneres til den manager, som lige har trykket "send test", må gerne vise
+// adressen, for vedkommende har selv indtastet den.
+export function sanitizeProviderError(
+  value: string | null | undefined,
+  max = 500,
+): string | null {
+  const v = (value ?? '').trim()
+  if (!v) return null
+  return v
+    // E-mailadresser, uanset hvor i teksten de står.
+    .replace(/[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+/g, (m) => maskRecipient(m) ?? '***')
+    // Telefonnumre: 8+ cifre i træk, evt. med mellemrum eller parenteser.
+    // Bindestreger og koloner bryder bevidst et match, så datoer og
+    // klokkeslæt ('2026-08-14 03:22') står læseligt tilbage — korte tal
+    // (statuskoder, portnumre) ligeså. En SAMMENHÆNGENDE talrække på 8+ cifre
+    // maskeres stadig, også når den er et udbyder-id: et nummer der slipper
+    // ind i en immutable log, kan aldrig fjernes igen, så tvivlen falder ud
+    // til maskering.
+    .replace(/\+?\d(?:[\d\s()]{6,})\d/g, (m) =>
+      m.replace(/\D/g, '').length >= 8 ? (maskRecipient(m) ?? '***') : m,
+    )
+    .slice(0, max)
+}

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { StickyNote } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Field } from '@/components/detail-field'
+import { DocumentDeleteButton } from '@/components/document-delete-button'
+import { useAccess } from '@/hooks/use-access'
 import { supabase } from '@/lib/supabase'
 
 // Tilstand/dokumentation for en pakke: intake-tilstand (preset + note + evt.
@@ -63,10 +65,12 @@ function ConditionEntry({
   url,
   note,
   label,
+  action,
 }: {
   url: string | null
   note: string | null
   label: string
+  action?: React.ReactNode
 }) {
   const [failed, setFailed] = useState(false)
   const showImage = !!url && !failed
@@ -90,6 +94,7 @@ function ConditionEntry({
         </span>
         {note && <span className="whitespace-pre-wrap text-[13px]">{note}</span>}
       </div>
+      {action && <div className="ml-auto">{action}</div>}
     </div>
   )
 }
@@ -99,6 +104,7 @@ function ConditionEntry({
 export function ParcelDocumentList({ parcelId }: { parcelId: string }) {
   const { t } = useTranslation()
   const { data, isPending } = useParcelCondition(parcelId, null)
+  const { data: access } = useAccess()
 
   if (isPending) return <Skeleton className="h-24 w-full" />
   if (!data?.docs.length) {
@@ -112,6 +118,18 @@ export function ParcelDocumentList({ parcelId }: { parcelId: string }) {
           url={d.url}
           note={d.note}
           label={dateFormat.format(new Date(d.created_at))}
+          action={
+            access?.isPlatformAdmin ? (
+              <DocumentDeleteButton
+                table="parcel_documents"
+                bucket="parcel-photos"
+                docId={d.id}
+                storagePath={d.storage_path}
+                i18nPrefix="parcelDetail"
+                invalidateKey={['parcel-documents', parcelId]}
+              />
+            ) : undefined
+          }
         />
       ))}
     </div>

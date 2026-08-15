@@ -28,6 +28,15 @@ export type AiProvider = {
    * overførselsgrundlag, en behandling inden for EU/EØS gør ikke.
    */
   outsideEu: boolean
+  /**
+   * Har udbyderen et gratis niveau hvis vilkår tillader at det indsendte
+   * bruges til modelforbedring? Så må DCA-nøglen til den udbyder KUN bruges
+   * til udvikling og test med syntetiske labels — kundedata (rigtige
+   * labelfotos) kræver en betalt plan med databehandleraftale.
+   * Advarslen vises på Operia → Integrationer, hvor DCA vælger hvilke
+   * udbydere kunderne overhovedet kan pege på. Se docs/gdpr/subprocessors.md.
+   */
+  hasFreeTier: boolean
 }
 
 export type AiModel = {
@@ -41,12 +50,16 @@ export type AiModel = {
 export const AI_PROVIDERS: AiProvider[] = [
   // Mistral står først, fordi den er den eneste udbyder hvor labelfotoet bliver
   // i EU/EØS — det er det valg en dansk kunde skal møde først.
-  { key: 'mistral', label: 'Mistral AI', vendor: 'Mistral AI SAS', country: 'fr', outsideEu: false },
-  { key: 'anthropic', label: 'Anthropic', vendor: 'Anthropic PBC', country: 'us', outsideEu: true },
-  { key: 'google', label: 'Google', vendor: 'Google LLC', country: 'us', outsideEu: true },
-  { key: 'openai', label: 'OpenAI', vendor: 'OpenAI, L.L.C.', country: 'us', outsideEu: true },
-  { key: 'xai', label: 'xAI', vendor: 'xAI Corp.', country: 'us', outsideEu: true },
-  { key: 'deepseek', label: 'DeepSeek', vendor: 'DeepSeek', country: 'cn', outsideEu: true },
+  // hasFreeTier: verificeret 2026-08-14. Mistrals "Experiment"-plan og Googles
+  // Gemini-gratistier tillader begge at indsendt indhold bruges til
+  // modelforbedring; Anthropic har intet gratis API-niveau (nøglen kræver
+  // kredit fra første kald).
+  { key: 'mistral', label: 'Mistral AI', vendor: 'Mistral AI SAS', country: 'fr', outsideEu: false, hasFreeTier: true },
+  { key: 'anthropic', label: 'Anthropic', vendor: 'Anthropic PBC', country: 'us', outsideEu: true, hasFreeTier: false },
+  { key: 'google', label: 'Google', vendor: 'Google LLC', country: 'us', outsideEu: true, hasFreeTier: true },
+  { key: 'openai', label: 'OpenAI', vendor: 'OpenAI, L.L.C.', country: 'us', outsideEu: true, hasFreeTier: false },
+  { key: 'xai', label: 'xAI', vendor: 'xAI Corp.', country: 'us', outsideEu: true, hasFreeTier: false },
+  { key: 'deepseek', label: 'DeepSeek', vendor: 'DeepSeek', country: 'cn', outsideEu: true, hasFreeTier: false },
 ]
 
 // Versionen af oplysningsteksten kunden bekræfter bor i databasen alene

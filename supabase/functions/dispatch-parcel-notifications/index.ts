@@ -45,6 +45,7 @@ import {
   renderHtml,
   resolveTemplate,
   timeToMinutes,
+  sanitizeProviderError,
 } from '../_shared/notify.ts'
 import {
   DELIVERED_STATUS,
@@ -397,7 +398,7 @@ Deno.serve(async (req) => {
           recipient: to,
           status: result.ok ? 'sent' : 'failed',
           provider_id: result.id ?? null,
-          error: result.ok ? null : (result.error ?? '').slice(0, 500),
+          error: result.ok ? null : sanitizeProviderError(result.error, 500),
         })
 
         if (result.ok) {
@@ -422,7 +423,7 @@ Deno.serve(async (req) => {
               batch: isBatch,
               recipient: maskRecipient(to),
               reason: classifySendError(result.error ?? '', channel),
-              error: (result.error ?? '').slice(0, 300),
+              error: sanitizeProviderError(result.error, 300),
             },
           })
         }
@@ -504,7 +505,7 @@ Deno.serve(async (req) => {
         recipient: to,
         status: result.ok ? 'sent' : 'failed',
         provider_id: result.id ?? null,
-        error: result.ok ? null : (result.error ?? '').slice(0, 500),
+        error: result.ok ? null : sanitizeProviderError(result.error, 500),
         digest_key: today,
       })
 
@@ -527,7 +528,7 @@ Deno.serve(async (req) => {
             batch: false,
             recipient: maskRecipient(to),
             reason: classifySendError(result.error ?? '', channel),
-            error: (result.error ?? '').slice(0, 300),
+            error: sanitizeProviderError(result.error, 300),
           },
         })
       }

@@ -252,8 +252,16 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
 
     fun applyPhoto(uri: Uri?) {
         if (uri == null) return
-        val target = photoTarget ?: return
+        // Cache-filen skal væk også uden mål — ellers efterlader et bortfaldet
+        // fotomål (dialogen lukket) billedet liggende i cachen.
+        val target = photoTarget
+        if (target == null) {
+            deleteCapture(ctx, uri)
+            return
+        }
         val bytes = readScaledJpeg(ctx, uri)
+        // Billedet ligger nu i hukommelsen; cache-filen skal væk uanset udfaldet.
+        deleteCapture(ctx, uri)
         if (bytes == null) {
             toast.show("err", msgPhotoFailed)
             return
@@ -262,7 +270,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) applyPhoto(pendingUri)
+        if (ok) applyPhoto(pendingUri) else deleteCapture(ctx, pendingUri)
     }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         applyPhoto(uri)
@@ -453,6 +461,9 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     fun readLabel(uri: Uri?) {
         if (uri == null) return
         val bytes = readScaledJpeg(ctx, uri)
+        // Labelfotoet er personoplysninger (navne, adresser, telefonnumre) og må
+        // ikke blive liggende i enhedens cache efter aflæsningen.
+        deleteCapture(ctx, uri)
         if (bytes == null) {
             toast.show("err", msgPhotoFailed)
             return
@@ -485,7 +496,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
     }
 
     val takeLabelPicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) readLabel(aiPendingUri)
+        if (ok) readLabel(aiPendingUri) else deleteCapture(ctx, aiPendingUri)
     }
     val pickLabelImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         readLabel(uri)

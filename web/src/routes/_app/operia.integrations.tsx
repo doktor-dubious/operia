@@ -248,9 +248,20 @@ function IntegrationsPage() {
                           {t('integrationsPage.aiNoModelsYet')}
                         </span>
                       )}
+                      {p.hasFreeTier && (
+                        <span className="text-xs text-amber-600 dark:text-amber-500">
+                          {t('integrationsPage.aiFreeTier')}
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
+                {AI_PROVIDERS.some((p) => p.hasFreeTier) && (
+                  <p className="mt-3 flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-foreground-light">
+                    <Info className="mt-px size-3.5 shrink-0 text-amber-600 dark:text-amber-500" />
+                    <span>{t('integrationsPage.aiFreeTierExplainer')}</span>
+                  </p>
+                )}
               </div>
 
               <div className="rounded-md border p-4">

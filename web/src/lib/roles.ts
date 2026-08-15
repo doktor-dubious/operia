@@ -174,6 +174,11 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/inventory', roles: ['inventory_manager'] },
   { prefix: '/products/routes', roles: ['route_planner_manager'] },
   { prefix: '/products', roles: [] },
+  // Persondata-siden rummer indsigtsudtrækket, som sar_export i databasen
+  // også autoriserer for data_manager — sideadgangen skal følge med.
+  // Opbevarings-fanen kan en data_manager se men ikke gemme (RLS kræver
+  // manager), præcis som databasen håndhæver.
+  { prefix: '/configure/personal-data', roles: ['data_manager'] },
   { prefix: '/configure', roles: [] },
 ]
 

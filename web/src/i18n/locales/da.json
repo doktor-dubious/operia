@@ -161,6 +161,7 @@
     "inventoryImportItems": "Lagervarer",
     "inventoryExportItems": "Lagervarer",
     "configureLogDrains": "Log-drains",
+    "configurePrivacy": "Databeskyttelse",
     "operiaLogDrains": "Log-drains",
     "exportData": "Eksport",
     "condition": "Tilstand",
@@ -178,7 +179,9 @@
     "assetMove": "Flyt aktiv",
     "assetDocument": "Dokumentér aktiv",
     "assetSearch": "Søg aktiver",
-    "assetNew": "Nyt aktiv"
+    "assetNew": "Nyt aktiv",
+    "configurePersonalData": "Persondata",
+    "operiaRetention": "Opbevaring"
   },
   "operiaConfig": {
     "title": "Operia-konfiguration",
@@ -220,7 +223,8 @@
       "imports": "Import & eksport",
       "log": "Log",
       "other": "Andet",
-      "ai": "AI"
+      "ai": "AI",
+      "compliance": "Databeskyttelse"
     },
     "eventType": "Handling",
     "live": "Live",
@@ -956,7 +960,12 @@
     "intakePhoto": "Foto ved modtagelse",
     "documents": "Dokumentation",
     "noDocuments": "Ingen dokumentation endnu.",
-    "notRelocatable": "Kan ikke flyttes i status \"{{status}}\"."
+    "notRelocatable": "Kan ikke flyttes i status \"{{status}}\".",
+    "documentDelete": "Slet dokumentation",
+    "documentDeleteTitle": "Slet dokumentationspost",
+    "documentDeleteWarning": "Posten (foto og/eller note) slettes permanent. Sletningen er GDPR-vejen for persondata i dokumentationen og logges i pakkens historik.",
+    "documentDeleteAcknowledge": "Jeg forstår, at dokumentationen slettes permanent og ikke kan gendannes.",
+    "documentDeletedToast": "Dokumentationen er slettet"
   },
   "employees": {
     "title": "Medarbejdere",
@@ -1019,6 +1028,7 @@
     "saveChanges": "Gem ændringer",
     "new": "Ny",
     "noPermission": "Du har ikke rettigheder til denne handling.",
+    "documentFileDeleteFailed": "Posten er slettet, men fotofilen kunne ikke fjernes fra lageret — fjern den manuelt eller lad oprydningsjobbet tage den.",
     "delete": "Slet",
     "nameTaken": "Dette navn er allerede i brug.",
     "optional": "valgfri"
@@ -1429,6 +1439,7 @@
     "defaultCurrency": "Standardvaluta",
     "currencyDefaultMarker": "Standardvaluta — kan ikke fravælges.",
     "tabLogDrains": "Log-drains",
+    "tabPrivacy": "Databeskyttelse",
     "logoNotImage": "Filen skal være et billede.",
     "logoDropHint": "Træk et billede hertil, eller klik for at vælge",
     "removeLogo": "Fjern logo"
@@ -2430,6 +2441,8 @@
     "aiModelsDesc": "Hvilke modeller kunderne kan vælge imellem. En models udbyder skal også være valgt ovenfor.",
     "aiNoModelsYet": "— ingen modeller endnu",
     "aiNoVision": "— kan ikke læse billeder",
+    "aiFreeTier": "— har gratis niveau",
+    "aiFreeTierExplainer": "Mistral og Google udbyder et gratis niveau, hvis vilkår tillader dem at bruge det indsendte til modelforbedring. Er DCA's nøgle til en af dem på gratis-niveauet, må udbyderen kun bruges til udvikling og test med syntetiske labels — aldrig til rigtige kundelabels. Før en udbyder gøres tilgængelig for kunder i drift, skal nøglen stå på en betalt plan med databehandleraftale (se docs/gdpr/subprocessors.md).",
     "aiVisionExplainer": "Label-scanning på håndterminalen kræver en model der kan læse billeder (vision). Modeller uden vision kan vælges, men kan kun bruges til fremtidige tekst-funktioner.",
     "enable": "Aktivér integrationen",
     "enableDesc": "Når den er slået fra, er AD-integrationen skjult for alle kunder.",
@@ -2446,6 +2459,29 @@
     "interval_720": "Hver 12. time",
     "interval_1440": "Dagligt",
     "interval_10080": "Ugentligt"
+  },
+  "companyPrivacy": {
+    "subtitle": "Kontakter og databehandleraftale",
+    "intro": "Jeres virksomhed er dataansvarlig for de personoplysninger Operia behandler; DCA Logic er databehandler. Kontakterne her er dem DCA skriver til — udpeg dem, så beskeder om nye underdatabehandlere og eventuelle sikkerhedsbrud lander det rigtige sted.",
+    "privacyContact": "Databeskyttelseskontakt",
+    "privacyContactHint": "Modtager varsel når DCA vil tilføje eller skifte en underdatabehandler (30 dages frist, med indsigelsesret), og er indgangen for indsigts- og sletteanmodninger I videresender.",
+    "securityContact": "Sikkerhedskontakt",
+    "securityContactHint": "Modtager underretning om brud på persondatasikkerheden. DCA underretter inden for 24 timer efter at have opdaget bruddet — jeres egen frist over for Datatilsynet er 72 timer og løber fra vores besked.",
+    "contactName": "Navn",
+    "contactEmail": "E-mail",
+    "contactPhone": "Telefon",
+    "contactPhoneAlways": "Telefon (helst døgnet rundt)",
+    "noSecurityContactWarning": "Der er ingen sikkerhedskontakt. Uden en e-mailadresse går en underretning om brud til virksomhedens almindelige kontakt og kan blive forsinket.",
+    "dpa": "Databehandleraftale",
+    "dpaHint": "Aftalen mellem jer og DCA Logic. Registreringen vedligeholdes af DCA.",
+    "dpaHintAdmin": "DCA's dokumentation for at aftalen var på plads FØR behandlingen begyndte (art. 28(3)). Underskriftsdato kræver både version og underskriver.",
+    "dpaNone": "Der er endnu ikke registreret en underskrevet databehandleraftale. Kontakt DCA Logic.",
+    "dpaVersion": "Version",
+    "dpaSignedAt": "Underskrevet den",
+    "dpaSignedBy": "Underskrevet af",
+    "dpaIncomplete": "Underskriftsdato kræver både version og underskriver.",
+    "noDpaWarning": "Ingen databehandleraftale registreret for denne kunde. Aftalen skal være underskrevet, før der behandles rigtige personoplysninger.",
+    "emailInvalid": "Ugyldig e-mailadresse."
   },
   "companyAi": {
     "noneOffered": "Der er ingen AI-udbydere tilgængelige for din virksomhed.",
@@ -2588,5 +2624,86 @@
     "breakdown": "Heraf {{parcelCount}} pakkebeskeder og {{assetCount}} aktivpåmindelser.",
     "notes": "Kun gennemførte afsendelser og AI-aflæsninger tælles (accepteret af udbyderen); testsendinger og afviste aflæsninger er fraregnet.",
     "aiRead": "AI-aflæsning · {{model}}"
+  },
+  "personalData": {
+    "subtitle": "Opbevaringsperioder og indsigtsanmodninger",
+    "area": "Område",
+    "retention": "Opbevaring",
+    "sar": "Indsigtsanmodning"
+  },
+  "retention": {
+    "intro": "I bestemmer selv, hvor længe Operia gemmer jeres data. Lad feltet stå tomt for at følge platformens standard. Er begge tomme, gemmes data indtil videre.",
+    "daysUnit": "dage",
+    "inherited": "Arver {{days}} dage",
+    "inheritedForever": "Arver: gemmes indtil videre",
+    "invalid": "{{category}}: angiv et helt antal dage større end 0, eller lad feltet stå tomt.",
+    "explainer": "Oprydningen kører automatisk hver nat. Forkortes en periode, slettes data der allerede er ældre, ved næste kørsel — og sletningen kan ikke fortrydes. Hver oprydning skrives i revisionsloggen. Forsendelseshistorikken har bevidst ingen selvstændig periode: den følger pakken.",
+    "cat": {
+      "parcels": {
+        "label": "Pakker og historik",
+        "desc": "Lukkede pakker (udleveret, afvist, returneret, annulleret) og deres hændelseshistorik. Åbne pakker slettes aldrig af et vindue."
+      },
+      "parcelFiles": {
+        "label": "Fotos og underskrifter",
+        "desc": "Tilstandsfotos og kvitteringsunderskrifter på lukkede pakker. Forældreløse filer fjernes altid, uanset vindue."
+      },
+      "notifications": {
+        "label": "Beskedlog",
+        "desc": "Log over sendte e-mails og SMS’er (pakker og aktivudlån). Modtagerens adresse ryddes allerede, når pakken lukkes."
+      },
+      "audit": {
+        "label": "Revisionslog",
+        "desc": "Virksomhedens hændelseslog. Loggen kan ikke redigeres — kun slettes efter alder — så dette er den eneste måde at fjerne gamle rækker på."
+      },
+      "imports": {
+        "label": "Import og modtagne filer",
+        "desc": "Importkørsler og registreringen af modtagne HR-filer. Selve CSV-filen slettes altid efter vellykket import."
+      },
+      "assetLoans": {
+        "label": "Udlånshistorik",
+        "desc": "Afsluttede aktivudlån. Låntagerens kontaktoplysninger ryddes allerede ved retur."
+      },
+      "employees": {
+        "label": "Fratrådte medarbejdere",
+        "desc": "Inaktive medarbejdere ANONYMISERES efter perioden — de slettes ikke, fordi pakkehistorikken peger på rækken. Kun medarbejdere uden åbne pakker."
+      },
+      "routes": {
+        "label": "Ruteplaner",
+        "desc": "Gemte ruter med adresser og koordinater."
+      }
+    },
+    "platformEmpty": "Gemmes indtil videre",
+    "platformSubtitle": "Standardperioder for kunder uden egen indstilling",
+    "platformIntro": "Platformens standard-opbevaringsperioder. De gælder kun for kunder, der ikke selv har sat en periode under Konfigurér → Persondata — opbevaringsperioden er kundens beslutning som dataansvarlig, og det her er alene udgangspunktet. Tomt felt = gem indtil videre.",
+    "platformExplainer": "En ændring her slår igennem hos ALLE kunder uden egen indstilling ved næste natlige oprydning, og sletningen kan ikke fortrydes. Aftal perioderne med kunden, før de sættes, og skriv dem ind i databehandleraftalens bilag C.4. Hver ændring skrives i revisionsloggen."
+  },
+  "sar": {
+    "intro": "Saml alt hvad Operia har om én person — til besvarelse af en indsigtsanmodning (GDPR art. 15). Vælg en medarbejder, skriv et navn, eller gør begge dele.",
+    "employee": "Medarbejder",
+    "employeeHint": "Følger medarbejderens data: stamdata, pakker, historik, beskeder, udlån og brugerkonto.",
+    "query": "Navn i fritekst",
+    "queryPlaceholder": "fx navnet på en der har afhentet en pakke",
+    "queryHint": "Nødvendigt for personer uden medarbejderrække — fuldmagtsafhentere og private afsendere findes kun som tekst i en anden persons pakke. Søgningen er ufølsom over for store/små bogstaver; æ, ø og å svarer til ae, oe og aa.",
+    "run": "Lav udtræk",
+    "needSubject": "Vælg en medarbejder eller skriv et navn.",
+    "resultTitle": "Udtræk",
+    "resultSubject": "{{subject}} — dannet {{date}}",
+    "download": "Download JSON",
+    "truncated": "afkortet ved {{limit}}",
+    "noData": "Ingen data fundet om denne person.",
+    "limitations": "Udtrækket dækker det Operia gemmer. Kopier i backup og i jeres eget logsystem (log-drain) indgår ikke, og selve billedfilerne udleveres manuelt — udtrækket viser deres placering. Hvert udtræk skrives i revisionsloggen.",
+    "section": {
+      "asset_events_as_actor": "Aktivhandlinger personen har udført",
+      "asset_loans": "Aktivudlån",
+      "audit_as_actor": "Revisionsspor med personen som aktør",
+      "employee": "Medarbejderstamdata",
+      "files": "Filer (fotos og underskrifter)",
+      "notifications": "Beskeder sendt til personen",
+      "parcel_events_as_actor": "Handlinger personen selv har udført",
+      "parcel_events_on_subject_parcels": "Historik på personens pakker",
+      "parcels_as_subject": "Pakker til/udleveret til personen",
+      "parcels_mentioning": "Pakker der nævner personen i fritekst",
+      "user_account": "Brugerkonto"
+    }
   }
 }

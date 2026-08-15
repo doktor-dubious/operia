@@ -17,6 +17,7 @@
 // (token/api-nøgle) læses kun her (service-role) — aldrig i browseren.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { sanitizeProviderError } from '../_shared/notify.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -307,7 +308,11 @@ Deno.serve(async (req) => {
       .update({
         last_run_at: now,
         last_status: result.ok ? 'ok' : 'error',
-        last_error: result.ok ? null : `${result.status}: ${result.detail ?? ''}`.slice(0, 1000),
+        // Svaret fra kundens eget endpoint kan citere den payload vi sendte
+        // (revisionsrækker) — renses som de øvrige udbyder-fejl.
+        last_error: result.ok
+          ? null
+          : sanitizeProviderError(`${result.status}: ${result.detail ?? ''}`, 1000),
       })
       .eq('id', drain.id)
     return json({ ok: result.ok, status: result.status, detail: result.detail ?? null })

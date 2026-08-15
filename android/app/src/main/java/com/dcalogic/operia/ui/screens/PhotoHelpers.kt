@@ -58,9 +58,43 @@ internal fun readScaledJpeg(context: Context, uri: Uri): ByteArray? = runCatchin
     }
 }.getOrNull()
 
+/** Mappen kamera-optagelser lander i — spejler `res/xml/file_paths.xml`. */
+private fun capturesDir(context: Context) = File(context.cacheDir, "captures")
+
 /** Midlertidig fil-Uri til kamera-optagelse, delt via FileProvider. */
 internal fun newCaptureUri(context: Context): Uri {
-    val dir = File(context.cacheDir, "captures").apply { mkdirs() }
+    val dir = capturesDir(context).apply { mkdirs() }
     val file = File(dir, "cap_${System.currentTimeMillis()}.jpg")
     return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+}
+
+/**
+ * Slet kamera-optagelsen bag en Uri. GDPR: et labelfoto eller et tilstandsfoto
+ * er personoplysninger (navne, adresser, telefonnumre, undertiden personer), og
+ * enheden er ikke opbevaringsstedet — billedet skal kun leve indtil det er
+ * uploadet eller aflæst. Kaldes derfor så snart bytes er læst ind i hukommelsen,
+ * og også når brugeren fortryder optagelsen.
+ *
+ * Kun vores egne FileProvider-Uri'er røres: en Uri fra galleriet (MediaStore)
+ * peger på brugerens eget billede, som appen ikke må slette. Filnavnet
+ * normaliseres og valideres mod captures-mappen, så en manipuleret Uri
+ * (`../..`) ikke kan pege uden for cachen.
+ */
+internal fun deleteCapture(context: Context, uri: Uri?) {
+    if (uri == null || uri.authority != "${context.packageName}.fileprovider") return
+    runCatching {
+        val dir = capturesDir(context)
+        val file = File(dir, File(uri.lastPathSegment ?: return).name)
+        if (file.parentFile?.canonicalPath == dir.canonicalPath) file.delete()
+    }
+}
+
+/**
+ * Ryd hele captures-mappen. Sikkerhedsnettet under [deleteCapture]: et
+ * app-nedbrud, en kamera-app der aldrig vender tilbage, eller en fremtidig
+ * kaldsvej der glemmer oprydningen, må ikke efterlade fotos på enheden.
+ * Kaldes ved app-start (MainActivity).
+ */
+internal fun sweepCaptures(context: Context) {
+    runCatching { capturesDir(context).listFiles()?.forEach { it.delete() } }
 }

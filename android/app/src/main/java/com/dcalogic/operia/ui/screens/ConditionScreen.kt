@@ -120,6 +120,8 @@ fun ConditionScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? =
     fun applyPhoto(uri: Uri?) {
         if (uri == null) return
         val bytes = readScaledJpeg(ctx, uri)
+        // Billedet ligger nu i hukommelsen; cache-filen skal væk uanset udfaldet.
+        deleteCapture(ctx, uri)
         if (bytes == null) {
             toast.show("err", msgPhotoFailed)
             return
@@ -129,7 +131,7 @@ fun ConditionScreen(vm: AppViewModel, onBack: () -> Unit, initialCode: String? =
     }
 
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) applyPhoto(pendingUri)
+        if (ok) applyPhoto(pendingUri) else deleteCapture(ctx, pendingUri)
     }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         applyPhoto(uri)

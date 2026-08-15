@@ -45,6 +45,7 @@ import { Route as AppParcelsBoardRouteImport } from './routes/_app/parcels.board
 import { Route as AppOperiaUsersRouteImport } from './routes/_app/operia.users'
 import { Route as AppOperiaTemplatesRouteImport } from './routes/_app/operia.templates'
 import { Route as AppOperiaShippingRouteImport } from './routes/_app/operia.shipping'
+import { Route as AppOperiaRetentionRouteImport } from './routes/_app/operia.retention'
 import { Route as AppOperiaProductsRouteImport } from './routes/_app/operia.products'
 import { Route as AppOperiaNotificationsRouteImport } from './routes/_app/operia.notifications'
 import { Route as AppOperiaMapsRouteImport } from './routes/_app/operia.maps'
@@ -71,6 +72,8 @@ import { Route as AppConfigureUsersRouteImport } from './routes/_app/configure.u
 import { Route as AppConfigureTemplatesRouteImport } from './routes/_app/configure.templates'
 import { Route as AppConfigureShippingRouteImport } from './routes/_app/configure.shipping'
 import { Route as AppConfigureProductsRouteImport } from './routes/_app/configure.products'
+import { Route as AppConfigurePrivacyRouteImport } from './routes/_app/configure.privacy'
+import { Route as AppConfigurePersonalDataRouteImport } from './routes/_app/configure.personal-data'
 import { Route as AppConfigureNotificationsRouteImport } from './routes/_app/configure.notifications'
 import { Route as AppConfigureLoginSecurityRouteImport } from './routes/_app/configure.login-security'
 import { Route as AppConfigureLogDrainsRouteImport } from './routes/_app/configure.log-drains'
@@ -278,6 +281,11 @@ const AppOperiaShippingRoute = AppOperiaShippingRouteImport.update({
   path: '/shipping',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaRetentionRoute = AppOperiaRetentionRouteImport.update({
+  id: '/retention',
+  path: '/retention',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaProductsRoute = AppOperiaProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -408,6 +416,17 @@ const AppConfigureProductsRoute = AppConfigureProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppConfigureRoute,
 } as any)
+const AppConfigurePrivacyRoute = AppConfigurePrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigurePersonalDataRoute =
+  AppConfigurePersonalDataRouteImport.update({
+    id: '/personal-data',
+    path: '/personal-data',
+    getParentRoute: () => AppConfigureRoute,
+  } as any)
 const AppConfigureNotificationsRoute =
   AppConfigureNotificationsRouteImport.update({
     id: '/notifications',
@@ -587,6 +606,8 @@ export interface FileRoutesByFullPath {
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
   '/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/configure/personal-data': typeof AppConfigurePersonalDataRoute
+  '/configure/privacy': typeof AppConfigurePrivacyRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
   '/configure/templates': typeof AppConfigureTemplatesRoute
@@ -613,6 +634,7 @@ export interface FileRoutesByFullPath {
   '/operia/maps': typeof AppOperiaMapsRoute
   '/operia/notifications': typeof AppOperiaNotificationsRoute
   '/operia/products': typeof AppOperiaProductsRoute
+  '/operia/retention': typeof AppOperiaRetentionRoute
   '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/operia/users': typeof AppOperiaUsersRoute
@@ -676,6 +698,8 @@ export interface FileRoutesByTo {
   '/configure/log-drains': typeof AppConfigureLogDrainsRoute
   '/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/configure/personal-data': typeof AppConfigurePersonalDataRoute
+  '/configure/privacy': typeof AppConfigurePrivacyRoute
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
   '/configure/templates': typeof AppConfigureTemplatesRoute
@@ -702,6 +726,7 @@ export interface FileRoutesByTo {
   '/operia/maps': typeof AppOperiaMapsRoute
   '/operia/notifications': typeof AppOperiaNotificationsRoute
   '/operia/products': typeof AppOperiaProductsRoute
+  '/operia/retention': typeof AppOperiaRetentionRoute
   '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
   '/operia/users': typeof AppOperiaUsersRoute
@@ -768,6 +793,8 @@ export interface FileRoutesById {
   '/_app/configure/log-drains': typeof AppConfigureLogDrainsRoute
   '/_app/configure/login-security': typeof AppConfigureLoginSecurityRoute
   '/_app/configure/notifications': typeof AppConfigureNotificationsRoute
+  '/_app/configure/personal-data': typeof AppConfigurePersonalDataRoute
+  '/_app/configure/privacy': typeof AppConfigurePrivacyRoute
   '/_app/configure/products': typeof AppConfigureProductsRoute
   '/_app/configure/shipping': typeof AppConfigureShippingRoute
   '/_app/configure/templates': typeof AppConfigureTemplatesRoute
@@ -794,6 +821,7 @@ export interface FileRoutesById {
   '/_app/operia/maps': typeof AppOperiaMapsRoute
   '/_app/operia/notifications': typeof AppOperiaNotificationsRoute
   '/_app/operia/products': typeof AppOperiaProductsRoute
+  '/_app/operia/retention': typeof AppOperiaRetentionRoute
   '/_app/operia/shipping': typeof AppOperiaShippingRoute
   '/_app/operia/templates': typeof AppOperiaTemplatesRoute
   '/_app/operia/users': typeof AppOperiaUsersRoute
@@ -860,6 +888,8 @@ export interface FileRouteTypes {
     | '/configure/log-drains'
     | '/configure/login-security'
     | '/configure/notifications'
+    | '/configure/personal-data'
+    | '/configure/privacy'
     | '/configure/products'
     | '/configure/shipping'
     | '/configure/templates'
@@ -886,6 +916,7 @@ export interface FileRouteTypes {
     | '/operia/maps'
     | '/operia/notifications'
     | '/operia/products'
+    | '/operia/retention'
     | '/operia/shipping'
     | '/operia/templates'
     | '/operia/users'
@@ -949,6 +980,8 @@ export interface FileRouteTypes {
     | '/configure/log-drains'
     | '/configure/login-security'
     | '/configure/notifications'
+    | '/configure/personal-data'
+    | '/configure/privacy'
     | '/configure/products'
     | '/configure/shipping'
     | '/configure/templates'
@@ -975,6 +1008,7 @@ export interface FileRouteTypes {
     | '/operia/maps'
     | '/operia/notifications'
     | '/operia/products'
+    | '/operia/retention'
     | '/operia/shipping'
     | '/operia/templates'
     | '/operia/users'
@@ -1040,6 +1074,8 @@ export interface FileRouteTypes {
     | '/_app/configure/log-drains'
     | '/_app/configure/login-security'
     | '/_app/configure/notifications'
+    | '/_app/configure/personal-data'
+    | '/_app/configure/privacy'
     | '/_app/configure/products'
     | '/_app/configure/shipping'
     | '/_app/configure/templates'
@@ -1066,6 +1102,7 @@ export interface FileRouteTypes {
     | '/_app/operia/maps'
     | '/_app/operia/notifications'
     | '/_app/operia/products'
+    | '/_app/operia/retention'
     | '/_app/operia/shipping'
     | '/_app/operia/templates'
     | '/_app/operia/users'
@@ -1357,6 +1394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaShippingRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/retention': {
+      id: '/_app/operia/retention'
+      path: '/retention'
+      fullPath: '/operia/retention'
+      preLoaderRoute: typeof AppOperiaRetentionRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/products': {
       id: '/_app/operia/products'
       path: '/products'
@@ -1537,6 +1581,20 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/configure/products'
       preLoaderRoute: typeof AppConfigureProductsRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/privacy': {
+      id: '/_app/configure/privacy'
+      path: '/privacy'
+      fullPath: '/configure/privacy'
+      preLoaderRoute: typeof AppConfigurePrivacyRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/personal-data': {
+      id: '/_app/configure/personal-data'
+      path: '/personal-data'
+      fullPath: '/configure/personal-data'
+      preLoaderRoute: typeof AppConfigurePersonalDataRouteImport
       parentRoute: typeof AppConfigureRoute
     }
     '/_app/configure/notifications': {
@@ -1742,6 +1800,8 @@ interface AppConfigureRouteChildren {
   AppConfigureLogDrainsRoute: typeof AppConfigureLogDrainsRoute
   AppConfigureLoginSecurityRoute: typeof AppConfigureLoginSecurityRoute
   AppConfigureNotificationsRoute: typeof AppConfigureNotificationsRoute
+  AppConfigurePersonalDataRoute: typeof AppConfigurePersonalDataRoute
+  AppConfigurePrivacyRoute: typeof AppConfigurePrivacyRoute
   AppConfigureProductsRoute: typeof AppConfigureProductsRoute
   AppConfigureShippingRoute: typeof AppConfigureShippingRoute
   AppConfigureTemplatesRoute: typeof AppConfigureTemplatesRoute
@@ -1759,6 +1819,8 @@ const AppConfigureRouteChildren: AppConfigureRouteChildren = {
   AppConfigureLogDrainsRoute: AppConfigureLogDrainsRoute,
   AppConfigureLoginSecurityRoute: AppConfigureLoginSecurityRoute,
   AppConfigureNotificationsRoute: AppConfigureNotificationsRoute,
+  AppConfigurePersonalDataRoute: AppConfigurePersonalDataRoute,
+  AppConfigurePrivacyRoute: AppConfigurePrivacyRoute,
   AppConfigureProductsRoute: AppConfigureProductsRoute,
   AppConfigureShippingRoute: AppConfigureShippingRoute,
   AppConfigureTemplatesRoute: AppConfigureTemplatesRoute,
@@ -1788,6 +1850,7 @@ interface AppOperiaRouteChildren {
   AppOperiaMapsRoute: typeof AppOperiaMapsRoute
   AppOperiaNotificationsRoute: typeof AppOperiaNotificationsRoute
   AppOperiaProductsRoute: typeof AppOperiaProductsRoute
+  AppOperiaRetentionRoute: typeof AppOperiaRetentionRoute
   AppOperiaShippingRoute: typeof AppOperiaShippingRoute
   AppOperiaTemplatesRoute: typeof AppOperiaTemplatesRoute
   AppOperiaUsersRoute: typeof AppOperiaUsersRoute
@@ -1813,6 +1876,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaMapsRoute: AppOperiaMapsRoute,
   AppOperiaNotificationsRoute: AppOperiaNotificationsRoute,
   AppOperiaProductsRoute: AppOperiaProductsRoute,
+  AppOperiaRetentionRoute: AppOperiaRetentionRoute,
   AppOperiaShippingRoute: AppOperiaShippingRoute,
   AppOperiaTemplatesRoute: AppOperiaTemplatesRoute,
   AppOperiaUsersRoute: AppOperiaUsersRoute,

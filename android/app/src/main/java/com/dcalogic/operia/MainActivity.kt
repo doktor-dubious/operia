@@ -55,6 +55,7 @@ import com.dcalogic.operia.ui.screens.ReceiveScreen
 import com.dcalogic.operia.ui.screens.RouteScreen
 import com.dcalogic.operia.ui.screens.SearchScreen
 import com.dcalogic.operia.ui.screens.StockScreen
+import com.dcalogic.operia.ui.screens.sweepCaptures
 
 // FragmentActivity (ikke ComponentActivity): androidx' BiometricPrompt kræver
 // en FragmentActivity for at kunne vise systemets prompt.
@@ -63,6 +64,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // GDPR: label- og tilstandsfotos er personoplysninger og slettes fra
+        // cachen så snart de er læst (deleteCapture). Et nedbrud eller en
+        // kamera-app der aldrig vender tilbage kan alligevel efterlade en fil —
+        // så ryddes den her, ved næste appstart.
+        sweepCaptures(this)
         enableEdgeToEdge()
         setContent {
             // Samme vm-instans (aktivitets-scoped) til både tema og app, så

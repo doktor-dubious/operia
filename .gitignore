@@ -8,6 +8,13 @@ docs/operia.txt
 # (se CLAUDE.md "Known gaps"). Må ikke ind i git-historikken.
 prototype/
 
+# Testlabels til AI-labellæsning — billeder af fragtlabels med navne, adresser
+# og telefonnumre. Labelsne er syntetiske testdata, men et labelfoto er præcis
+# den datatype feature'n behandler, så billederne holdes uden for git (GDPR:
+# ingen personoplysninger i repoet, hverken rigtige eller forvekslelige).
+# Ligger kun lokalt; brug egne labels ved test.
+docs/labels/
+
 # Node / web
 node_modules/
 dist/

@@ -243,6 +243,8 @@ export const configureConfigSections: ConfigNavSection[] = [
       { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
       { labelKey: 'configureIntegrations', href: '/configure/integrations' },
       { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
+      { labelKey: 'configurePrivacy', href: '/configure/privacy' },
+      { labelKey: 'configurePersonalData', href: '/configure/personal-data' },
     ],
   },
 ]
@@ -295,6 +297,7 @@ export const operiaConfigSections: ConfigNavSection[] = [
       { labelKey: 'operiaAssetData', href: '/operia/asset-data' },
       { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
       { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
+      { labelKey: 'operiaRetention', href: '/operia/retention' },
     ],
   },
   {

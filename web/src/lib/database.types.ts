@@ -665,6 +665,9 @@ export type Database = {
           created_at: string
           default_currency: string
           default_language: string
+          dpa_signed_at: string | null
+          dpa_signed_by: string | null
+          dpa_version: string | null
           handheld_reauth_minutes: number | null
           id: string
           is_active: boolean
@@ -682,10 +685,16 @@ export type Database = {
           parcel_reminder_max: number | null
           parcel_status_enabled: boolean | null
           parcel_status_time: string | null
+          privacy_contact_email: string | null
+          privacy_contact_name: string | null
+          privacy_contact_phone: string | null
           purchasing_email: string | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           registration_no: string | null
+          security_contact_email: string | null
+          security_contact_name: string | null
+          security_contact_phone: string | null
           shipping_byoc_fee: number | null
           shipping_byoc_subscription: number | null
           shipping_margin_fixed: number | null
@@ -708,6 +717,9 @@ export type Database = {
           created_at?: string
           default_currency?: string
           default_language?: string
+          dpa_signed_at?: string | null
+          dpa_signed_by?: string | null
+          dpa_version?: string | null
           handheld_reauth_minutes?: number | null
           id?: string
           is_active?: boolean
@@ -725,10 +737,16 @@ export type Database = {
           parcel_reminder_max?: number | null
           parcel_status_enabled?: boolean | null
           parcel_status_time?: string | null
+          privacy_contact_email?: string | null
+          privacy_contact_name?: string | null
+          privacy_contact_phone?: string | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          security_contact_email?: string | null
+          security_contact_name?: string | null
+          security_contact_phone?: string | null
           shipping_byoc_fee?: number | null
           shipping_byoc_subscription?: number | null
           shipping_margin_fixed?: number | null
@@ -751,6 +769,9 @@ export type Database = {
           created_at?: string
           default_currency?: string
           default_language?: string
+          dpa_signed_at?: string | null
+          dpa_signed_by?: string | null
+          dpa_version?: string | null
           handheld_reauth_minutes?: number | null
           id?: string
           is_active?: boolean
@@ -768,10 +789,16 @@ export type Database = {
           parcel_reminder_max?: number | null
           parcel_status_enabled?: boolean | null
           parcel_status_time?: string | null
+          privacy_contact_email?: string | null
+          privacy_contact_name?: string | null
+          privacy_contact_phone?: string | null
           purchasing_email?: string | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          security_contact_email?: string | null
+          security_contact_name?: string | null
+          security_contact_phone?: string | null
           shipping_byoc_fee?: number | null
           shipping_byoc_subscription?: number | null
           shipping_margin_fixed?: number | null
@@ -1143,6 +1170,53 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_catalog"
             referencedColumns: ["key"]
+          },
+        ]
+      }
+      company_retention: {
+        Row: {
+          asset_loans_days: number | null
+          audit_days: number | null
+          company_id: string
+          employees_days: number | null
+          imports_days: number | null
+          notifications_days: number | null
+          parcel_files_days: number | null
+          parcels_days: number | null
+          routes_days: number | null
+          updated_at: string
+        }
+        Insert: {
+          asset_loans_days?: number | null
+          audit_days?: number | null
+          company_id: string
+          employees_days?: number | null
+          imports_days?: number | null
+          notifications_days?: number | null
+          parcel_files_days?: number | null
+          parcels_days?: number | null
+          routes_days?: number | null
+          updated_at?: string
+        }
+        Update: {
+          asset_loans_days?: number | null
+          audit_days?: number | null
+          company_id?: string
+          employees_days?: number | null
+          imports_days?: number | null
+          notifications_days?: number | null
+          parcel_files_days?: number | null
+          parcels_days?: number | null
+          routes_days?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_retention_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2297,6 +2371,7 @@ export type Database = {
           ai_model_costs: Json
           ai_models: string[]
           ai_providers: string[]
+          asset_loans_retention_days: number | null
           asset_no_length: number | null
           asset_no_prefix: string
           asset_no_type: string
@@ -2316,6 +2391,7 @@ export type Database = {
           email_antispoof_strict: boolean
           email_base_domain: string | null
           email_enabled: boolean
+          employees_retention_days: number | null
           entra_anonymize_retired: boolean
           entra_enabled: boolean
           entra_sync_interval_minutes: number
@@ -2333,6 +2409,7 @@ export type Database = {
           login_biometric_enabled: boolean
           login_password_enabled: boolean
           maps_provider: string
+          notifications_retention_days: number | null
           notify_email_enabled: boolean
           notify_sms_enabled: boolean
           parcel_arrival_enabled: boolean
@@ -2345,9 +2422,11 @@ export type Database = {
           parcel_reminder_max: number
           parcel_status_enabled: boolean
           parcel_status_time: string
+          parcels_retention_days: number | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           refresh_interval_seconds: number
+          routes_retention_days: number | null
           sftp_enabled: boolean
           sftp_host: string | null
           shipping_byoc_fee: number
@@ -2364,6 +2443,7 @@ export type Database = {
           ai_model_costs?: Json
           ai_models?: string[]
           ai_providers?: string[]
+          asset_loans_retention_days?: number | null
           asset_no_length?: number | null
           asset_no_prefix?: string
           asset_no_type?: string
@@ -2383,6 +2463,7 @@ export type Database = {
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          employees_retention_days?: number | null
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
           entra_sync_interval_minutes?: number
@@ -2400,6 +2481,7 @@ export type Database = {
           login_biometric_enabled?: boolean
           login_password_enabled?: boolean
           maps_provider?: string
+          notifications_retention_days?: number | null
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
           parcel_arrival_enabled?: boolean
@@ -2412,9 +2494,11 @@ export type Database = {
           parcel_reminder_max?: number
           parcel_status_enabled?: boolean
           parcel_status_time?: string
+          parcels_retention_days?: number | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           refresh_interval_seconds?: number
+          routes_retention_days?: number | null
           sftp_enabled?: boolean
           sftp_host?: string | null
           shipping_byoc_fee?: number
@@ -2431,6 +2515,7 @@ export type Database = {
           ai_model_costs?: Json
           ai_models?: string[]
           ai_providers?: string[]
+          asset_loans_retention_days?: number | null
           asset_no_length?: number | null
           asset_no_prefix?: string
           asset_no_type?: string
@@ -2450,6 +2535,7 @@ export type Database = {
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          employees_retention_days?: number | null
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
           entra_sync_interval_minutes?: number
@@ -2467,6 +2553,7 @@ export type Database = {
           login_biometric_enabled?: boolean
           login_password_enabled?: boolean
           maps_provider?: string
+          notifications_retention_days?: number | null
           notify_email_enabled?: boolean
           notify_sms_enabled?: boolean
           parcel_arrival_enabled?: boolean
@@ -2479,9 +2566,11 @@ export type Database = {
           parcel_reminder_max?: number
           parcel_status_enabled?: boolean
           parcel_status_time?: string
+          parcels_retention_days?: number | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           refresh_interval_seconds?: number
+          routes_retention_days?: number | null
           sftp_enabled?: boolean
           sftp_host?: string | null
           shipping_byoc_fee?: number
@@ -3102,6 +3191,10 @@ export type Database = {
         Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
         Returns: undefined
       }
+      retention_days: {
+        Args: { p_category: string; p_company_id: string }
+        Returns: number
+      }
       retire_asset: {
         Args: { p_asset_id: string; p_note?: string; p_reason: string }
         Returns: undefined
@@ -3112,6 +3205,11 @@ export type Database = {
       }
       return_asset: { Args: { p_asset_id: string }; Returns: undefined }
       run_retention_purge: { Args: never; Returns: undefined }
+      sar_export: {
+        Args: { p_company_id: string; p_employee_id?: string; p_query?: string }
+        Returns: Json
+      }
+      sar_section_limit: { Args: never; Returns: number }
       send_asset_to_service: {
         Args: {
           p_asset_id: string

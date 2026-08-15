@@ -2,10 +2,18 @@
 
 Where in the codebase NIS2 (security, access control, auditability, log management)
 and GDPR (personal-data protection, minimization, retention) are addressed.
-Last reviewed: 2026-07-20; §11 (AI label reading) added 2026-08-12, Mistral (EU) same day.
+Last reviewed: 2026-08-14 (§§11–13 + gaps); previous full review 2026-07-20.
 Update this file when compliance-relevant code changes.
 
 Legend: **N** = NIS2-relevant, **G** = GDPR-relevant.
+
+**Two layers.** This file is layer 1: the engineering truth, referenced to code.
+Layer 2 — the formal, customer- and auditor-facing documents — lives in
+[`docs/gdpr/`](gdpr/): [`subprocessors.md`](gdpr/subprocessors.md) (the Art. 28(2)
+register and transfer bases), [`ropa.md`](gdpr/ropa.md) (the Art. 30(2) record) and
+[`toms.md`](gdpr/toms.md) (the Art. 32 measures, Annex C of every DPA). They reference
+this map but never require reading code. Anything added here that touches a new
+recipient, purpose or personal-data field must be reflected there in the same commit.
 
 ## 1. Tenant isolation / RLS (N, G)
 
@@ -254,8 +262,10 @@ Employee CSVs (personal data) arrive over SFTP or email; both legs are hardened:
   any anonymization path today.
 - `20260730120100_parcel_removal.sql` — `parcels.removed_reason` (manager free text),
   `removed_by`/`_at`; same un-scrubbed free-text caveat as the row below.
-- Android (scaffold): `allowBackup="false"`; no local personal-data storage;
-  only the public anon key is embedded — RLS is the access control.
+- Android: `allowBackup="false"`; only the public anon key is embedded — RLS is the
+  access control. The only personal data that ever touches the device's own storage is a
+  camera capture in `cacheDir/captures`, deleted the moment it has been read and swept at
+  app start (§11). The session token in SharedPreferences remains the open item (gaps).
 
 ## 10. Authentication (N)
 
@@ -352,14 +362,245 @@ sends customer personal data to a general-purpose AI vendor, so it gets its own 
   customer log drains, so anything personal written there can never be erased. The
   vendor error text goes to the function's own (short-lived) log only.
   Logs taxonomy: category `ai`, level from the outcome (`audit_level()`).
+- **Nothing is left on the device either** (2026-08-14): the handheld deletes the
+  captured label photo from `cacheDir/captures` as soon as `readScaledJpeg` has it in
+  memory, and on a cancelled capture (`deleteCapture()` in `PhotoHelpers.kt`, wired into
+  `ReceiveScreen` label + per-parcel photos, `ConditionScreen`, `AssetDocumentScreen`).
+  Only our own FileProvider URIs are touched — a gallery URI points at the user's own
+  picture and must not be deleted — and the filename is normalized against the captures
+  directory so a manipulated URI cannot escape the cache. `sweepCaptures()` in
+  `MainActivity.onCreate` clears anything a crash or a camera app that never returned
+  left behind.
+- **Free tiers are development-only** (`hasFreeTier` in `web/src/lib/ai.ts`): Google's
+  Gemini free tier and Mistral's free "Experiment" plan both allow the vendor to use
+  submitted content for model improvement, so a key on those plans may only see
+  synthetic labels. Operia → Integrationer shows the warning next to the provider
+  before a platform admin exposes it to customers
+  (`integrationsPage.aiFreeTier*`). Anthropic has no free API tier. The production rule
+  is written down in [`docs/gdpr/subprocessors.md`](gdpr/subprocessors.md) §2.
 - Fixtures: `supabase/tests/ai_label_audit.sql` (runs in a rolled-back transaction).
+- Test labels: `docs/labels/` is **gitignored since 2026-08-14** and untracked. Label
+  photos are exactly the data category this feature processes, so they stay out of the
+  repository even though the current set is synthetic. (They were committed between
+  2026-08-06 and 2026-08-13 and remain in git history — see gaps.)
+
+## 12. Platform-admin impersonation (N, G)
+
+The broadest access path in the system: a DCA platform admin signing in **as** a customer
+user to reproduce a reported problem. Built 2026-07-28,
+`supabase/functions/impersonate-user/index.ts` + `20260728*_impersonation*.sql`.
+
+- **Server-side authorization, twice**: the caller's own JWT must resolve to a platform
+  admin, and the target must **not** be one (an admin cannot borrow another admin's
+  identity). The browser is untrusted; the UI button is cosmetic.
+- **The token never reaches the client**: the function generates a magic link with the
+  service-role key *without sending mail* and redeems it inside the function, returning
+  only the finished session tokens.
+- **No false signals in the user's own record**: GoTrue stamps `email_confirmed_at` and
+  `last_sign_in_at` on redemption, so `impersonation_restore_auth_state` puts the previous
+  values back — an impersonation must not look like the user's own login or invite accept.
+- **Visible and logged**: a cross-tab amber banner runs for the whole session
+  (`web/src/components/impersonation-banner.tsx`), and the action is written to `audit_log`
+  fail-closed with the target's **masked** e-mail (`maskRecipient()`), so the evidence
+  itself does not become a new personal-data leak.
+- GDPR framing: this is DCA-as-controller processing for service delivery — recorded in
+  [`docs/gdpr/ropa.md`](gdpr/ropa.md) §15.
+
+## 13. Maps, geocoding and route planning (G)
+
+- `supabase/functions/route-calc/index.ts` — two selectable providers:
+  **OpenRouteService** (HeiGIT gGmbH, DE — the default, `api.openrouteservice.org`) and
+  **Google** (`maps.googleapis.com/maps/api/geocode`, `routes.googleapis.com`), active as a
+  choice since `20260731100000`. Either way the **addresses** on the route (employee and
+  delivery addresses) leave the platform; with ORS they stay in the EU, with Google they
+  go to the US.
+- **The "no external requests" claim no longer holds for Google-configured platforms**: the
+  browser itself loads the Maps JavaScript API from Google when Google is the provider, so
+  the user's IP reaches Google directly. Google's ToS forbids drawing Google data on OSM
+  tiles, which is why there are two renderers rather than one. The ORS default keeps the
+  no-third-party-in-the-browser property intact.
+- API keys are edge secrets (`ORS_API_KEY`, `GOOGLE_MAPS_API_KEY`); the Google **browser**
+  key is necessarily public and must therefore be referrer-restricted.
+- Recorded in [`docs/gdpr/ropa.md`](gdpr/ropa.md) §8 and
+  [`subprocessors.md`](gdpr/subprocessors.md) rows 8–9.
+
+## 14. GDPR-kontakter og databehandleraftale pr. kunde (G)
+
+Added 2026-08-14, `20260814100000_privacy_contacts_dpa.sql`. Two DPA obligations
+were unfulfillable because `companies` held no contact field at all: Art. 28(2)
+(30-day sub-processor change notice — *to whom?*) and Art. 33(2) (breach
+notification without undue delay — *who is called at 03:00?*).
+
+- **Two contact blocks** (`privacy_contact_*`, `security_contact_*`) — the
+  customer's own data, maintained by a manager on `/configure/privacy`
+  (`web/src/components/company-privacy-fields.tsx`, shared with the platform side).
+- **The DPA record** (`dpa_version`, `dpa_signed_at`, `dpa_signed_by`) is DCA's
+  evidence that the agreement was in force *before* processing began, so it is
+  DCA-owned: `protect_company_dca_columns()` was extended to reject a manager
+  writing it, exactly like company name/CVR and the shipping model. The UI mirrors
+  this (read-only without `admin`), but the database is the enforcement. A check
+  constraint (`companies_dpa_record_complete`) refuses a signature date without a
+  version and a signatory — a half record is not evidence.
+- **Audit without new PII**: `audit_company_privacy()` writes
+  `privacy.contacts_changed` with the **names of the changed fields** plus two
+  booleans (is a contact set at all) — never the contact's name, e-mail or phone,
+  because `audit_log` is immutable and forwarded to log drains.
+  `privacy.dpa_changed` logs version and date (contract data, not personal data)
+  but only a `signatory_changed` flag for the person's name. Verified against the
+  live database 2026-08-14 in a rolled-back transaction.
+- Taxonomy: `privacy.*` → new category `compliance`; the client mirror is
+  `categoryOf`/`CATEGORIES` in `operia.logs.tsx` — kept in sync.
+- Referenced by [`docs/gdpr/dpa/bilag-da.md`](gdpr/dpa/bilag-da.md) B.2, C.1 and
+  D.1: the annexes point at these screens as the place where the instruction and
+  the notice addresses live.
+
+## 15. Per-company retention (G)
+
+Added 2026-08-14, `20260814140000_retention_per_company.sql`. Retention was
+platform-level, SQL-only and covered three tables — which made DCA, not the
+customer, the one deciding how long the *controller's* data lives. Now:
+
+- **Eight categories** (`parcels`, `parcel_files`, `notifications`, `audit`,
+  `imports`, `asset_loans`, `employees`, `routes`) resolved as **customer value →
+  platform default → keep forever** by `retention_days(company, category)`, the
+  single place the UI, the purge and the cleanup function all read. The function
+  is `SECURITY DEFINER` and therefore guards itself: a signed-in user may only ask
+  about their own company (platform admins about all), while the service role —
+  which has no `auth.uid()` — passes, because the daily file cleanup looks the
+  window up per company folder.
+- **`run_retention_purge()` rewritten** to loop companies × categories. Order
+  matters inside a company: `parcel_events` has `on delete restrict` against
+  `parcels`, so the history is deleted explicitly *before* the parcel — both only
+  possible under the `operia.retention_purge` GUC. Photos and signatures become
+  orphans and are swept by the existing daily job.
+- **Only closed parcels** are ever deleted by a window (delivered/rejected/
+  returned/removed), so a window can never destroy evidence for something still
+  in dispute. **Employees are anonymized, never deleted**, and only when they have
+  no open parcels.
+- **`parcel_notifications.recipient` is now cleared when the parcel closes**
+  (trigger `parcels_clear_notification_recipients`), mirroring the asset-loan twin
+  from `20260720130100`; the migration backfilled every already-closed parcel. The
+  row survives as proof that a notification was sent — only the address goes.
+- **`parcel-files-cleanup` reads the per-company window** through the same RPC
+  (cached per company folder) instead of the single platform setting.
+- Settings changes are audited (`retention.company_changed`, before/after), and
+  every purge logs table, row count and window.
+- **Both levels have a screen**, sharing one category catalogue and one field list
+  (`web/src/components/retention-fields.tsx`): `CompanyRetentionFields` on
+  `/configure/personal-data` (empty field = inherit, and the row says what it
+  inherits) and `PlatformRetentionFields` on `/operia/retention` (DCA's defaults,
+  with an explicit warning that a change reaches every customer without their own
+  setting). Schedule and rationale:
+  [`docs/gdpr/retention-schedule.md`](gdpr/retention-schedule.md).
+- Platform-side audit was **incomplete until `20260814170000`**: the five new default
+  columns were written by triggers that only knew the three old ones, so a platform
+  admin could set a default that deletes customer data without leaving a trace. The
+  two overlapping triggers are now one function covering all eight categories, still
+  logging `retention.changed` but with before/after per changed field.
+- Verified 2026-08-14 against the live database in a rolled-back transaction:
+  386 closed demo parcels purged with **0 orphaned events**, audit rows purged, all
+  logged.
+- **Review hardening 2026-08-15** (`20260815090000_gdpr_review_fixes.sql`): the
+  `parcel_documents` delete-log trigger from `20260814190000` fired on the cascade
+  from a parcel delete too, inserting an event for a parcel already gone — an FK
+  violation that aborted the *entire* nightly purge; it now logs only when the
+  parcel still exists. The notifications purge deleted by age alone, wiping the
+  dispatcher's dedup/counter state for still-**open** parcels (the reminder ladder
+  would restart) — it now only touches notifications whose parcel is closed or
+  gone (asset twin: returned or gone). And audit rows belonging to a **deleted**
+  company (no FK by design) matched neither the platform branch nor the company
+  loop and were retained forever — they now follow the platform window.
+  `parcel-files-cleanup` no longer aborts wholesale when the `retention_days`
+  lookup fails (orphan sweep must always run; a failed lookup means "no window"
+  and is logged), its closed-status set finally includes `removed`, and document
+  files whose `parcel_documents` row is gone while the parcel survives (an erasure
+  where the file removal failed) are now swept as orphans after a one-day grace.
+
+## 16. Subject access export — Art. 15 (G)
+
+Added 2026-08-14, `20260814150000_sar_export.sql`. `sar_export(company, employee, query)`
+gathers everything Operia holds about one person, server-side.
+
+- **Two entry points, because personal data lives in two shapes**: a keyed lookup
+  follows the foreign keys (employee row, parcels as receiver/collector, events on
+  those parcels, events the person performed, notifications, asset loans, user
+  account, audit rows as actor), and a **folded free-text search** finds people who
+  have no row at all — proxy collectors and private senders exist only as a string
+  in someone else's parcel (`delivered_to`, `sender`, `delivered_note`,
+  `receiver_override_reason`, `removed_reason`, `condition_note`). Folding is
+  `fold_name()`, the same Danish transliteration the AI matching layer uses
+  (æ→ae, ø→oe, å→aa), so a search matches regardless of case or diacritics.
+  Since `20260815090000` the match is **word-anchored** (`fold_contains()`):
+  "Anne Jensen" no longer matches inside "Marianne Jensen", which would have
+  handed one person's parcels to another in an Art. 15 dossier. The same fix
+  added the free-text **documentation notes** (`parcel_documents.note`,
+  `asset_documents.note` — the very fields the erasure path exists for) as their
+  own export sections; before, a proxy collector named only in a note was
+  invisible to the export.
+- **Authorization is server-side** (`SECURITY DEFINER` bypasses RLS): platform admin,
+  or manager/data_manager in exactly that company.
+- **Sections are capped** at `sar_section_limit()` (500) and the response says
+  `truncated: true` per section, so nobody mistakes a cap for completeness.
+- **Files are listed, not exported** — bucket + path for photos and signatures, so
+  handing over an image stays a deliberate act.
+- **The export logs itself**: `privacy.sar_exported` with employee number and row
+  counts, never the name or the content. A complete dossier about one person is
+  itself an intrusive operation and must be reviewable.
+- Art. 15(1) needs more than rows (purposes, recipients, retention, rights), so the
+  response carries a `notice` block pointing at `docs/gdpr/`.
+- UI: `web/src/components/company-sar-export.tsx` on `/configure/personal-data` —
+  counts per section on screen, JSON download built in the browser.
+- Verified 2026-08-14 against live demo data: keyed lookup returned 26 parcels /
+  51 events / 4 notifications for one employee; free-text `Anita Trampedach`
+  returned 7 parcels naming her without a foreign key.
+
+## 17. Free text and provider errors (G)
+
+The sweep behind [`docs/gdpr/free-text-fields.md`](gdpr/free-text-fields.md)
+(2026-08-14) classified every text column in the schema. 13 need a scrub /
+time-limit / evidence decision; two findings were plain gaps and were fixed
+rather than decided (`20260814190000_parcel_documents_erasure.sql`):
+
+- **`parcel_documents` had no erasure path.** Its asset twin got one in
+  `20260801180000`, but the parcel side kept only `insert` and `select` policies —
+  so a platform admin could delete the *photo* from `parcel-photos` while the
+  free-text note beside it was unreachable for everyone. Now: platform-admin-only
+  DELETE (deliberately not managers — documentation is evidence), UPDATE still
+  revoked for all (erasure is deletion, never rewriting), deletion written to
+  `parcel_events` as `document_deleted` and mirrored to `audit_log`, and a delete
+  button on the documentation list in `parcel-condition.tsx` gated on
+  `isPlatformAdmin`.
+- **Provider error strings echoed recipients.** `parcel_notifications.error`,
+  `asset_loan_notifications.error` and `log_drains.last_error` stored the raw
+  vendor response, and a rejection quotes the address that failed
+  (`550 5.1.1 <anna@firma.dk> unknown`) — a back door around the masking in §6 and
+  the recipient clearing in §15. `sanitizeProviderError()`
+  (`supabase/functions/_shared/notify.ts`) now masks e-mail addresses and 8+ digit
+  numbers **at the point of storage**, applied at all 11 persistence sites across
+  five edge functions; the response returned to the manager who typed the address
+  is deliberately left intact. Status codes, short numbers, dates and clock times
+  stay readable — since 2026-08-15 the phone rule no longer spans hyphens, so an
+  ISO timestamp (`2026-08-14 03:22`) survives; a *contiguous* run of 8+ digits is
+  still masked even when it is a vendor message id, because a number that slips
+  into an immutable log can never be removed again. The migration nulled
+  pre-existing rows matching either pattern (deliberately over-broad: an old
+  error string has no operational value, and some contained only a timestamp).
+
+- **Deleting evidence was classified `success`** until `20260814200000`:
+  `audit_level()`'s `like '%.deleted'` needs a literal dot before "deleted", and both
+  `parcel.document_deleted` and `asset.document_deleted` end in `_deleted` (the dot sits
+  after `parcel`/`asset`). The function already carried escaped twins for `_failed`,
+  `_bounced`, `_overridden` and `_complained` — `_deleted` was the one that was missed,
+  so since 2026-08-01 an erasure of chain-of-custody documentation did not surface in the
+  warning-level filter the weekly log review depends on. Now `warning`; stored levels
+  recomputed (append-only content untouched, only the generated column).
 
 ## Known gaps / roadmap
 
 | Gap | Status |
 |---|---|
-| MFA + Entra ID SSO (NIS2 requirement per spec §security) | **Open** — TOTP disabled in `config.toml` (needs Supabase Pro), no enrollment UI, no SSO. Planned. |
-| Retention settings UI | **Open** — mechanism live (§6) but platform admins must set windows via SQL. |
+| MFA + Entra ID SSO (NIS2 requirement per spec §security) | **Partly** (row corrected 2026-08-14 — it claimed TOTP was disabled) — `[auth.mfa.totp]` has `enroll_enabled = true` / `verify_enabled = true` in `config.toml`; phone MFA and WebAuthn MFA stay off. Still **open**: no enrolment UI anywhere in the web app, so no user can actually add a factor, the hosted project's MFA state must be confirmed in the Dashboard, and there is no Entra ID SSO. |
+| Retention settings UI | **Fixed 2026-08-14** (§15) — eight categories on both levels: the customer's own on `/configure/personal-data`, DCA's defaults on `/operia/retention`. Everything still defaults to NULL = keep until further notice, so nothing is deleted until someone sets a window. |
 | Web passkey activation | **Open** — `[auth.passkey]` / `[auth.webauthn]` are set in `config.toml`, but CLI 2.111.0's `config push` silently ignores them (verified 2026-08-04: an invalid value still reports "up to date"), so the hosted project still reports `passkeys_enabled: false`. A platform admin must switch it on in Dashboard → Authentication → Passkeys with the same rp values. Until then `login_biometric_enabled` stays false (default since `20260804051827`) and the web button is hidden; the handheld is unaffected. |
 | Handheld session at rest | **Open** — supabase-kt persists the session in plain SharedPreferences. Biometric login gates the *app* at startup, not the stored token, so a rooted/ADB-accessible device can still read it. A Keystore-backed `SessionManager` would be the fix. |
 | Hosted password policy | **Open** — `config.toml` raised to 8 (2026-07-16) but the hosted project's Auth → Passwords setting must be raised manually in the dashboard. |
@@ -367,12 +608,13 @@ sends customer personal data to a general-purpose AI vendor, so it gets its own 
 | `gateway/.env` file permissions | **Fixed on the current box** (600, 2026-07-16) + README instruction; re-check on any new deployment. |
 | `parcel-photos` / `signatures` lifecycle | **Fixed 2026-07-20** (§6) — DELETE policies + daily orphan/retention purge. Retention window still defaults to NULL (keep forever) and has no UI. |
 | `imports-cleanup` edge function | **Done** — implemented; 30-day purge of the `imports` bucket. |
-| Anonymization of free text | **Open** — `parcels.delivered_to` / `delivered_note` / `receiver_override_reason` / `removed_reason` (the last two added 2026-07-30) hold the free-text name of whoever collected a parcel (often a proxy, i.e. a third party) and are not cleared by any anonymization path. The signature image is now purgeable but the name beside it is not. Decide: scrub on anonymize, or document the retention as chain-of-custody evidence. |
+| Anonymization of free text | **Inventoried 2026-08-14, decisions pending** ([`docs/gdpr/free-text-fields.md`](gdpr/free-text-fields.md) lists all 13 fields with a recommendation each; §17 covers the two that were fixed instead) —  `parcels.delivered_to` / `delivered_note` / `receiver_override_reason` / `removed_reason` (the last two added 2026-07-30) hold the free-text name of whoever collected a parcel (often a proxy, i.e. a third party) and are not cleared by any anonymization path. The signature image is now purgeable but the name beside it is not. Decide: scrub on anonymize, or document the retention as chain-of-custody evidence. |
 | Personal data in `audit_log` | **Partly by design since 2026-07-30** — `parcel.receiver_overridden` and `parcel.removed` now copy the manager's free-text reason into `detail` (`20260730140000_audit_parcel_reason.sql`), because the reason *is* the audit trail for an exception; it may name a person. Every other event type stays minimized. |
 | Personal data already in `audit_log` | **Open** — new writes are otherwise minimized (§6), but rows written before 2026-07-20 still contain employee names, `EX-<name>` retirement entries, invitee emails and unmasked recipients. The table is UPDATE/DELETE-blocked, so only the global age-based purge can remove them — and `audit_retention_days` defaults to NULL. Copies already delivered to log drains are beyond reach. |
-| Notification recipient logs | **Open** — `parcel_notifications.recipient` and `asset_loan_notifications.recipient` store the literal email/MSISDN of every message sent. Loan recipients are now cleared on return (§5); parcel ones are not, and neither table has a retention window. |
-| Right of access (Art. 15) | **Open** — no per-employee data export. `import.export.tsx` is bulk masterdata for active employees only, so it cannot answer a subject access request. DCA is a processor and owes controllers assistance here (Art. 28(3)(e)). |
+| Notification recipient logs | **Fixed 2026-08-14** (§15) — `parcel_notifications.recipient` is cleared when the parcel closes, mirroring the asset-loan twin, and the backfill cleared every already-closed parcel. Both tables now fall under the `notifications` retention category. |
+| Right of access (Art. 15) | **Largely fixed 2026-08-14** (§16) — `sar_export()` + the screen on `/configure/personal-data` answer a request for employees *and*, via folded free-text search, for people with no row (proxy collectors, private senders). Remaining: image files are listed rather than packaged, sections cap at 500 rows, and there is no PDF rendering — the export is JSON. |
 | Consent / legal basis / opt-out | **Open** — no consent column, no legal-basis record, no per-employee notification preference or opt-out. Notification toggles exist only at platform and company level; the data subject has no control. |
-| Per-company retention | **Open** — retention windows live on `platform_settings` only, so the customer (the actual controller) cannot set its own. Nothing has a window for `parcels`, `parcel_events` (deliberately), notifications, `asset_loans` or `employees`. |
-| Processor agreements / transfers | **Open** — personal data leaves to Resend (name + email + barcode; US), Postmark (holds inbound HR CSVs; US), GatewayAPI (phone numbers; DK), OpenRouteService (addresses), Anthropic / Google Gemini (full label photos; US — §11; Mistral is the EU-internal alternative, same section), Google Maps/Geocoding where configured (employee + delivery addresses; US, active provider since `20260731100000`) and any customer-configured log drain. No DPA/subprocessor list or transfer mechanism is recorded in the repo. The web app loads no CDN, analytics or external fonts, but a Google-configured platform loads the Maps JS API in the browser — the earlier "no external requests" claim no longer holds for those tenants. |
-| Free AI tiers train on the data | **Open** — Gemini (`20260806193000_ai_gemini_lite_models.sql`) *and* Mistral's free "Experiment" plan both permit the vendor to use requests for model improvement. Indefensible for customer personal data. Either key must be on a paid plan before a customer is pointed at that provider; until then the free keys are for testing with synthetic labels only (`docs/labels/` holds real ones — do not use them for tier testing). Mistral additionally offers a DPA and Zero Data Retention on the paid plan. |
+| Per-company retention | **Fixed 2026-08-14** (§15) — `company_retention` gives the controller its own window per category, resolved customer → platform → keep forever. `parcel_events` remains deliberately without one (it follows the parcel). Remaining: agree actual values with each customer; see [`docs/gdpr/retention-schedule.md`](gdpr/retention-schedule.md). |
+| Processor agreements / transfers | **Partly (2026-08-14)** — the register now exists: [`docs/gdpr/subprocessors.md`](gdpr/subprocessors.md) lists every recipient (Supabase/AWS, Resend, Postmark, GatewayAPI, Mistral, Anthropic, Google AI + Maps, OpenRouteService, customer log drains), what each receives, where it is processed and on what transfer basis, with a dated verification log. Verified from vendor primary sources: **Resend, Postmark (ActiveCampaign) and Google LLC are DPF-certified; Supabase and Anthropic are not — they rely on SCCs.** Still **open**: confirm each on the official `dataprivacyframework.gov` list, execute/file the vendor DPAs, write one TIA per US vendor, confirm the AWS region of DCA's own gateway/web box, and move the AI keys off free tiers. The DPA annexes are **drafted** (`docs/gdpr/dpa/bilag-da.md`, version `DCA-DPA-1.0`, Datatilsynet's standard clauses as the body) but not yet legally reviewed or signed by anyone; §14 adds the in-product contacts and signature record the annexes depend on. |
+| Free AI tiers train on the data | **Documented, decision pending (2026-08-14)** — Gemini (`20260806193000_ai_gemini_lite_models.sql`) *and* Mistral's free "Experiment" plan both permit the vendor to use requests for model improvement. Both providers are now flagged `hasFreeTier` in `web/src/lib/ai.ts` and carry a warning on Operia → Integrationer, and the rule ("free tier = development with synthetic labels only; production requires a paid plan with a DPA") is written into [`subprocessors.md`](gdpr/subprocessors.md) §2. **Open**: actually moving the production key to a paid plan — intended provider is Mistral (EU, DPA, zero data retention). Anthropic has no free tier. |
+| Real personal data in git history | **Partly (2026-08-14)** — `docs/labels/` is untracked and gitignored, so no label images are in the working tree of any future commit. The 13 images committed 2026-08-06 → 2026-08-13 **remain reachable in git history**; the current set is synthetic test labels, so this is documented as an accepted residual rather than rewritten. If a real label ever entered the repo, history rewrite (`git filter-repo`) + force-push is required, and any clone/fork must be re-cloned. |

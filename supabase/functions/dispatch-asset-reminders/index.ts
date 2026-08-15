@@ -28,6 +28,7 @@ import {
   render,
   renderHtml,
   resolveTemplate,
+  sanitizeProviderError,
 } from '../_shared/notify.ts'
 
 const CORS = {
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
           recipient: to,
           status: result.ok ? 'sent' : 'failed',
           provider_id: result.id ?? null,
-          error: result.ok ? null : (result.error ?? '').slice(0, 500),
+          error: result.ok ? null : sanitizeProviderError(result.error, 500),
         })
 
         if (result.ok) {
@@ -292,7 +293,7 @@ Deno.serve(async (req) => {
               kind,
               recipient: maskRecipient(to),
               reason: classifySendError(result.error ?? '', channel),
-              error: (result.error ?? '').slice(0, 300),
+              error: sanitizeProviderError(result.error, 300),
             },
           })
         }

@@ -70,6 +70,7 @@ const CATEGORIES = [
   'maps',
   'imports',
   'ai',
+  'compliance',
   'log',
   'other',
 ] as const
@@ -267,6 +268,10 @@ function categoryOf(action: string): string {
     // trække ud alene (aflæsninger, opsætning, kundens bekræftelse).
     case 'ai':
       return 'ai'
+    // Samme begrundelse som 'ai': GDPR-hændelser (kontakter, databehandler-
+    // aftale) skal kunne trækkes ud alene ved en gennemgang.
+    case 'privacy':
+      return 'compliance'
     default:
       return 'other'
   }
@@ -314,7 +319,10 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
     a === 'user.impersonated' ||
     /[._]complained$/.test(a) ||
     /[._]overridden$/.test(a) ||
-    /\.(deleted|deactivated|anonymized|removed|revoked|disabled|written_off)$/.test(a) ||
+    // '_deleted' (parcel.document_deleted, asset.document_deleted) klassificeres
+    // også som sletning — samme escaped tvilling som i SQL (20260814200000).
+    /[._]deleted$/.test(a) ||
+    /\.(deactivated|anonymized|removed|revoked|disabled|written_off)$/.test(a) ||
     (a === 'parcel.status_changed' &&
       (to === 'rejected' || to === 'returned' || to === 'removed'))
   )

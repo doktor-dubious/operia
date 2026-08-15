@@ -30,6 +30,7 @@ import {
   maskRecipient,
   render,
   renderHtml,
+  sanitizeProviderError,
 } from '../_shared/notify.ts'
 
 const CORS = {
@@ -203,7 +204,7 @@ Deno.serve(async (req) => {
       recipient: to,
       status: result.ok ? 'sent' : 'failed',
       provider_id: result.id ?? null,
-      error: result.ok ? null : (result.error ?? '').slice(0, 500),
+      error: result.ok ? null : sanitizeProviderError(result.error, 500),
     })
 
     // Kvittering/fejl til Logs (audit_log). '.failed' udleder 'error'-niveau.
@@ -222,7 +223,7 @@ Deno.serve(async (req) => {
           ? {}
           : {
               reason: classifySendError(result.error ?? '', channel),
-              error: (result.error ?? '').slice(0, 300),
+              error: sanitizeProviderError(result.error, 300),
             }),
       },
       p_actor: callerId,
