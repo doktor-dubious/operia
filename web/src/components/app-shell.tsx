@@ -747,7 +747,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ModernRail />
           <div className="flex min-w-0 flex-1 flex-col">
             <PageHeader />
-            <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
+            {/* Bred skærm: indholdet begrænses til ~1536px og centreres via
+                voksende vandret padding — IKKE ved at kappe <main> selv, for
+                main er sidens eneste scroll-container (scrollbar/hjul skal virke
+                helt ud til vinduskanten), og de sticky gem-bjælker regner med
+                at kunne ophæve main's padding med negative margener. */}
+            <main className="w-full flex-1 overflow-y-auto px-[max(1.5rem,calc((100%-1536px)/2))] pb-6 pt-4">
+              {children}
+            </main>
           </div>
         </div>
       </div>
@@ -768,7 +775,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ClassicSidebar />
         <SidebarInset>
           <PageHeader />
-          <main className="flex-1 overflow-y-auto px-6 pb-6 pt-4">{children}</main>
+          {/* Samme brede-skærm-cap (via padding) som i modern-varianten ovenfor. */}
+          <main className="w-full flex-1 overflow-y-auto px-[max(1.5rem,calc((100%-1536px)/2))] pb-6 pt-4">
+            {children}
+          </main>
         </SidebarInset>
       </SidebarProvider>
     </div>

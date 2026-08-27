@@ -765,262 +765,260 @@ export function HandheldDesignEditor({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="py-6">
+      <div className="mx-auto w-full max-w-3xl py-6">
         <header className="mb-8">
           <h1 className="text-2xl font-medium text-foreground">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-foreground-light">{subtitle}</p>}
         </header>
 
-        <div className="max-w-3xl">
-          {banner}
-          <DetailTabs
-            tabs={[
-              { key: 'details', label: t('detail.tabDetails') },
-              { key: 'tiles', label: t('handheldDesignPage.tilesSection') },
-              ...extraTabs.map(({ key, label }) => ({ key, label })),
-            ]}
-            active={tab}
-            onChange={setTab}
-            showMaximize={false}
-          >
-            {extraTabs.find((et) => et.key === tab)?.content}
-            {tab === 'details' && (
-              <div className="flex flex-col gap-8">
-                {/* Indholdselementer med til/fra */}
-                <section className="flex flex-col gap-3">
-                  <SectionTitle>{t('handheldDesignPage.contentSection')}</SectionTitle>
-                  <div className="flex flex-col gap-4">
-                    {/* Hilsen-elementerne (undertitel/titel) i den gemte rækkefølge,
-                        træk i grebet for at bytte om — enheden viser dem i samme
-                        rækkefølge (design.greetingOrder). */}
-                    {design.greetingOrder.map((gk) => (
-                      <div
-                        key={gk}
-                        onDragOver={(e) => {
-                          e.preventDefault()
-                          if (dragGreeting && dragGreeting !== gk) reorderGreeting(dragGreeting, gk)
-                        }}
-                        className={cn('flex items-start gap-2', dragGreeting === gk && 'opacity-60')}
+        {banner}
+        <DetailTabs
+          tabs={[
+            { key: 'details', label: t('detail.tabDetails') },
+            { key: 'tiles', label: t('handheldDesignPage.tilesSection') },
+            ...extraTabs.map(({ key, label }) => ({ key, label })),
+          ]}
+          active={tab}
+          onChange={setTab}
+          showMaximize={false}
+        >
+          {extraTabs.find((et) => et.key === tab)?.content}
+          {tab === 'details' && (
+            <div className="flex flex-col gap-8">
+              {/* Indholdselementer med til/fra */}
+              <section className="flex flex-col gap-3">
+                <SectionTitle>{t('handheldDesignPage.contentSection')}</SectionTitle>
+                <div className="flex flex-col gap-4">
+                  {/* Hilsen-elementerne (undertitel/titel) i den gemte rækkefølge,
+                      træk i grebet for at bytte om — enheden viser dem i samme
+                      rækkefølge (design.greetingOrder). */}
+                  {design.greetingOrder.map((gk) => (
+                    <div
+                      key={gk}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        if (dragGreeting && dragGreeting !== gk) reorderGreeting(dragGreeting, gk)
+                      }}
+                      className={cn('flex items-start gap-2', dragGreeting === gk && 'opacity-60')}
+                    >
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={() => setDragGreeting(gk)}
+                        onDragEnd={() => setDragGreeting(null)}
+                        aria-label={t('handheldDesignPage.reorderHandle')}
+                        title={t('handheldDesignPage.reorderHandle')}
+                        className="mt-3.5 cursor-grab text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
                       >
-                        <button
-                          type="button"
-                          draggable
-                          onDragStart={() => setDragGreeting(gk)}
-                          onDragEnd={() => setDragGreeting(null)}
-                          aria-label={t('handheldDesignPage.reorderHandle')}
-                          title={t('handheldDesignPage.reorderHandle')}
-                          className="mt-3.5 cursor-grab text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
-                        >
-                          <GripVertical className="size-4" />
-                        </button>
-                        <div className="flex-1">
-                          {gk === 'title' ? (
-                            <ToggleSection
-                              id="hh-welcome"
-                              label={t('handheldDesignPage.welcomeTitle')}
-                              checked={design.welcomeTitleEnabled}
-                              onCheckedChange={(v) => patchDesign({ welcomeTitleEnabled: v })}
-                            >
-                              <Input
-                                value={design.welcomeTitle}
-                                placeholder={t('handheldDesignPage.welcomeTitlePlaceholder')}
-                                onChange={(e) => patchDesign({ welcomeTitle: e.target.value })}
-                              />
-                            </ToggleSection>
-                          ) : (
-                            <ToggleSection
-                              id="hh-subtitle"
-                              label={t('handheldDesignPage.subtitleLabel')}
-                              checked={design.subtitleEnabled}
-                              onCheckedChange={(v) => patchDesign({ subtitleEnabled: v })}
-                            >
-                              <Input
-                                value={design.subtitle}
-                                placeholder={t('handheldDesignPage.subtitlePlaceholder')}
-                                onChange={(e) => patchDesign({ subtitle: e.target.value })}
-                              />
-                            </ToggleSection>
-                          )}
-                        </div>
+                        <GripVertical className="size-4" />
+                      </button>
+                      <div className="flex-1">
+                        {gk === 'title' ? (
+                          <ToggleSection
+                            id="hh-welcome"
+                            label={t('handheldDesignPage.welcomeTitle')}
+                            checked={design.welcomeTitleEnabled}
+                            onCheckedChange={(v) => patchDesign({ welcomeTitleEnabled: v })}
+                          >
+                            <Input
+                              value={design.welcomeTitle}
+                              placeholder={t('handheldDesignPage.welcomeTitlePlaceholder')}
+                              onChange={(e) => patchDesign({ welcomeTitle: e.target.value })}
+                            />
+                          </ToggleSection>
+                        ) : (
+                          <ToggleSection
+                            id="hh-subtitle"
+                            label={t('handheldDesignPage.subtitleLabel')}
+                            checked={design.subtitleEnabled}
+                            onCheckedChange={(v) => patchDesign({ subtitleEnabled: v })}
+                          >
+                            <Input
+                              value={design.subtitle}
+                              placeholder={t('handheldDesignPage.subtitlePlaceholder')}
+                              onChange={(e) => patchDesign({ subtitle: e.target.value })}
+                            />
+                          </ToggleSection>
+                        )}
                       </div>
-                    ))}
+                    </div>
+                  ))}
 
-                    {/* Skabelon-koder til velkomsttitel/undertitel. Literalerne står
-                        i JSX (ikke i i18n-strengen), ellers ville i18next selv
-                        forsøge at interpolere {{name}} osv. */}
-                    <p className="text-xs text-muted-foreground">
-                      {t('handheldDesignPage.tokenHintPrefix')}{' '}
-                      {TOKEN_HINTS.map(([token, key], i) => {
-                        const raw = t(`handheldDesignPage.${key}`)
-                        // Udelad forklaringen når den blot ville gentage selve
-                        // koden (engelsk: "{{lastname}} (last name)"); på dansk
-                        // er den en oversættelse og bevares derfor.
-                        const desc = raw && raw !== `handheldDesignPage.${key}` ? raw : ''
-                        return (
-                          <span key={token}>
-                            {i > 0 && ', '}
-                            <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{token}</code>
-                            {desc ? ` ${desc}` : ''}
-                          </span>
-                        )
-                      })}
-                    </p>
-
-                    <ToggleSection
-                      id="hh-logo"
-                      label={t('handheldDesignPage.logo')}
-                      checked={design.logoEnabled}
-                      onCheckedChange={(v) => patchDesign({ logoEnabled: v })}
-                    >
-                      <DesignImageField
-                        url={design.logoUrl}
-                        onChange={(u) => patchDesign({ logoUrl: u })}
-                        kind="logo"
-                        pathPrefix="handheld-design"
-                        companyId={companyId}
-                        hint={t('handheldDesignPage.logoHint')}
-                        allowUrl
-                      />
-                    </ToggleSection>
-
-                    <ToggleSection
-                      id="hh-hero"
-                      label={t('handheldDesignPage.hero')}
-                      checked={design.heroEnabled}
-                      onCheckedChange={(v) => patchDesign({ heroEnabled: v })}
-                    >
-                      <DesignImageField
-                        url={design.heroUrl}
-                        onChange={(u) => patchDesign({ heroUrl: u })}
-                        kind="hero"
-                        pathPrefix="handheld-design"
-                        companyId={companyId}
-                        hint={t('handheldDesignPage.heroHint')}
-                      />
-                    </ToggleSection>
-                  </div>
-                </section>
-
-                {/* Farvetema (enhedens look) */}
-                <section className="flex flex-col gap-3">
-                  <SectionTitle>{t('handheldDesignPage.themeSection')}</SectionTitle>
-                  <RadioGroup
-                    value={design.theme}
-                    onValueChange={(v) =>
-                      patchDesign({
-                        theme: HANDHELD_THEMES.includes(v as HandheldTheme)
-                          ? (v as HandheldTheme)
-                          : 'midnight',
-                      })
-                    }
-                    className="flex flex-wrap gap-3"
-                  >
-                    {HANDHELD_THEMES.map((th) => {
-                      const pal = handheldPalette(th)
+                  {/* Skabelon-koder til velkomsttitel/undertitel. Literalerne står
+                      i JSX (ikke i i18n-strengen), ellers ville i18next selv
+                      forsøge at interpolere {{name}} osv. */}
+                  <p className="text-xs text-muted-foreground">
+                    {t('handheldDesignPage.tokenHintPrefix')}{' '}
+                    {TOKEN_HINTS.map(([token, key], i) => {
+                      const raw = t(`handheldDesignPage.${key}`)
+                      // Udelad forklaringen når den blot ville gentage selve
+                      // koden (engelsk: "{{lastname}} (last name)"); på dansk
+                      // er den en oversættelse og bevares derfor.
+                      const desc = raw && raw !== `handheldDesignPage.${key}` ? raw : ''
                       return (
-                        <label
-                          key={th}
-                          htmlFor={`hh-theme-${th}`}
-                          className="flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent/40"
-                        >
-                          <RadioGroupItem value={th} id={`hh-theme-${th}`} />
-                          {/* Lille prøve: panelfarve på enhedsbaggrunden. */}
-                          <span
-                            className="size-4 rounded-sm border"
-                            style={{ background: pal.panel, borderColor: pal.line }}
-                          />
-                          <span className="text-[13px] font-[450]">
-                            {t(`handheldDesignPage.theme_${th}`)}
-                          </span>
-                        </label>
+                        <span key={token}>
+                          {i > 0 && ', '}
+                          <code className="rounded bg-muted px-1 py-0.5 text-[11px]">{token}</code>
+                          {desc ? ` ${desc}` : ''}
+                        </span>
                       )
                     })}
-                  </RadioGroup>
-                  <p className="text-xs text-muted-foreground">
-                    {t('handheldDesignPage.themeHint')}
                   </p>
-                </section>
 
-                {/* Ikon-tema */}
-                <section className="flex flex-col gap-3">
-                  <SectionTitle>{t('handheldDesignPage.iconThemeSection')}</SectionTitle>
-                  <RadioGroup
-                    value={design.iconTheme}
-                    onValueChange={(v) => patchDesign({ iconTheme: v as HandheldIconTheme })}
-                    className="flex flex-wrap gap-3"
+                  <ToggleSection
+                    id="hh-logo"
+                    label={t('handheldDesignPage.logo')}
+                    checked={design.logoEnabled}
+                    onCheckedChange={(v) => patchDesign({ logoEnabled: v })}
                   >
-                    {HANDHELD_ICON_THEMES.map((th) => (
+                    <DesignImageField
+                      url={design.logoUrl}
+                      onChange={(u) => patchDesign({ logoUrl: u })}
+                      kind="logo"
+                      pathPrefix="handheld-design"
+                      companyId={companyId}
+                      hint={t('handheldDesignPage.logoHint')}
+                      allowUrl
+                    />
+                  </ToggleSection>
+
+                  <ToggleSection
+                    id="hh-hero"
+                    label={t('handheldDesignPage.hero')}
+                    checked={design.heroEnabled}
+                    onCheckedChange={(v) => patchDesign({ heroEnabled: v })}
+                  >
+                    <DesignImageField
+                      url={design.heroUrl}
+                      onChange={(u) => patchDesign({ heroUrl: u })}
+                      kind="hero"
+                      pathPrefix="handheld-design"
+                      companyId={companyId}
+                      hint={t('handheldDesignPage.heroHint')}
+                    />
+                  </ToggleSection>
+                </div>
+              </section>
+
+              {/* Farvetema (enhedens look) */}
+              <section className="flex flex-col gap-3">
+                <SectionTitle>{t('handheldDesignPage.themeSection')}</SectionTitle>
+                <RadioGroup
+                  value={design.theme}
+                  onValueChange={(v) =>
+                    patchDesign({
+                      theme: HANDHELD_THEMES.includes(v as HandheldTheme)
+                        ? (v as HandheldTheme)
+                        : 'midnight',
+                    })
+                  }
+                  className="flex flex-wrap gap-3"
+                >
+                  {HANDHELD_THEMES.map((th) => {
+                    const pal = handheldPalette(th)
+                    return (
                       <label
                         key={th}
-                        htmlFor={`icon-theme-${th}`}
+                        htmlFor={`hh-theme-${th}`}
                         className="flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent/40"
                       >
-                        <RadioGroupItem value={th} id={`icon-theme-${th}`} />
+                        <RadioGroupItem value={th} id={`hh-theme-${th}`} />
+                        {/* Lille prøve: panelfarve på enhedsbaggrunden. */}
+                        <span
+                          className="size-4 rounded-sm border"
+                          style={{ background: pal.panel, borderColor: pal.line }}
+                        />
                         <span className="text-[13px] font-[450]">
-                          {t(`handheldDesignPage.iconTheme_${th}`)}
+                          {t(`handheldDesignPage.theme_${th}`)}
                         </span>
                       </label>
-                    ))}
-                  </RadioGroup>
-                  <p className="text-xs text-muted-foreground">
-                    {t('handheldDesignPage.iconThemeHint')}
-                  </p>
-                </section>
-              </div>
-            )}
-
-            {tab === 'tiles' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                  <SectionTitle>{t('handheldDesignPage.tilesSection')}</SectionTitle>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline" disabled={removed.length === 0}>
-                        <Plus className="size-4" /> {t('handheldDesignPage.addTile')}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {removed.map((item) => {
-                        const tile = HANDHELD_TILE_BY_KEY[item.key]
-                        if (!tile) return null
-                        const Icon = tileIcon(item, tile).icon
-                        return (
-                          <DropdownMenuItem
-                            key={item.key}
-                            className="cursor-pointer"
-                            onClick={() => patchTile(item.key, { enabled: true })}
-                          >
-                            <Icon className="size-4" />
-                            {item.title?.trim() || t(`handheldDesignPage.${tile.labelKey}`)}
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                    )
+                  })}
+                </RadioGroup>
                 <p className="text-xs text-muted-foreground">
-                  {t('handheldDesignPage.tilesHint')}
+                  {t('handheldDesignPage.themeHint')}
                 </p>
-                {visible.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">
-                    {t('handheldDesignPage.noTiles')}
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto pb-1 pt-2">
-                    <HandheldPreview
-                      tiles={visible}
-                      design={design}
-                      onConfigure={(key) => setConfigTarget({ groupKey: null, key })}
-                      onReorder={reorderVisible}
-                      onRemove={(key) => patchTile(key, { enabled: false })}
-                      onOpen={setOpenGroupKey}
-                    />
-                  </div>
-                )}
+              </section>
+
+              {/* Ikon-tema */}
+              <section className="flex flex-col gap-3">
+                <SectionTitle>{t('handheldDesignPage.iconThemeSection')}</SectionTitle>
+                <RadioGroup
+                  value={design.iconTheme}
+                  onValueChange={(v) => patchDesign({ iconTheme: v as HandheldIconTheme })}
+                  className="flex flex-wrap gap-3"
+                >
+                  {HANDHELD_ICON_THEMES.map((th) => (
+                    <label
+                      key={th}
+                      htmlFor={`icon-theme-${th}`}
+                      className="flex cursor-pointer items-center gap-2 rounded-md border p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-accent/40"
+                    >
+                      <RadioGroupItem value={th} id={`icon-theme-${th}`} />
+                      <span className="text-[13px] font-[450]">
+                        {t(`handheldDesignPage.iconTheme_${th}`)}
+                      </span>
+                    </label>
+                  ))}
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground">
+                  {t('handheldDesignPage.iconThemeHint')}
+                </p>
+              </section>
+            </div>
+          )}
+
+          {tab === 'tiles' && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <SectionTitle>{t('handheldDesignPage.tilesSection')}</SectionTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={removed.length === 0}>
+                      <Plus className="size-4" /> {t('handheldDesignPage.addTile')}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {removed.map((item) => {
+                      const tile = HANDHELD_TILE_BY_KEY[item.key]
+                      if (!tile) return null
+                      const Icon = tileIcon(item, tile).icon
+                      return (
+                        <DropdownMenuItem
+                          key={item.key}
+                          className="cursor-pointer"
+                          onClick={() => patchTile(item.key, { enabled: true })}
+                        >
+                          <Icon className="size-4" />
+                          {item.title?.trim() || t(`handheldDesignPage.${tile.labelKey}`)}
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            )}
-          </DetailTabs>
-        </div>
+              <p className="text-xs text-muted-foreground">
+                {t('handheldDesignPage.tilesHint')}
+              </p>
+              {visible.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border p-6 text-center text-[13px] text-muted-foreground">
+                  {t('handheldDesignPage.noTiles')}
+                </p>
+              ) : (
+                <div className="overflow-x-auto pb-1 pt-2">
+                  <HandheldPreview
+                    tiles={visible}
+                    design={design}
+                    onConfigure={(key) => setConfigTarget({ groupKey: null, key })}
+                    onReorder={reorderVisible}
+                    onRemove={(key) => patchTile(key, { enabled: false })}
+                    onOpen={setOpenGroupKey}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </DetailTabs>
       </div>
 
       {dirty && (

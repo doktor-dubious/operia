@@ -65,7 +65,7 @@ async function launchChromium() {
       '--disable-gpu',
       '--disable-dev-shm-usage',
       '--hide-scrollbars',
-      '--window-size=1440,900',
+      `--window-size=${process.env.WINDOW_SIZE || '1440,900'}`,
       `--user-data-dir=${PROFILE}`,
       'about:blank',
     ],

@@ -17,7 +17,7 @@ function ProductPlaceholderPage() {
     .find((p) => p.productKey === productKey)
 
   return (
-    <Card className="max-w-lg bg-panel">
+    <Card className="mx-auto w-full max-w-lg bg-panel">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           {item && <item.icon className="h-4 w-4 text-primary" />}

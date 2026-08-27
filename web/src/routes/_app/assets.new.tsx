@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { NewAssetForm, useAssetPickers } from '@/components/new-asset-form'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 // Nyt aktiv som selvstændig side — samme formular som dialogen på Aktiver, men
 // uden at skulle finde ind i registret først (den daglige vej fra sidemenuen).
@@ -25,7 +26,7 @@ function NewAssetPage() {
   const showAsset = (id: string) => navigate({ to: '/assets', search: { id } })
 
   return (
-    <div className="flex flex-col gap-6 xl:flex-row">
+    <TaskPageColumn className="flex flex-col gap-6 xl:flex-row">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('assetsPage.newTitle')}</CardTitle>
@@ -44,6 +45,6 @@ function NewAssetPage() {
           />
         </CardContent>
       </Card>
-    </div>
+    </TaskPageColumn>
   )
 }

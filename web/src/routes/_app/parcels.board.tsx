@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { ParcelStatus } from '@/components/parcel-status-badge'
 import { ParcelBoardOverview } from '@/components/parcel-board-overview'
 import { ParcelStatusList } from '@/components/parcel-status-list'
+import { TaskPageColumn } from '@/components/task-page-column'
 import { defaultWindowHours, isBoardStatus } from '@/lib/parcel-board'
 
 // Pakkeoversigt. Én rute, to visninger — styret af ?status:
@@ -28,7 +29,14 @@ function BoardPage() {
   const { status, hours } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
-  if (!status) return <ParcelBoardOverview />
+  // Overblikket lægges i den faste opgaveside-kolonne, så det flugter med de
+  // øvrige pakkesider; kategorilisten (en bred tabel) er bevidst fuldbred.
+  if (!status)
+    return (
+      <TaskPageColumn>
+        <ParcelBoardOverview />
+      </TaskPageColumn>
+    )
 
   return (
     <ParcelStatusList

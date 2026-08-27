@@ -14,6 +14,7 @@ import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { findAssetsByCode, type AssetHit } from '@/lib/asset-lookup'
 import { describeError } from '@/lib/errors'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/assets/search')({
   component: SearchPage,
@@ -76,7 +77,7 @@ function SearchPage() {
     })
 
   return (
-    <div className="flex flex-col gap-4">
+    <TaskPageColumn className="flex flex-col gap-4">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('nav.assetSearch')}</CardTitle>
@@ -140,6 +141,6 @@ function SearchPage() {
           ))}
         </div>
       )}
-    </div>
+    </TaskPageColumn>
   )
 }

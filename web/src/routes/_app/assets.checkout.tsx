@@ -24,6 +24,7 @@ import { describeError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 import { isValidEmail } from '@/lib/validation'
 import { cn } from '@/lib/utils'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/assets/checkout')({
   component: CheckoutPage,
@@ -142,7 +143,7 @@ function CheckoutPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 xl:flex-row">
+    <TaskPageColumn className="flex flex-col gap-6 xl:flex-row">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('nav.assetCheckout')}</CardTitle>
@@ -306,6 +307,6 @@ function CheckoutPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </TaskPageColumn>
   )
 }

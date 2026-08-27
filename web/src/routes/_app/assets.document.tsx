@@ -14,6 +14,7 @@ import { useCompanyContext } from '@/hooks/use-company-context'
 import { invalidateAssetQueries, type AssetHit } from '@/lib/asset-lookup'
 import { describeError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/assets/document')({
   component: DocumentPage,
@@ -74,7 +75,7 @@ function DocumentPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 xl:flex-row">
+    <TaskPageColumn className="flex flex-col gap-6 xl:flex-row">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('nav.assetDocument')}</CardTitle>
@@ -131,6 +132,6 @@ function DocumentPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </TaskPageColumn>
   )
 }

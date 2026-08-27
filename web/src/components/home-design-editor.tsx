@@ -923,13 +923,12 @@ export function HomeDesignEditor({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="py-6">
+      <div className="mx-auto w-full max-w-3xl py-6">
         <header className="mb-8">
           <h1 className="text-2xl font-medium text-foreground">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-foreground-light">{subtitle}</p>}
         </header>
 
-        <div className="max-w-3xl">
         {banner}
         <DetailTabs
           tabs={[
@@ -1340,7 +1339,6 @@ export function HomeDesignEditor({
             </div>
           )}
         </DetailTabs>
-        </div>
       </div>
 
       {dirty && (

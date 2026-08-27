@@ -190,6 +190,14 @@ personal data is removed instead.
   daily cleanup job removes screenshots whose feedback row no longer exists (with a
   one-day grace period, since the file is uploaded before the row is inserted). An
   erasure request covering a screenshot is honored by deleting the feedback row.
+- Sales leads (`20260822090000_sales_leads.sql`) — the public savings calculator's
+  "send me the calculation" stores e-mail, optional name/company, the calculation and
+  (abuse limiting only) IP + user agent, written solely by the `sales-lead` edge
+  function and readable by platform admins only. DCA is **controller** here, like the
+  feedback inbox — recorded in [`docs/gdpr/ropa.md`](gdpr/ropa.md) §15, with Resend as
+  the delivery vendor ([subprocessors.md](gdpr/subprocessors.md) row 3). A fixed
+  12-month `sales-leads-purge` pg_cron job deletes the whole row; the form's privacy
+  notice on the sales site states the processing, the sharing (none) and the window.
 - Audit-log minimization: names and recipient addresses are kept **out** of `audit_log`
   in the first place, since it is UPDATE/DELETE-blocked and forwarded to log drains —
   `audit_employees()` logs `employee_no`, `lend_asset`/`update_asset_loan` no longer log
@@ -404,7 +412,7 @@ user to reproduce a reported problem. Built 2026-07-28,
   fail-closed with the target's **masked** e-mail (`maskRecipient()`), so the evidence
   itself does not become a new personal-data leak.
 - GDPR framing: this is DCA-as-controller processing for service delivery — recorded in
-  [`docs/gdpr/ropa.md`](gdpr/ropa.md) §15.
+  [`docs/gdpr/ropa.md`](gdpr/ropa.md) §16.
 
 ## 13. Maps, geocoding and route planning (G)
 

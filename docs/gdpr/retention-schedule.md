@@ -50,6 +50,7 @@ with the before/after values.
 | `parcel_events` on its own | It is the chain of custody. Its lifetime follows the parcel, and an erasure request is met by **anonymizing the person** the event references, not by rewriting history |
 | Companies, locations, handling classes, carriers | Configuration, not personal data |
 | The feedback inbox | DCA is controller there; screenshots are deleted with the feedback row and orphans swept daily |
+| Sales leads (`sales_leads`, public savings calculator) | DCA is controller there; a **fixed 12-month window** applies instead — the `sales-leads-purge` pg_cron job (02:20) deletes the whole row incl. IP/user agent. Not customer-configurable because no customer is involved |
 | Backups | Expire with the platform's backup cycle. A deletion in the live system reaches backup when that backup expires — disclosed to controllers in DPA Bilag C.4 |
 | Copies already sent to a customer's log drain | Outside DCA's reach by design, which is why `audit_log` is minimized at the point of writing |
 

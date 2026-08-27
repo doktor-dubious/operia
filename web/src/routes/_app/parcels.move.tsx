@@ -26,6 +26,7 @@ import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { moveRequiresLocation, moveTargets, type MoveStatus } from '@/lib/parcel-moves'
 import { supabase } from '@/lib/supabase'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/parcels/move')({
   component: MovePage,
@@ -172,116 +173,118 @@ function MovePage() {
   }
 
   return (
-    <Card className="w-full max-w-2xl bg-panel">
-      <CardHeader>
-        <CardTitle className="text-base">{t('nav.move')}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="lookup">{t('handout.lookup')}</Label>
-            <ScannerIndicator signal={scanSignal} />
-          </div>
-          <div className="flex gap-2">
-            <Input
-              id="lookup"
-              ref={lookupRef}
-              value={lookup}
-              autoFocus
-              autoComplete="off"
-              placeholder={t('handout.lookupPlaceholder')}
-              onChange={(e) => setLookup(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  search()
-                }
-              }}
-            />
-            <Button type="button" variant="outline" onClick={() => search()}>
-              <Search className="size-4" /> {t('common.search')}
-            </Button>
-          </div>
-          {notFound && <p className="text-xs text-status-neutral-to-bad">{t('handout.notFound')}</p>}
-        </div>
-
-        {parcel && (
-          <>
-            <div className="rounded-md border bg-background/50 p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-mono text-sm">{parcel.barcode ?? '—'}</span>
-                <ParcelStatusBadge status={parcel.status} />
-              </div>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[13px]">
-                <dt className="text-muted-foreground">{t('parcels.receiver')}</dt>
-                <dd>{parcel.receiverName ?? '—'}</dd>
-                <dt className="text-muted-foreground">{t('parcels.location')}</dt>
-                <dd>{parcel.locationName ?? '—'}</dd>
-              </dl>
+    <TaskPageColumn>
+      <Card className="w-full max-w-2xl bg-panel">
+        <CardHeader>
+          <CardTitle className="text-base">{t('nav.move')}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lookup">{t('handout.lookup')}</Label>
+              <ScannerIndicator signal={scanSignal} />
             </div>
+            <div className="flex gap-2">
+              <Input
+                id="lookup"
+                ref={lookupRef}
+                value={lookup}
+                autoFocus
+                autoComplete="off"
+                placeholder={t('handout.lookupPlaceholder')}
+                onChange={(e) => setLookup(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    search()
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={() => search()}>
+                <Search className="size-4" /> {t('common.search')}
+              </Button>
+            </div>
+            {notFound && <p className="text-xs text-status-neutral-to-bad">{t('handout.notFound')}</p>}
+          </div>
 
-            {targets.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t('parcelDetail.notRelocatable', { status: t(statusLabelKey[parcel.status]) })}
-              </p>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  <Label>{t('parcelDetail.relocateStatus')}</Label>
-                  <Select
-                    value={status ?? undefined}
-                    onValueChange={(v) => setStatus(v as MoveStatus)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {targets.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(statusLabelKey[s])}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {parcel && (
+            <>
+              <div className="rounded-md border bg-background/50 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-mono text-sm">{parcel.barcode ?? '—'}</span>
+                  <ParcelStatusBadge status={parcel.status} />
                 </div>
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[13px]">
+                  <dt className="text-muted-foreground">{t('parcels.receiver')}</dt>
+                  <dd>{parcel.receiverName ?? '—'}</dd>
+                  <dt className="text-muted-foreground">{t('parcels.location')}</dt>
+                  <dd>{parcel.locationName ?? '—'}</dd>
+                </dl>
+              </div>
 
-                <div className="flex flex-col gap-2">
-                  <Label>
-                    {t('parcels.location')}
-                    {needsLocation ? (
-                      <span className="text-destructive"> *</span>
-                    ) : (
-                      <span className="font-normal text-muted-foreground">
-                        {' '}
-                        ({t('common.optional')})
-                      </span>
-                    )}
-                  </Label>
-                  <Select value={locationId} onValueChange={setLocationId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
-                      {locations?.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {targets.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('parcelDetail.notRelocatable', { status: t(statusLabelKey[parcel.status]) })}
+                </p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <Label>{t('parcelDetail.relocateStatus')}</Label>
+                    <Select
+                      value={status ?? undefined}
+                      onValueChange={(v) => setStatus(v as MoveStatus)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {targets.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {t(statusLabelKey[s])}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="flex justify-end">
-                  <Button type="button" disabled={busy || !canMove} onClick={move}>
-                    {busy ? t('common.loading') : t('parcelDetail.relocate')}
-                  </Button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+                  <div className="flex flex-col gap-2">
+                    <Label>
+                      {t('parcels.location')}
+                      {needsLocation ? (
+                        <span className="text-destructive"> *</span>
+                      ) : (
+                        <span className="font-normal text-muted-foreground">
+                          {' '}
+                          ({t('common.optional')})
+                        </span>
+                      )}
+                    </Label>
+                    <Select value={locationId} onValueChange={setLocationId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>—</SelectItem>
+                        {locations?.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button type="button" disabled={busy || !canMove} onClick={move}>
+                      {busy ? t('common.loading') : t('parcelDetail.relocate')}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </TaskPageColumn>
   )
 }

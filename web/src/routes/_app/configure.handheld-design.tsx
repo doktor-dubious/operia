@@ -80,7 +80,14 @@ function ConfigureHandheldDesignPage() {
     queryClient.invalidateQueries({ queryKey: ['company-handheld-config-edit', companyId] })
   }
 
-  if (!companyId || isPending || !data) return <Skeleton className="h-40 w-full" />
+  // Skelettet i editorens egen 3xl-kolonne, så intet hopper vandret ved load.
+  if (!companyId || isPending || !data) {
+    return (
+      <div className="mx-auto w-full max-w-3xl py-6">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    )
+  }
 
   return (
     <HandheldDesignEditor

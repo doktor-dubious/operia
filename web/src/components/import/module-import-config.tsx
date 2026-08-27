@@ -108,14 +108,22 @@ export function ModuleImportConfig({ spec }: { spec: ModuleSpec }) {
       return { ...prev, fields }
     })
 
-  if (isPending || !values || !companyId) return <Skeleton className="h-40 w-full" />
+  // Skelettet i samme 3xl-kolonne som den færdige side, så intet hopper vandret.
+  if (isPending || !values || !companyId) {
+    return (
+      <div className="mx-auto w-full max-w-3xl">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    )
+  }
 
   const inactive = allFields.filter((f) => !values.fields.includes(f))
   const fieldLabel = (key: string) => t(`${spec.i18nKey}.field_${key}`)
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="flex flex-col gap-6">
+      {/* 3xl-kolonne som de øvrige import-faner, indholdet 2xl indeni. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header>
           <h1 className="text-2xl font-medium text-foreground">{t(`${spec.i18nKey}.configTitle`)}</h1>
           <p className="mt-1 text-sm text-foreground-light">{t(`${spec.i18nKey}.configSubtitle`)}</p>

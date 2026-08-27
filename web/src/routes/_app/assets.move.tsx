@@ -19,6 +19,7 @@ import { useCompanyContext } from '@/hooks/use-company-context'
 import { assetRpcErrorKey, invalidateAssetQueries, type AssetHit } from '@/lib/asset-lookup'
 import { describeError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/assets/move')({
   component: MovePage,
@@ -94,7 +95,7 @@ function MovePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 xl:flex-row">
+    <TaskPageColumn className="flex flex-col gap-6 xl:flex-row">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('nav.assetMove')}</CardTitle>
@@ -153,6 +154,6 @@ function MovePage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </TaskPageColumn>
   )
 }

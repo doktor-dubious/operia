@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { AssetStatus } from '@/components/asset-status-badge'
 import { AssetBoardOverview } from '@/components/asset-board-overview'
 import { AssetStatusList } from '@/components/asset-status-list'
+import { TaskPageColumn } from '@/components/task-page-column'
 import { isAssetBoardStatus } from '@/lib/asset-board'
 
 // Aktivoversigten: uden ?status vises overblikket (cirkel + udfaset-kasse);
@@ -18,6 +19,17 @@ export const Route = createFileRoute('/_app/assets/board')({
 
 function BoardPage() {
   const { status } = Route.useSearch()
-  if (!status) return <AssetBoardOverview />
-  return <AssetStatusList key={status} status={status} />
+  // Både overblik og kategoriliste i den faste opgaveside-kolonne som på
+  // /parcels/board — samme kolonne begge veje, så skiftet ikke hopper vandret.
+  if (!status)
+    return (
+      <TaskPageColumn>
+        <AssetBoardOverview />
+      </TaskPageColumn>
+    )
+  return (
+    <TaskPageColumn>
+      <AssetStatusList key={status} status={status} />
+    </TaskPageColumn>
+  )
 }

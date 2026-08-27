@@ -14,6 +14,7 @@ import { ScannerIndicator } from '@/components/scanner-indicator'
 import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/parcels/search')({
   component: SearchPage,
@@ -106,51 +107,53 @@ function SearchPage() {
   })
 
   return (
-    <Card className="w-full max-w-3xl bg-panel">
-      <CardHeader>
-        <CardTitle className="text-base">{t('nav.search')}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="lookup">{t('handout.lookup')}</Label>
-            <ScannerIndicator signal={scanSignal} />
-          </div>
-          <div className="flex gap-2">
-            <Input
-              id="lookup"
-              ref={lookupRef}
-              value={lookup}
-              autoFocus
-              autoComplete="off"
-              placeholder={t('handout.lookupPlaceholder')}
-              onChange={(e) => setLookup(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  search()
-                }
-              }}
-            />
-            <Button type="button" variant="outline" onClick={() => search()}>
-              <Search className="size-4" /> {t('common.search')}
-            </Button>
-          </div>
-        </div>
-
-        {hits !== null &&
-          (hits.length === 0 ? (
-            <p className="text-xs text-status-neutral-to-bad">{t('handout.notFound')}</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {hits.map((p) => (
-                <div key={p.id} className="rounded-md border bg-background/50 p-4">
-                  <ParcelSummary parcel={p} />
-                </div>
-              ))}
+    <TaskPageColumn>
+      <Card className="w-full max-w-3xl bg-panel">
+        <CardHeader>
+          <CardTitle className="text-base">{t('nav.search')}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lookup">{t('handout.lookup')}</Label>
+              <ScannerIndicator signal={scanSignal} />
             </div>
-          ))}
-      </CardContent>
-    </Card>
+            <div className="flex gap-2">
+              <Input
+                id="lookup"
+                ref={lookupRef}
+                value={lookup}
+                autoFocus
+                autoComplete="off"
+                placeholder={t('handout.lookupPlaceholder')}
+                onChange={(e) => setLookup(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    search()
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={() => search()}>
+                <Search className="size-4" /> {t('common.search')}
+              </Button>
+            </div>
+          </div>
+
+          {hits !== null &&
+            (hits.length === 0 ? (
+              <p className="text-xs text-status-neutral-to-bad">{t('handout.notFound')}</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {hits.map((p) => (
+                  <div key={p.id} className="rounded-md border bg-background/50 p-4">
+                    <ParcelSummary parcel={p} />
+                  </div>
+                ))}
+              </div>
+            ))}
+        </CardContent>
+      </Card>
+    </TaskPageColumn>
   )
 }

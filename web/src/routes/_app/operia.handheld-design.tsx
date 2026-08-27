@@ -66,7 +66,14 @@ function HandheldDesignPage() {
     queryClient.invalidateQueries({ queryKey: ['platform-handheld-config'] })
   }
 
-  if (isPending || !data) return <Skeleton className="h-40 w-full" />
+  // Skelettet i editorens egen 3xl-kolonne, så intet hopper vandret ved load.
+  if (isPending || !data) {
+    return (
+      <div className="mx-auto w-full max-w-3xl py-6">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    )
+  }
 
   return (
     <HandheldDesignEditor

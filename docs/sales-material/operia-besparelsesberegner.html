@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operia – Besparelsesberegner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b1220; --navy-2:#0A1A33; --blue:#2D6FF0; --steel:#4A7CA2;
+    --ink:#0b1220; --muted:#5b6b80; --line:#e3e8ef; --card:#fff; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  .op-calc{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    color:var(--ink);max-width:1180px;margin:0 auto;padding:24px 16px 48px;-webkit-font-smoothing:antialiased;
+  }
+  .op-calc *{font-family:inherit}
+
+  .op-head{text-align:center;margin-bottom:26px}
+  .op-eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+  .op-head h2{font-size:clamp(26px,4vw,38px);line-height:1.15;font-weight:800;margin:0 0 10px;letter-spacing:-.02em}
+  .op-head p{margin:0 auto;max-width:640px;color:var(--muted);font-size:16px;line-height:1.55}
+
+  .op-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  @media (max-width:900px){.op-grid{grid-template-columns:1fr}}
+
+  .op-global{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:6px 22px 8px;margin-bottom:16px;box-shadow:0 1px 2px rgba(11,18,32,.04);
+  }
+
+  .op-mod{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:14px;overflow:hidden;transition:border-color .18s,box-shadow .18s;
+  }
+  .op-mod.on{border-color:#c3d6fb;box-shadow:0 2px 10px rgba(45,111,240,.09)}
+  .op-mod-head{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
+  .op-mod-head:hover{background:#f8fafd}
+  .op-mod-title{flex:1;min-width:0}
+  .op-mod-title strong{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+  .op-mod-title span{display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .op-mod-sum{font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;transition:opacity .18s}
+  .op-mod.on .op-mod-sum{opacity:1}
+
+  .op-switch{
+    position:relative;flex:0 0 auto;width:46px;height:26px;border-radius:99px;background:#cdd6e2;
+    border:none;cursor:pointer;padding:0;transition:background .18s;
+  }
+  .op-switch::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(11,18,32,.3);transition:transform .18s;
+  }
+  .op-switch[aria-checked="true"]{background:var(--blue)}
+  .op-switch[aria-checked="true"]::after{transform:translateX(20px)}
+  .op-switch:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+  .op-mod-body{display:none;padding:0 20px 6px;border-top:1px solid var(--line)}
+  .op-mod.on .op-mod-body{display:block}
+
+  .op-field{padding:17px 0;border-bottom:1px solid var(--line)}
+  .op-field:last-child{border-bottom:none}
+  .op-label{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;margin-bottom:11px}
+  .op-info{
+    position:relative;display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
+    border-radius:50%;background:#dfe6ee;color:#5b6b80;font-size:11px;font-weight:700;cursor:help;
+    flex:0 0 auto;border:none;padding:0;
+  }
+  .op-info:hover,.op-info:focus{background:var(--blue);color:#fff;outline:none}
+  .op-info b{
+    position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);width:235px;
+    background:var(--navy);color:#fff;font-size:12.5px;font-weight:400;line-height:1.45;padding:9px 11px;
+    border-radius:8px;text-align:left;opacity:0;visibility:hidden;transition:opacity .15s;z-index:20;
+    pointer-events:none;box-shadow:0 8px 24px rgba(11,18,32,.22);
+  }
+  .op-info b::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--navy)}
+  .op-info:hover b,.op-info:focus b{opacity:1;visibility:visible}
+
+  .op-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:6px}
+  .op-value{font-size:19px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .op-value em{font-style:normal;font-weight:500;font-size:14.5px;color:var(--muted);margin-left:4px}
+  .op-step{display:flex;gap:6px;flex:0 0 auto}
+  .op-step button{
+    width:33px;height:33px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--navy);
+    font-size:17px;font-weight:600;line-height:1;cursor:pointer;transition:all .12s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .op-step button:hover{border-color:var(--blue);color:var(--blue);background:#f2f6ff}
+  .op-step button:active{transform:scale(.94)}
+  .op-step button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  input[type=range].op-range{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:var(--line);
+    outline:none;margin:6px 0 9px;cursor:pointer;
+  }
+  input[type=range].op-range::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--blue);
+    border:3px solid #fff;box-shadow:0 1px 5px rgba(45,111,240,.5);cursor:grab;
+  }
+  input[type=range].op-range::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--blue);border:3px solid #fff;
+    box-shadow:0 1px 5px rgba(45,111,240,.5);cursor:grab;
+  }
+  input[type=range].op-range:focus-visible{outline:2px solid var(--blue);outline-offset:4px}
+  .op-minmax{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+
+  .op-results{
+    background:var(--navy-2);color:#fff;border-radius:var(--radius);padding:32px 28px;position:sticky;top:20px;
+    background-image:radial-gradient(120% 70% at 50% 0%,rgba(45,111,240,.20),transparent 62%);
+  }
+  @media (max-width:900px){.op-results{position:static}}
+  .op-results h3{font-size:clamp(23px,3.4vw,29px);font-weight:800;text-align:center;margin:0 0 24px;letter-spacing:-.02em}
+
+  .op-stat{text-align:center;margin-bottom:20px}
+  .op-stat .k{font-size:14px;color:rgba(255,255,255,.62);margin-bottom:4px}
+  .op-stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .op-stat .v small{font-size:14.5px;font-weight:500;opacity:.75;margin-left:2px}
+  .op-note{text-align:center;font-size:14px;color:rgba(255,255,255,.72);background:rgba(255,255,255,.06);border-radius:9px;padding:9px 12px;margin:0 0 22px}
+
+  .op-break{margin:0 0 24px;padding:0;list-style:none;display:grid;gap:1px;background:rgba(255,255,255,.12);border-radius:10px;overflow:hidden}
+  .op-break li{display:flex;justify-content:space-between;gap:12px;background:#132745;padding:11px 14px;font-size:14px}
+  .op-break li span{color:rgba(255,255,255,.78)}
+  .op-break li b{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .op-total{border-top:1px solid rgba(255,255,255,.16);padding-top:24px;text-align:center}
+  .op-total .k{font-size:16px;font-weight:600;color:rgba(255,255,255,.85);margin-bottom:8px}
+  .op-total .v{
+    font-size:clamp(36px,6.2vw,50px);font-weight:800;letter-spacing:-.03em;line-height:1.05;
+    font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,#9dc0ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .op-empty{text-align:center;color:rgba(255,255,255,.6);font-size:15px;line-height:1.55;padding:26px 8px}
+  .op-foot{font-size:12px;color:rgba(255,255,255,.45);text-align:center;margin:14px 0 0;line-height:1.5}
+
+  .op-benefits{margin-top:28px;padding-top:22px;border-top:1px solid rgba(255,255,255,.16)}
+  .op-benefits h4{font-size:15px;font-weight:700;margin:0 0 13px}
+  .op-benefits ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .op-benefits li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:rgba(255,255,255,.9);line-height:1.4}
+  .op-check{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:rgba(45,111,240,.9);display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .op-check svg{width:11px;height:11px}
+
+  .op-cta{
+    display:block;width:100%;margin-top:24px;padding:15px;border-radius:10px;background:var(--blue);color:#fff;
+    text-align:center;font-size:15.5px;font-weight:600;text-decoration:none;transition:background .15s,transform .1s;
+  }
+  .op-cta:hover{background:#1c5ad6}
+  .op-cta:active{transform:scale(.99)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="op-calc">
+  <div class="op-head">
+    <span class="op-eyebrow">Operia · Besparelsesberegner</span>
+    <h2>Hvad koster de manuelle rutiner jer?</h2>
+    <p>Slå de moduler til, der er relevante for jer, og juster tallene. Beregningen opdaterer sig løbende.</p>
+  </div>
+
+  <div class="op-grid">
+    <div>
+      <div class="op-global" id="op-global"></div>
+      <div id="op-modules"></div>
+    </div>
+
+    <div class="op-results">
+      <h3>Besparelser pr. år</h3>
+      <div id="op-out"></div>
+
+      <div class="op-benefits">
+        <h4>Derudover får I:</h4>
+        <ul>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Fuld sporbarhed og dokumentation på tværs af moduler</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Ét system i stedet for regneark og løse aftaler</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Data der holder ved revision, tvister og udbud</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Jeres eget navn og design på løsningen</li>
+        </ul>
+      </div>
+
+      <a class="op-cta" href="/kontakt/">Book en demo af Operia</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+/* ============================================================
+   ANTAGELSER — juster her
+   ============================================================ */
+var A = {
+  WORKDAYS : 260,
+  WORKWEEKS: 46,
+  DAYHOURS : 7.4,
+  eff_pkg    : 0.75,
+  eff_report : 1.00,
+  eff_asset  : 0.70,
+  eff_count  : 0.80,
+  eff_plan   : 0.80,
+  red_km     : 0.12,
+  eff_book   : 0.60,
+  eff_bookadm: 0.80
+};
+
+/* ---------- globalt felt ---------- */
+var WAGE = {
+  label:'Timeløn', unit:'kr. / time', min:100, max:1000, step:5, value:299, dec:0,
+  minLabel:'100 kr. / time', maxLabel:'1.000 kr. / time',
+  info:'Den samlede timeomkostning — løn inkl. pension, feriepenge og tillæg. Bruges i alle moduler.'
+};
+
+/* ---------- moduler ---------- */
+var MODULES = [
+{
+  id:'pkg', on:true,
+  name:'Pakkehåndtering',
+  desc:'Modtagelse, registrering, besked og udlevering',
+  fields:[
+    {id:'antal', label:'Antal håndterede pakker', unit:'pakker / dag', min:5,max:300,step:5,value:70,dec:0,
+     minLabel:'5 pakker / dag', maxLabel:'300 pakker / dag',
+     info:'Pakker, breve og forsendelser I i gennemsnit modtager og videregiver pr. arbejdsdag.'},
+    {id:'min', label:'Manuel håndtering i tid', unit:'minutter pr. pakke', min:1,max:10,step:0.5,value:2,dec:1,
+     minLabel:'~ 1 minut pr. pakke', maxLabel:'~ 10 minutter pr. pakke',
+     info:'Tid fra modtagelse til udlevering: registrering i regneark, opslag af modtager, besked og kvittering.'},
+    {id:'rap', label:'Rapportering og fakturering', unit:'timer / måned', min:0,max:40,step:1,value:4,dec:0,
+     minLabel:'0 timer / måned', maxLabel:'40 timer / måned',
+     info:'Tid pr. måned på statistik, dokumentation og fakturagrundlag. Operia danner det automatisk.'},
+    {id:'tab', label:'Antal mistede pakker', unit:'pakker / år', min:0,max:100,step:1,value:3,dec:0,
+     minLabel:'0 pakker / år', maxLabel:'100 pakker / år',
+     info:'Forsendelser der forsvinder eller ikke kan spores.'},
+    {id:'vaerdi', label:'Gennemsnitlig værdi pr. pakke', unit:'kr.', min:100,max:10000,step:50,value:250,dec:0,
+     minLabel:'100 kr.', maxLabel:'10.000 kr.',
+     info:'Bruges til at beregne, hvad bortkomne forsendelser koster i erstatning og genbestilling.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.antal * v.min / 60) * A.WORKDAYS * A.eff_pkg + v.rap * 12 * A.eff_report,
+      money: v.tab * v.vaerdi
+    };
+  }
+},
+{
+  id:'asset', on:false,
+  name:'Aktivstyring',
+  desc:'Udstyr, værktøj og inventar med fuld historik',
+  fields:[
+    {id:'soeg', label:'Tid brugt på at finde og registrere udstyr', unit:'timer / uge', min:0,max:40,step:0.5,value:4,dec:1,
+     minLabel:'0 timer / uge', maxLabel:'40 timer / uge',
+     info:'Samlet tid pr. uge på tværs af medarbejdere: hvor er udstyret, hvem har det, og hvornår kommer det tilbage?'},
+    {id:'optael', label:'Årlig inventering og optælling', unit:'timer / år', min:0,max:300,step:5,value:40,dec:0,
+     minLabel:'0 timer / år', maxLabel:'300 timer / år',
+     info:'Tid brugt på fysisk optælling og afstemning mod lister. Operia har altid en opdateret status.'},
+    {id:'tab', label:'Bortkomne aktiver', unit:'stk. / år', min:0,max:100,step:1,value:6,dec:0,
+     minLabel:'0 stk. / år', maxLabel:'100 stk. / år',
+     info:'Udstyr der forsvinder, fordi der ikke er styr på hvem der sidst havde det.'},
+    {id:'vaerdi', label:'Gennemsnitlig genanskaffelsesværdi', unit:'kr.', min:500,max:50000,step:500,value:4000,dec:0,
+     minLabel:'500 kr.', maxLabel:'50.000 kr.',
+     info:'Hvad koster det at genanskaffe et typisk aktiv?'}
+  ],
+  calc:function(v){
+    return {
+      hours: v.soeg * A.WORKWEEKS * A.eff_asset + v.optael * A.eff_count,
+      money: v.tab * v.vaerdi
+    };
+  }
+},
+{
+  id:'route', on:false,
+  name:'Ruteplanlægning',
+  desc:'Optimerede ruter, stop og kørselsdokumentation',
+  fields:[
+    {id:'plan', label:'Tid brugt på at planlægge ruter', unit:'minutter / dag', min:0,max:240,step:5,value:45,dec:0,
+     minLabel:'0 minutter / dag', maxLabel:'240 minutter / dag',
+     info:'Daglig planlægning af hvem der kører hvor, i hvilken rækkefølge og med hvilke stop.'},
+    {id:'km', label:'Kørte kilometer', unit:'km / dag', min:0,max:2000,step:10,value:120,dec:0,
+     minLabel:'0 km / dag', maxLabel:'2.000 km / dag',
+     info:'Samlet daglig kørsel på tværs af køretøjer.'},
+    {id:'kmpris', label:'Omkostning pr. kilometer', unit:'kr. / km', min:1,max:15,step:0.5,value:3.5,dec:1,
+     minLabel:'1 kr. / km', maxLabel:'15 kr. / km',
+     info:'Brændstof eller strøm, dæk, service og afskrivning pr. kørt kilometer.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.plan / 60) * A.WORKDAYS * A.eff_plan,
+      money: v.km * A.WORKDAYS * A.red_km * v.kmpris
+    };
+  }
+},
+{
+  id:'book', on:false,
+  name:'Booking',
+  desc:'Lokaler, ressourcer og udstyr uden dobbeltbookinger',
+  fields:[
+    {id:'ansatte', label:'Antal medarbejdere', unit:'medarbejdere', min:5,max:2000,step:5,value:60,dec:0,
+     minLabel:'5 medarbejdere', maxLabel:'2.000 medarbejdere',
+     info:'Antal personer der booker lokaler eller ressourcer i hverdagen.'},
+    {id:'spild', label:'Spildtid pr. medarbejder på at finde ledigt lokale', unit:'minutter / uge', min:0,max:60,step:1,value:6,dec:0,
+     minLabel:'0 minutter / uge', maxLabel:'60 minutter / uge',
+     info:'Tid på at lede efter et ledigt lokale, rykke møder og rydde op i dobbeltbookinger.'},
+    {id:'adm', label:'Administration af lokaler og ressourcer', unit:'timer / måned', min:0,max:60,step:1,value:3,dec:0,
+     minLabel:'0 timer / måned', maxLabel:'60 timer / måned',
+     info:'Receptionens eller facility-teamets tid på at koordinere bookinger manuelt.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.ansatte * v.spild / 60) * A.WORKWEEKS * A.eff_book + v.adm * 12 * A.eff_bookadm,
+      money: 0
+    };
+  }
+}
+];
+
+/* ============================================================
+   MOTOR
+   ============================================================ */
+function f(n,d){
+  d = d || 0;
+  return new Intl.NumberFormat('da-DK',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+}
+
+var conf = {}, state = {};
+
+function fieldHTML(key,c){
+  return '<div class="op-field">'+
+    '<div class="op-label">'+c.label+
+      '<button class="op-info" type="button" aria-label="Forklaring">i<b>'+c.info+'</b></button>'+
+    '</div>'+
+    '<div class="op-row">'+
+      '<div class="op-value"><span data-out="'+key+'">'+f(c.value,c.dec)+'</span><em>'+c.unit+'</em></div>'+
+      '<div class="op-step">'+
+        '<button type="button" data-nudge="'+key+'" data-dir="-1" aria-label="Mindre">&minus;</button>'+
+        '<button type="button" data-nudge="'+key+'" data-dir="1" aria-label="Mere">+</button>'+
+      '</div>'+
+    '</div>'+
+    '<input class="op-range" type="range" data-key="'+key+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" value="'+c.value+'" aria-label="'+c.label+'">'+
+    '<div class="op-minmax"><span>'+c.minLabel+'</span><span>'+c.maxLabel+'</span></div>'+
+  '</div>';
+}
+
+conf['wage'] = WAGE;
+state['wage'] = WAGE.value;
+document.getElementById('op-global').innerHTML = fieldHTML('wage', WAGE);
+
+var modHTML = '';
+MODULES.forEach(function(m){
+  var body = '';
+  m.fields.forEach(function(c){
+    var key = m.id + '.' + c.id;
+    conf[key] = c;
+    state[key] = c.value;
+    body += fieldHTML(key,c);
+  });
+  modHTML +=
+    '<div class="op-mod'+(m.on?' on':'')+'" id="mod-'+m.id+'">'+
+      '<div class="op-mod-head" data-toggle="'+m.id+'">'+
+        '<button class="op-switch" type="button" role="switch" aria-checked="'+m.on+'" aria-label="Slå '+m.name+' til eller fra"></button>'+
+        '<div class="op-mod-title"><strong>'+m.name+'</strong><span>'+m.desc+'</span></div>'+
+        '<div class="op-mod-sum" data-sum="'+m.id+'"></div>'+
+      '</div>'+
+      '<div class="op-mod-body">'+body+'</div>'+
+    '</div>';
+});
+document.getElementById('op-modules').innerHTML = modHTML;
+
+document.addEventListener('input', function(e){
+  var k = e.target.getAttribute && e.target.getAttribute('data-key');
+  if(!k) return;
+  state[k] = +e.target.value;
+  render();
+});
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest) return;
+
+  var nudge = e.target.closest('[data-nudge]');
+  if(nudge){
+    var k = nudge.getAttribute('data-nudge'), c = conf[k];
+    var next = +(state[k] + c.step * +nudge.getAttribute('data-dir')).toFixed(4);
+    state[k] = Math.min(c.max, Math.max(c.min, next));
+    var inp = document.querySelector('[data-key="'+k+'"]');
+    if(inp) inp.value = state[k];
+    render();
+    return;
+  }
+
+  var head = e.target.closest('[data-toggle]');
+  if(head){
+    var id = head.getAttribute('data-toggle');
+    var m = MODULES.filter(function(x){ return x.id === id; })[0];
+    m.on = !m.on;
+    document.getElementById('mod-'+id).classList.toggle('on', m.on);
+    head.querySelector('.op-switch').setAttribute('aria-checked', m.on);
+    render();
+  }
+});
+
+function paint(k){
+  var inp = document.querySelector('[data-key="'+k+'"]');
+  if(!inp) return;
+  var pct = (state[k] - conf[k].min) / (conf[k].max - conf[k].min) * 100;
+  inp.style.background = 'linear-gradient(90deg,var(--blue) 0%,var(--blue) '+pct+'%,var(--line) '+pct+'%,var(--line) 100%)';
+}
+
+function render(){
+  Object.keys(conf).forEach(function(k){
+    var o = document.querySelector('[data-out="'+k+'"]');
+    if(o) o.textContent = f(state[k], conf[k].dec);
+    paint(k);
+  });
+
+  var wage = state['wage'];
+  var totalHours = 0, totalMoney = 0, rows = '', active = 0;
+
+  MODULES.forEach(function(m){
+    var sumEl = document.querySelector('[data-sum="'+m.id+'"]');
+    if(!m.on){ if(sumEl) sumEl.textContent = ''; return; }
+    active++;
+
+    var v = {};
+    m.fields.forEach(function(c){ v[c.id] = state[m.id+'.'+c.id]; });
+    var r = m.calc(v);
+    var kr = r.hours * wage + r.money;
+
+    totalHours += r.hours;
+    totalMoney += r.money;
+
+    if(sumEl) sumEl.textContent = f(Math.round(kr)) + ' kr./år';
+    rows += '<li><span>'+m.name+'</span><b>'+f(Math.round(kr))+' kr.</b></li>';
+  });
+
+  var out = document.getElementById('op-out');
+
+  if(!active){
+    out.innerHTML = '<p class="op-empty">Slå mindst ét modul til for at se beregningen.</p>';
+    return;
+  }
+
+  var total = totalHours * wage + totalMoney;
+
+  out.innerHTML =
+    '<div class="op-stat">'+
+      '<div class="k">Sparede timer til andre opgaver</div>'+
+      '<div class="v">'+f(Math.round(totalHours))+' <small>timer / år</small></div>'+
+    '</div>'+
+    '<p class="op-note">Det svarer til <strong>'+f(Math.round(totalHours/A.DAYHOURS))+'</strong> arbejdsdage om året</p>'+
+    (totalMoney > 0
+      ? '<div class="op-stat"><div class="k">Undgåede direkte omkostninger</div>'+
+        '<div class="v">'+f(Math.round(totalMoney))+' <small>kr. / år</small></div></div>'
+      : '')+
+    (active > 1 ? '<ul class="op-break">'+rows+'</ul>' : '')+
+    '<div class="op-total">'+
+      '<div class="k">Samlet besparelse pr. år</div>'+
+      '<div class="v">'+f(Math.round(total))+' kr.</div>'+
+    '</div>'+
+    '<p class="op-foot">Beregnet ud fra '+A.WORKDAYS+' arbejdsdage, '+A.WORKWEEKS+' arbejdsuger og en '+String(A.DAYHOURS).replace('.',',')+'-timers arbejdsdag. Estimatet bygger på erfaringstal og er ikke et tilbud.</p>';
+}
+
+render();
+})();
+</script>
+</body>
+</html>

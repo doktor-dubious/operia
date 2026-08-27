@@ -187,7 +187,17 @@ gaps in `../compliance-map.md`.
 | **Recipients** | Platform admins only |
 | **Retention** | Until handled; screenshots deletable, and orphaned screenshots swept daily |
 
-## 15. DCA Logic as controller — platform administration and impersonation
+## 15. DCA Logic as controller — sales leads (public savings calculator)
+
+| | |
+|---|---|
+| **Purpose** | Send a visitor of the public savings calculator (operia-info.predictioninstitute.com) their calculation by e-mail, and — only if they asked for it (`want_demo`) — follow up about a demo |
+| **Personal data** | E-mail; optionally name and company; IP address and user agent (abuse limiting only); the submitted calculation |
+| **Recipients** | Platform admins only (`sales_leads`, RLS); Resend delivers the e-mail (see [subprocessors.md](subprocessors.md) row 3) |
+| **Legal basis** | Consent implicit in the request ("send me the calculation"); legitimate interest for the abuse-limiting fields |
+| **Retention** | Fixed 12 months — the `sales-leads-purge` pg_cron job deletes the whole row, including IP/user agent |
+
+## 16. DCA Logic as controller — platform administration and impersonation
 
 | | |
 |---|---|
@@ -196,7 +206,7 @@ gaps in `../compliance-map.md`.
 | **Safeguards** | Impersonation is server-verified (caller must be platform admin, target must not be), the magic-link token is redeemed inside the edge function and never reaches the browser, the user's verification/last-login state is restored afterwards, the session is visibly bannered, and the action is audit-logged fail-closed |
 | **Retention** | Audit events per §11 |
 
-## 16. Offboarding and return of data
+## 17. Offboarding and return of data
 
 Art. 28(3)(g) requires deletion or return at the end of the contract. Cascades and logo cleanup
 exist in code, but the **verified end-to-end runbook (database, storage buckets, auth users,

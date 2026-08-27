@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operia – Besparelsesberegner</title>
+<meta name="description" content="Beregn hvad manuelle rutiner i pakkehåndtering, aktivstyring, ruteplanlægning og booking koster jer pr. år — og hvad Operia kan spare.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* To temaer, valgt med knappen øverst til højre og bevaret i delte links:
+     "blue"   — generisk blå/navy (salgs-skitsens palet)
+     "operia" — produktets egen identitet (hue 159, Supabase-grøn #3ecf8e,
+                mørkt panel #131413 — samme toner som web/src/index.css) */
+  body{
+    --accent:#2D6FF0;          /* interaktive flader: switches, slider, flueben */
+    --accent-ink:#2D6FF0;      /* accentfarvet TEKST på lys baggrund */
+    --accent-contrast:#fff;    /* tekst/ikon oven på accentfarven */
+    --accent-soft:#f2f6ff;     /* svag accent-baggrund (hover m.m.) */
+    --panel:#0A1A33;           /* resultatpanelets baggrund */
+    --panel-row:#132745;       /* rækker i modulopdelingen */
+    --panel-grad:rgba(45,111,240,.20);
+    --cta:#2D6FF0; --cta-ink:#fff; --cta-hover:#1c5ad6;
+    --headgrad:#9dc0ff;        /* nederste stop i total-tallets gradient */
+    --page:#f5f7fa; --ink:#0b1220; --muted:#5b6b80; --line:#e3e8ef;
+    --card:#fff; --switch-off:#cdd6e2; --tooltip:#0b1220; --radius:14px;
+  }
+  body[data-theme="operia"]{
+    --accent:#3ecf8e;
+    --accent-ink:#1d7a40;
+    --accent-contrast:#0c0e0d;
+    --accent-soft:#eef7f2;
+    --panel:#131413;
+    --panel-row:#1e201f;
+    --panel-grad:rgba(62,207,142,.14);
+    --cta:#3ecf8e; --cta-ink:#0c0e0d; --cta-hover:#34b27b;
+    --headgrad:#a5d9c0;
+    --page:#f7f9f8; --ink:#0c0e0d; --muted:#6f7170; --line:#e4e6e5;
+    --card:#fff; --switch-off:#cfd2d0; --tooltip:#1e201f;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--page)}
+  .op-calc{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    color:var(--ink);max-width:1180px;margin:0 auto;padding:24px 16px 48px;-webkit-font-smoothing:antialiased;
+  }
+  .op-calc *{font-family:inherit}
+
+  .op-head{text-align:center;margin-bottom:18px}
+  .op-eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:10px}
+  .op-head h1{font-size:clamp(26px,4vw,38px);line-height:1.15;font-weight:800;margin:0 0 10px;letter-spacing:-.02em}
+  .op-head p{margin:0 auto;max-width:640px;color:var(--muted);font-size:16px;line-height:1.55}
+
+  /* Værktøjslinje: presets til venstre, temavalg til højre */
+  .op-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .op-presets{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .op-presets .lbl{font-size:13px;color:var(--muted);margin-right:2px}
+  .op-chip{
+    border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;
+    padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;
+  }
+  .op-chip:hover{border-color:var(--accent);color:var(--accent-ink)}
+  .op-chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-contrast)}
+  .op-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .op-themes{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:99px;background:var(--card);padding:3px}
+  .op-themes button{
+    border:none;background:transparent;color:var(--muted);border-radius:99px;padding:5px 13px;
+    font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;
+  }
+  .op-themes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-contrast)}
+  .op-themes button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .op-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  @media (max-width:900px){.op-grid{grid-template-columns:1fr}}
+
+  .op-global{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:6px 22px 8px;margin-bottom:16px;box-shadow:0 1px 2px rgba(11,18,32,.04);
+  }
+
+  .op-mod{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:14px;overflow:hidden;transition:border-color .18s,box-shadow .18s;
+  }
+  .op-mod.on{border-color:var(--accent);box-shadow:0 2px 10px var(--panel-grad)}
+  .op-mod-head{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
+  .op-mod-head:hover{background:var(--accent-soft)}
+  .op-mod-title{flex:1;min-width:0}
+  .op-mod-title strong{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+  .op-mod-title span{display:block;font-size:13px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .op-mod-sum{font-size:13px;font-weight:700;color:var(--accent-ink);white-space:nowrap;font-variant-numeric:tabular-nums;opacity:0;transition:opacity .18s}
+  .op-mod.on .op-mod-sum{opacity:1}
+
+  .op-switch{
+    position:relative;flex:0 0 auto;width:46px;height:26px;border-radius:99px;background:var(--switch-off);
+    border:none;cursor:pointer;padding:0;transition:background .18s;
+  }
+  .op-switch::after{
+    content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(11,18,32,.3);transition:transform .18s;
+  }
+  .op-switch[aria-checked="true"]{background:var(--accent)}
+  .op-switch[aria-checked="true"]::after{transform:translateX(20px)}
+  .op-switch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  .op-mod-body{display:none;padding:0 20px 6px;border-top:1px solid var(--line)}
+  .op-mod.on .op-mod-body{display:block}
+
+  .op-field{padding:17px 0;border-bottom:1px solid var(--line);position:relative}
+  .op-field:last-child{border-bottom:none}
+  .op-label{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;margin-bottom:11px}
+  .op-info{
+    display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
+    border-radius:50%;background:#dfe6ee;color:#5b6b80;font-size:11px;font-weight:700;cursor:help;
+    flex:0 0 auto;border:none;padding:0;position:static;
+  }
+  body[data-theme="operia"] .op-info{background:#e2e7e4;color:#6f7170}
+  .op-info:hover,.op-info:focus{background:var(--accent);color:var(--accent-contrast);outline:none}
+  /* Boblen placeres i forhold til hele feltet (venstrestillet), så den aldrig
+     klippes af skærmkanten på mobil. */
+  .op-info b{
+    position:absolute;bottom:calc(100% - 8px);left:0;width:min(320px,100%);
+    background:var(--tooltip);color:#fff;font-size:12.5px;font-weight:400;line-height:1.45;padding:9px 11px;
+    border-radius:8px;text-align:left;opacity:0;visibility:hidden;transition:opacity .15s;z-index:20;
+    pointer-events:none;box-shadow:0 8px 24px rgba(11,18,32,.22);
+  }
+  .op-info:hover b,.op-info:focus b{opacity:1;visibility:visible}
+
+  .op-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:6px}
+  .op-value{font-size:19px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .op-value em{font-style:normal;font-weight:500;font-size:14.5px;color:var(--muted);margin-left:4px}
+  .op-step{display:flex;gap:6px;flex:0 0 auto}
+  .op-step button{
+    width:33px;height:33px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    font-size:17px;font-weight:600;line-height:1;cursor:pointer;transition:all .12s;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .op-step button:hover{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+  .op-step button:active{transform:scale(.94)}
+  .op-step button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  input[type=range].op-range{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:var(--line);
+    outline:none;margin:6px 0 9px;cursor:pointer;
+  }
+  input[type=range].op-range::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);
+    border:3px solid #fff;box-shadow:0 1px 5px rgba(11,18,32,.35);cursor:grab;
+  }
+  input[type=range].op-range::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--accent);border:3px solid #fff;
+    box-shadow:0 1px 5px rgba(11,18,32,.35);cursor:grab;
+  }
+  input[type=range].op-range:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+  .op-minmax{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+
+  .op-results{
+    background:var(--panel);color:#fff;border-radius:var(--radius);padding:32px 28px;position:sticky;top:20px;
+    background-image:radial-gradient(120% 70% at 50% 0%,var(--panel-grad),transparent 62%);
+  }
+  @media (max-width:900px){.op-results{position:static}}
+  .op-results h2{font-size:clamp(23px,3.4vw,29px);font-weight:800;text-align:center;margin:0 0 24px;letter-spacing:-.02em}
+
+  .op-stat{text-align:center;margin-bottom:20px}
+  .op-stat .k{font-size:14px;color:rgba(255,255,255,.62);margin-bottom:4px}
+  .op-stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .op-stat .v small{font-size:14.5px;font-weight:500;opacity:.75;margin-left:2px}
+  .op-note{text-align:center;font-size:14px;color:rgba(255,255,255,.72);background:rgba(255,255,255,.06);border-radius:9px;padding:9px 12px;margin:0 0 22px}
+
+  .op-break{margin:0 0 24px;padding:0;list-style:none;display:grid;gap:1px;background:rgba(255,255,255,.12);border-radius:10px;overflow:hidden}
+  .op-break li{display:flex;justify-content:space-between;gap:12px;background:var(--panel-row);padding:11px 14px;font-size:14px}
+  .op-break li span{color:rgba(255,255,255,.78)}
+  .op-break li b{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .op-total{border-top:1px solid rgba(255,255,255,.16);padding-top:24px;text-align:center}
+  .op-total .k{font-size:16px;font-weight:600;color:rgba(255,255,255,.85);margin-bottom:8px}
+  .op-total .v{
+    font-size:clamp(36px,6.2vw,50px);font-weight:800;letter-spacing:-.03em;line-height:1.05;
+    font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,var(--headgrad));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .op-empty{text-align:center;color:rgba(255,255,255,.6);font-size:15px;line-height:1.55;padding:26px 8px}
+  .op-foot{font-size:12px;color:rgba(255,255,255,.45);text-align:center;margin:14px 0 0;line-height:1.5}
+
+  .op-share{text-align:center;margin-top:16px}
+  .op-share button{
+    border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.85);
+    border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .op-share button:hover{border-color:rgba(255,255,255,.55);background:rgba(255,255,255,.06)}
+  .op-share button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .op-share .ok{display:block;font-size:12.5px;color:var(--headgrad);margin-top:7px;min-height:16px}
+
+  .op-benefits{margin-top:24px;padding-top:22px;border-top:1px solid rgba(255,255,255,.16)}
+  .op-benefits h3{font-size:15px;font-weight:700;margin:0 0 13px}
+  .op-benefits ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .op-benefits li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:rgba(255,255,255,.9);line-height:1.4}
+  .op-check{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .op-check svg{width:11px;height:11px}
+
+  /* Lead-formular: "Få beregningen på mail" */
+  .op-lead{margin-top:24px;padding-top:22px;border-top:1px solid rgba(255,255,255,.16)}
+  .op-lead h3{font-size:15px;font-weight:700;margin:0 0 4px}
+  .op-lead .sub{font-size:13px;color:rgba(255,255,255,.6);margin:0 0 13px;line-height:1.45}
+  .op-lead input[type=text],.op-lead input[type=email]{
+    width:100%;margin-bottom:9px;padding:11px 13px;border-radius:9px;font-size:14px;
+    border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff;
+  }
+  .op-lead input::placeholder{color:rgba(255,255,255,.45)}
+  .op-lead input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .op-lead .duo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  @media (max-width:480px){.op-lead .duo{grid-template-columns:1fr}}
+  .op-demo{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;color:rgba(255,255,255,.85);margin:4px 0 13px;cursor:pointer;line-height:1.4}
+  .op-demo input{width:17px;height:17px;margin:1px 0 0;accent-color:var(--accent);cursor:pointer;flex:0 0 auto}
+  .op-hp{position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden} /* honeypot */
+  .op-send{
+    display:block;width:100%;padding:13px;border-radius:10px;border:none;background:var(--cta);color:var(--cta-ink);
+    text-align:center;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;
+  }
+  .op-send:hover{background:var(--cta-hover)}
+  .op-send:disabled{opacity:.55;cursor:default}
+  .op-lead .msg{font-size:13px;margin:9px 0 0;min-height:17px;line-height:1.45}
+  .op-lead .msg.ok{color:var(--headgrad)}
+  .op-lead .msg.err{color:#f2a9a0}
+  .op-privacy{font-size:11.5px;color:rgba(255,255,255,.4);margin:10px 0 0;line-height:1.5}
+
+  .op-cta{
+    display:block;width:100%;margin-top:20px;padding:15px;border-radius:10px;border:none;background:var(--cta);color:var(--cta-ink);
+    text-align:center;font-size:15.5px;font-weight:600;text-decoration:none;cursor:pointer;transition:background .15s,transform .1s;
+  }
+  .op-cta:hover{background:var(--cta-hover)}
+  .op-cta:active{transform:scale(.99)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-theme="blue">
+
+<div class="op-calc" id="root">
+  <div class="op-head">
+    <span class="op-eyebrow">Operia · Besparelsesberegner</span>
+    <h1>Hvad koster de manuelle rutiner jer?</h1>
+    <p>Slå de moduler til, der er relevante for jer, og juster tallene. Beregningen opdaterer sig løbende.</p>
+  </div>
+
+  <div class="op-toolbar">
+    <div class="op-presets" role="group" aria-label="Forudfyld med typiske tal">
+      <span class="lbl">Forudfyld:</span>
+      <button class="op-chip" type="button" data-preset="lille" aria-pressed="false">Lille virksomhed</button>
+      <button class="op-chip" type="button" data-preset="mellem" aria-pressed="false">Mellem</button>
+      <button class="op-chip" type="button" data-preset="stor" aria-pressed="false">Stor</button>
+    </div>
+    <div class="op-themes" role="group" aria-label="Farvetema">
+      <button type="button" data-theme-pick="blue" aria-pressed="true">Blå</button>
+      <button type="button" data-theme-pick="operia" aria-pressed="false">Operia</button>
+    </div>
+  </div>
+
+  <div class="op-grid">
+    <div>
+      <div class="op-global" id="op-global"></div>
+      <div id="op-modules"></div>
+    </div>
+
+    <div class="op-results">
+      <h2>Besparelser pr. år</h2>
+      <div id="op-out"></div>
+
+      <div class="op-share">
+        <button type="button" id="op-copy">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Kopiér link til beregningen
+        </button>
+        <span class="ok" id="op-copy-ok" aria-live="polite"></span>
+      </div>
+
+      <div class="op-lead">
+        <h3 id="op-lead-h">Få beregningen på mail</h3>
+        <p class="sub">Så har I tallene ved hånden, når I skal drøfte det internt.</p>
+        <form id="op-lead-form" novalidate>
+          <input type="email" name="email" id="op-email" placeholder="din@email.dk" autocomplete="email" required aria-label="E-mail">
+          <div class="duo">
+            <input type="text" name="name" placeholder="Navn (valgfrit)" autocomplete="name" aria-label="Navn">
+            <input type="text" name="company" placeholder="Virksomhed (valgfrit)" autocomplete="organization" aria-label="Virksomhed">
+          </div>
+          <div class="op-hp" aria-hidden="true">
+            <label>Udfyld ikke dette felt<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+          </div>
+          <label class="op-demo"><input type="checkbox" id="op-demo" name="demo">Kontakt mig om en demo af Operia</label>
+          <button class="op-send" type="submit" id="op-send">Send mig beregningen</button>
+          <p class="msg" id="op-msg" aria-live="polite"></p>
+        </form>
+        <p class="op-privacy">Vi (DCA Logic) bruger din e-mail — og navn/virksomhed, hvis du udfylder dem — til at sende beregningen og til at kontakte dig om en demo, hvis du har bedt om det. Din IP-adresse og browsertype gemmes alene for at begrænse misbrug. Oplysningerne deles ikke med andre og slettes senest efter 12 måneder — skriv til os, hvis du vil have dem slettet før.</p>
+      </div>
+
+      <div class="op-benefits">
+        <h3>Derudover får I:</h3>
+        <ul>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Fuld sporbarhed og dokumentation på tværs af moduler</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Ét system i stedet for regneark og løse aftaler</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Data der holder ved revision, tvister og udbud</li>
+          <li><span class="op-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2 4.6 8.8 10 3.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Jeres eget navn og design på løsningen</li>
+        </ul>
+      </div>
+
+      <button class="op-cta" type="button" id="op-book">Book en demo af Operia</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+/* ============================================================
+   BACKEND — lead-endpointet (anon-nøglen er offentlig pr. design)
+   ============================================================ */
+var SUPABASE_URL = 'https://rjlxmdfmktucunxehtqz.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbHhtZGZta3R1Y3VueGVodHF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MzY4OTEsImV4cCI6MjA5OTIxMjg5MX0.6Br86Xx4x4q6084I3rq6adoh9X_bRbxWjCkuEu5fvTQ';
+
+/* ============================================================
+   ANTAGELSER — juster her
+   Konsistente arbejdstidstal: 45 effektive arbejdsuger ⇒ 225 effektive
+   arbejdsdage (ferie, helligdage og fravær trukket fra). Dag- og uge-baserede
+   beregninger bruger dermed SAMME grundlag.
+   ============================================================ */
+var A = {
+  WORKDAYS : 225,
+  WORKWEEKS: 45,
+  DAYHOURS : 7.4,
+  eff_pkg    : 0.75,
+  eff_report : 1.00,
+  eff_asset  : 0.70,
+  eff_count  : 0.80,
+  eff_plan   : 0.80,
+  red_km     : 0.12,
+  eff_book   : 0.60,
+  eff_bookadm: 0.80,
+  eff_loss   : 0.85   /* andel af bortkomne pakker/aktiver der undgås */
+};
+
+/* ---------- globalt felt ---------- */
+var WAGE = {
+  label:'Timeløn', unit:'kr. / time', min:100, max:1000, step:5, value:300, dec:0,
+  minLabel:'100 kr. / time', maxLabel:'1.000 kr. / time',
+  info:'Den samlede timeomkostning — løn inkl. pension, feriepenge og tillæg. Bruges i alle moduler.'
+};
+
+/* ---------- moduler ---------- */
+var MODULES = [
+{
+  id:'pkg', on:true,
+  name:'Pakkehåndtering',
+  desc:'Modtagelse, registrering, besked og udlevering',
+  fields:[
+    {id:'antal', label:'Antal håndterede pakker', unit:'pakker / dag', min:5,max:300,step:5,value:70,dec:0,
+     minLabel:'5 pakker / dag', maxLabel:'300 pakker / dag',
+     info:'Pakker, breve og forsendelser I i gennemsnit modtager og videregiver pr. arbejdsdag.'},
+    {id:'min', label:'Manuel håndtering i tid', unit:'minutter pr. pakke', min:1,max:10,step:0.5,value:2,dec:1,
+     minLabel:'~ 1 minut pr. pakke', maxLabel:'~ 10 minutter pr. pakke',
+     info:'Tid fra modtagelse til udlevering: registrering i regneark, opslag af modtager, besked og kvittering.'},
+    {id:'rap', label:'Rapportering og fakturering', unit:'timer / måned', min:0,max:40,step:1,value:4,dec:0,
+     minLabel:'0 timer / måned', maxLabel:'40 timer / måned',
+     info:'Tid pr. måned på statistik, dokumentation og fakturagrundlag. Operia danner det automatisk.'},
+    {id:'tab', label:'Antal mistede pakker', unit:'pakker / år', min:0,max:100,step:1,value:3,dec:0,
+     minLabel:'0 pakker / år', maxLabel:'100 pakker / år',
+     info:'Forsendelser der forsvinder eller ikke kan spores. Vi regner med, at sporbarhed forhindrer de fleste — ikke alle.'},
+    {id:'vaerdi', label:'Gennemsnitlig værdi pr. pakke', unit:'kr.', min:100,max:10000,step:50,value:250,dec:0,
+     minLabel:'100 kr.', maxLabel:'10.000 kr.',
+     info:'Bruges til at beregne, hvad bortkomne forsendelser koster i erstatning og genbestilling.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.antal * v.min / 60) * A.WORKDAYS * A.eff_pkg + v.rap * 12 * A.eff_report,
+      money: v.tab * v.vaerdi * A.eff_loss
+    };
+  }
+},
+{
+  id:'asset', on:false,
+  name:'Aktivstyring',
+  desc:'Udstyr, værktøj og inventar med fuld historik',
+  fields:[
+    {id:'soeg', label:'Tid brugt på at finde og registrere udstyr', unit:'timer / uge', min:0,max:40,step:0.5,value:4,dec:1,
+     minLabel:'0 timer / uge', maxLabel:'40 timer / uge',
+     info:'Samlet tid pr. uge på tværs af medarbejdere: hvor er udstyret, hvem har det, og hvornår kommer det tilbage?'},
+    {id:'optael', label:'Årlig inventering og optælling', unit:'timer / år', min:0,max:300,step:5,value:40,dec:0,
+     minLabel:'0 timer / år', maxLabel:'300 timer / år',
+     info:'Tid brugt på fysisk optælling og afstemning mod lister. Operia har altid en opdateret status.'},
+    {id:'tab', label:'Bortkomne aktiver', unit:'stk. / år', min:0,max:100,step:1,value:6,dec:0,
+     minLabel:'0 stk. / år', maxLabel:'100 stk. / år',
+     info:'Udstyr der forsvinder, fordi der ikke er styr på hvem der sidst havde det. Vi regner med, at de fleste — ikke alle — undgås.'},
+    {id:'vaerdi', label:'Gennemsnitlig genanskaffelsesværdi', unit:'kr.', min:500,max:50000,step:500,value:4000,dec:0,
+     minLabel:'500 kr.', maxLabel:'50.000 kr.',
+     info:'Hvad koster det at genanskaffe et typisk aktiv?'}
+  ],
+  calc:function(v){
+    return {
+      hours: v.soeg * A.WORKWEEKS * A.eff_asset + v.optael * A.eff_count,
+      money: v.tab * v.vaerdi * A.eff_loss
+    };
+  }
+},
+{
+  id:'route', on:false,
+  name:'Ruteplanlægning',
+  desc:'Optimerede ruter, stop og kørselsdokumentation',
+  fields:[
+    {id:'plan', label:'Tid brugt på at planlægge ruter', unit:'minutter / dag', min:0,max:240,step:5,value:45,dec:0,
+     minLabel:'0 minutter / dag', maxLabel:'240 minutter / dag',
+     info:'Daglig planlægning af hvem der kører hvor, i hvilken rækkefølge og med hvilke stop.'},
+    {id:'km', label:'Kørte kilometer', unit:'km / dag', min:0,max:2000,step:10,value:120,dec:0,
+     minLabel:'0 km / dag', maxLabel:'2.000 km / dag',
+     info:'Samlet daglig kørsel på tværs af køretøjer.'},
+    {id:'kmpris', label:'Omkostning pr. kilometer', unit:'kr. / km', min:1,max:15,step:0.5,value:3.5,dec:1,
+     minLabel:'1 kr. / km', maxLabel:'15 kr. / km',
+     info:'Brændstof eller strøm, dæk, service og afskrivning pr. kørt kilometer.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.plan / 60) * A.WORKDAYS * A.eff_plan,
+      money: v.km * A.WORKDAYS * A.red_km * v.kmpris
+    };
+  }
+},
+{
+  id:'book', on:false,
+  name:'Booking',
+  desc:'Lokaler, ressourcer og udstyr uden dobbeltbookinger',
+  fields:[
+    {id:'ansatte', label:'Antal medarbejdere', unit:'medarbejdere', min:5,max:2000,step:5,value:60,dec:0,
+     minLabel:'5 medarbejdere', maxLabel:'2.000 medarbejdere',
+     info:'Antal personer der booker lokaler eller ressourcer i hverdagen.'},
+    {id:'spild', label:'Spildtid pr. medarbejder på at finde ledigt lokale', unit:'minutter / uge', min:0,max:60,step:1,value:6,dec:0,
+     minLabel:'0 minutter / uge', maxLabel:'60 minutter / uge',
+     info:'Tid på at lede efter et ledigt lokale, rykke møder og rydde op i dobbeltbookinger.'},
+    {id:'adm', label:'Administration af lokaler og ressourcer', unit:'timer / måned', min:0,max:60,step:1,value:3,dec:0,
+     minLabel:'0 timer / måned', maxLabel:'60 timer / måned',
+     info:'Receptionens eller facility-teamets tid på at koordinere bookinger manuelt.'}
+  ],
+  calc:function(v){
+    return {
+      hours: (v.ansatte * v.spild / 60) * A.WORKWEEKS * A.eff_book + v.adm * 12 * A.eff_bookadm,
+      money: 0
+    };
+  }
+}
+];
+
+/* ---------- presets: typiske tal for tre virksomhedsstørrelser ---------- */
+var PRESETS = {
+  lille : { wage:280, pkg:{antal:20, min:2.5, rap:2, tab:1, vaerdi:250},
+            asset:{soeg:2,  optael:20,  tab:3,  vaerdi:3000},
+            route:{plan:20, km:40,  kmpris:3.5}, book:{ansatte:25,  spild:5, adm:2} },
+  mellem: { wage:300, pkg:{antal:70, min:2,   rap:4, tab:3, vaerdi:250},
+            asset:{soeg:4,  optael:40,  tab:6,  vaerdi:4000},
+            route:{plan:45, km:120, kmpris:3.5}, book:{ansatte:60,  spild:6, adm:3} },
+  stor  : { wage:320, pkg:{antal:200,min:1.5, rap:8, tab:8, vaerdi:300},
+            asset:{soeg:10, optael:120, tab:15, vaerdi:5000},
+            route:{plan:90, km:400, kmpris:4},   book:{ansatte:300, spild:8, adm:8} }
+};
+
+/* ============================================================
+   MOTOR
+   ============================================================ */
+function f(n,d){
+  d = d || 0;
+  return new Intl.NumberFormat('da-DK',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+}
+
+var conf = {}, state = {};
+
+function fieldHTML(key,c){
+  return '<div class="op-field">'+
+    '<div class="op-label">'+c.label+
+      '<button class="op-info" type="button" aria-label="Forklaring">i<b>'+c.info+'</b></button>'+
+    '</div>'+
+    '<div class="op-row">'+
+      '<div class="op-value"><span data-out="'+key+'">'+f(c.value,c.dec)+'</span><em>'+c.unit+'</em></div>'+
+      '<div class="op-step">'+
+        '<button type="button" data-nudge="'+key+'" data-dir="-1" aria-label="Mindre">&minus;</button>'+
+        '<button type="button" data-nudge="'+key+'" data-dir="1" aria-label="Mere">+</button>'+
+      '</div>'+
+    '</div>'+
+    '<input class="op-range" type="range" data-key="'+key+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'" value="'+c.value+'" aria-label="'+c.label+'">'+
+    '<div class="op-minmax"><span>'+c.minLabel+'</span><span>'+c.maxLabel+'</span></div>'+
+  '</div>';
+}
+
+conf['wage'] = WAGE;
+state['wage'] = WAGE.value;
+document.getElementById('op-global').innerHTML = fieldHTML('wage', WAGE);
+
+var modHTML = '';
+MODULES.forEach(function(m){
+  var body = '';
+  m.fields.forEach(function(c){
+    var key = m.id + '.' + c.id;
+    conf[key] = c;
+    state[key] = c.value;
+    body += fieldHTML(key,c);
+  });
+  modHTML +=
+    '<div class="op-mod'+(m.on?' on':'')+'" id="mod-'+m.id+'">'+
+      '<div class="op-mod-head" data-toggle="'+m.id+'">'+
+        '<button class="op-switch" type="button" role="switch" aria-checked="'+m.on+'" aria-label="Slå '+m.name+' til eller fra"></button>'+
+        '<div class="op-mod-title"><strong>'+m.name+'</strong><span>'+m.desc+'</span></div>'+
+        '<div class="op-mod-sum" data-sum="'+m.id+'"></div>'+
+      '</div>'+
+      '<div class="op-mod-body">'+body+'</div>'+
+    '</div>';
+});
+document.getElementById('op-modules').innerHTML = modHTML;
+
+function setValue(k, val){
+  var c = conf[k];
+  // snap til nærmeste step og klem inden for min/max
+  var snapped = c.min + Math.round((val - c.min) / c.step) * c.step;
+  state[k] = Math.min(c.max, Math.max(c.min, +snapped.toFixed(4)));
+  var inp = document.querySelector('[data-key="'+k+'"]');
+  if(inp) inp.value = state[k];
+}
+
+function clearPresetChoice(){
+  document.querySelectorAll('[data-preset]').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+}
+
+document.addEventListener('input', function(e){
+  var k = e.target.getAttribute && e.target.getAttribute('data-key');
+  if(!k) return;
+  state[k] = +e.target.value;
+  clearPresetChoice();
+  render();
+});
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest) return;
+
+  var nudge = e.target.closest('[data-nudge]');
+  if(nudge){
+    var k = nudge.getAttribute('data-nudge'), c = conf[k];
+    setValue(k, state[k] + c.step * +nudge.getAttribute('data-dir'));
+    clearPresetChoice();
+    render();
+    return;
+  }
+
+  var preset = e.target.closest('[data-preset]');
+  if(preset){
+    var p = PRESETS[preset.getAttribute('data-preset')];
+    if(p){
+      setValue('wage', p.wage);
+      MODULES.forEach(function(m){
+        var vals = p[m.id] || {};
+        m.fields.forEach(function(c){
+          if(vals[c.id] != null) setValue(m.id+'.'+c.id, vals[c.id]);
+        });
+      });
+      clearPresetChoice();
+      preset.setAttribute('aria-pressed','true');
+      render();
+    }
+    return;
+  }
+
+  var themeBtn = e.target.closest('[data-theme-pick]');
+  if(themeBtn){
+    setTheme(themeBtn.getAttribute('data-theme-pick'));
+    return;
+  }
+
+  var head = e.target.closest('[data-toggle]');
+  if(head){
+    var id = head.getAttribute('data-toggle');
+    var m = MODULES.filter(function(x){ return x.id === id; })[0];
+    m.on = !m.on;
+    document.getElementById('mod-'+id).classList.toggle('on', m.on);
+    head.querySelector('.op-switch').setAttribute('aria-checked', m.on);
+    render();
+  }
+});
+
+function setTheme(t){
+  if(t !== 'operia') t = 'blue';
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-pick]').forEach(function(b){
+    b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-pick') === t));
+  });
+  render(); // slider-gradienter genberegnes (bruger var(--accent))
+}
+
+function paint(k){
+  var inp = document.querySelector('[data-key="'+k+'"]');
+  if(!inp) return;
+  var pct = (state[k] - conf[k].min) / (conf[k].max - conf[k].min) * 100;
+  inp.style.background = 'linear-gradient(90deg,var(--accent) 0%,var(--accent) '+pct+'%,var(--line) '+pct+'%,var(--line) 100%)';
+}
+
+/* Fælles beregning — bruges af både visningen og lead-payloaden.
+   Afrunding: hvert moduls kr.-beløb afrundes FØRST, og totalen er summen af de
+   afrundede beløb, så opdelingen altid stemmer med totalen. */
+function compute(){
+  var wage = state['wage'];
+  var perModule = [], totalHours = 0, totalMoney = 0, total = 0;
+  MODULES.forEach(function(m){
+    if(!m.on) return;
+    var v = {};
+    m.fields.forEach(function(c){ v[c.id] = state[m.id+'.'+c.id]; });
+    var r = m.calc(v);
+    var kr = Math.round(r.hours * wage + r.money);
+    perModule.push({ id:m.id, name:m.name, kr:kr });
+    totalHours += r.hours;
+    totalMoney += r.money;
+    total += kr;
+  });
+  return { perModule:perModule, hours:Math.round(totalHours), money:Math.round(totalMoney), total:total };
+}
+
+function render(){
+  Object.keys(conf).forEach(function(k){
+    var o = document.querySelector('[data-out="'+k+'"]');
+    if(o) o.textContent = f(state[k], conf[k].dec);
+    paint(k);
+  });
+
+  var res = compute();
+
+  MODULES.forEach(function(m){
+    var sumEl = document.querySelector('[data-sum="'+m.id+'"]');
+    if(!sumEl) return;
+    var row = res.perModule.filter(function(x){ return x.id === m.id; })[0];
+    sumEl.textContent = row ? f(row.kr) + ' kr./år' : '';
+  });
+
+  var out = document.getElementById('op-out');
+
+  if(!res.perModule.length){
+    out.innerHTML = '<p class="op-empty">Slå mindst ét modul til for at se beregningen.</p>';
+    return;
+  }
+
+  var rows = '';
+  res.perModule.forEach(function(x){
+    rows += '<li><span>'+x.name+'</span><b>'+f(x.kr)+' kr.</b></li>';
+  });
+
+  out.innerHTML =
+    '<div class="op-stat">'+
+      '<div class="k">Sparede timer til andre opgaver</div>'+
+      '<div class="v">'+f(res.hours)+' <small>timer / år</small></div>'+
+    '</div>'+
+    '<p class="op-note">Det svarer til <strong>'+f(Math.round(res.hours/A.DAYHOURS))+'</strong> arbejdsdage om året</p>'+
+    (res.money > 0
+      ? '<div class="op-stat"><div class="k">Undgåede direkte omkostninger</div>'+
+        '<div class="v">'+f(res.money)+' <small>kr. / år</small></div></div>'
+      : '')+
+    (res.perModule.length > 1 ? '<ul class="op-break">'+rows+'</ul>' : '')+
+    '<div class="op-total">'+
+      '<div class="k">Samlet besparelse pr. år</div>'+
+      '<div class="v">'+f(res.total)+' kr.</div>'+
+    '</div>'+
+    '<p class="op-foot">Beregnet ud fra '+A.WORKDAYS+' effektive arbejdsdage ('+A.WORKWEEKS+' arbejdsuger — ferie og helligdage fratrukket) og en '+String(A.DAYHOURS).replace('.',',')+'-timers arbejdsdag. Tidsbesparelser og undgåede tab er reduceret med erfaringsfaktorer. Estimatet bygger på erfaringstal og er ikke et tilbud.</p>';
+}
+
+/* ============================================================
+   DELBARE LINKS — tilstanden i URL'ens query-parametre
+   Format: ?t=operia&w=300&pkg=1_70_2_4_3_250&asset=0_..._...
+   (første tal = modul til/fra, resten = felterne i rækkefølge)
+   ============================================================ */
+function buildQuery(){
+  var q = [];
+  q.push('t=' + document.body.getAttribute('data-theme'));
+  q.push('w=' + state['wage']);
+  MODULES.forEach(function(m){
+    var parts = [m.on ? 1 : 0];
+    m.fields.forEach(function(c){ parts.push(state[m.id+'.'+c.id]); });
+    q.push(m.id + '=' + parts.join('_'));
+  });
+  return q.join('&');
+}
+
+function applyQuery(){
+  var params = new URLSearchParams(location.search);
+  if(![...params.keys()].length) return;
+  if(params.get('t')) setThemeSilent(params.get('t'));
+  if(params.get('w')) setValue('wage', +params.get('w') || WAGE.value);
+  MODULES.forEach(function(m){
+    var raw = params.get(m.id);
+    if(!raw) return;
+    var parts = raw.split('_');
+    m.on = parts[0] === '1';
+    document.getElementById('mod-'+m.id).classList.toggle('on', m.on);
+    document.querySelector('#mod-'+m.id+' .op-switch').setAttribute('aria-checked', m.on);
+    m.fields.forEach(function(c,i){
+      var n = parseFloat(parts[i+1]);
+      if(!isNaN(n)) setValue(m.id+'.'+c.id, n);
+    });
+  });
+}
+function setThemeSilent(t){
+  if(t !== 'operia') t = 'blue';
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('[data-theme-pick]').forEach(function(b){
+    b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-pick') === t));
+  });
+}
+
+document.getElementById('op-copy').addEventListener('click', function(){
+  var url = location.origin + location.pathname + '?' + buildQuery();
+  history.replaceState(null, '', url);
+  var ok = document.getElementById('op-copy-ok');
+  function done(){ ok.textContent = 'Link kopieret — send det videre, så åbner beregningen med jeres tal.';
+    setTimeout(function(){ ok.textContent = ''; }, 5000); }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done, function(){ ok.textContent = url; });
+  } else {
+    ok.textContent = url; // fallback: vis linket så det kan kopieres manuelt
+  }
+});
+
+/* ============================================================
+   LEAD — "Få beregningen på mail" + demo-CTA
+   ============================================================ */
+document.getElementById('op-book').addEventListener('click', function(){
+  document.getElementById('op-demo').checked = true;
+  var el = document.getElementById('op-lead-h');
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(function(){ document.getElementById('op-email').focus({preventScroll:true}); }, 450);
+});
+
+document.getElementById('op-lead-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  var form = e.target;
+  var msg = document.getElementById('op-msg');
+  var btn = document.getElementById('op-send');
+  var email = form.email.value.trim();
+
+  msg.className = 'msg';
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+    msg.className = 'msg err';
+    msg.textContent = 'Skriv en gyldig e-mailadresse.';
+    return;
+  }
+  var res = compute();
+  if(!res.perModule.length){
+    msg.className = 'msg err';
+    msg.textContent = 'Slå mindst ét modul til, før du sender beregningen.';
+    return;
+  }
+
+  var modules = {};
+  MODULES.forEach(function(m){
+    var v = { on: m.on };
+    m.fields.forEach(function(c){ v[c.id] = state[m.id+'.'+c.id]; });
+    modules[m.id] = v;
+  });
+
+  btn.disabled = true;
+  msg.textContent = 'Sender …';
+
+  fetch(SUPABASE_URL + '/functions/v1/sales-lead', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + SUPABASE_ANON,
+      'apikey': SUPABASE_ANON
+    },
+    body: JSON.stringify({
+      email: email,
+      name: form.name.value.trim().slice(0,120),
+      company: form.company.value.trim().slice(0,120),
+      wantDemo: document.getElementById('op-demo').checked,
+      website: form.website.value, // honeypot
+      theme: document.body.getAttribute('data-theme'),
+      wage: state['wage'],
+      modules: modules,
+      shareQuery: buildQuery()
+    })
+  }).then(function(r){ return r.json().then(function(j){ return {status:r.status, body:j}; }); })
+  .then(function(r){
+    btn.disabled = false;
+    if(r.status === 200 && r.body && r.body.ok){
+      msg.className = 'msg ok';
+      msg.textContent = document.getElementById('op-demo').checked
+        ? 'Beregningen er på vej til din indbakke — og vi kontakter dig om en demo.'
+        : 'Beregningen er på vej til din indbakke.';
+      form.reset();
+    } else if(r.status === 429){
+      msg.className = 'msg err';
+      msg.textContent = 'Der er sendt mange beregninger fra denne adresse — prøv igen senere.';
+    } else {
+      msg.className = 'msg err';
+      msg.textContent = 'Noget gik galt — prøv igen, eller skriv direkte til os.';
+    }
+  }).catch(function(){
+    btn.disabled = false;
+    msg.className = 'msg err';
+    msg.textContent = 'Ingen forbindelse — prøv igen om lidt.';
+  });
+});
+
+applyQuery();
+render();
+})();
+</script>
+</body>
+</html>

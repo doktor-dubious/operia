@@ -17,6 +17,7 @@ import { ScannerIndicator } from '@/components/scanner-indicator'
 import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
+import { TaskPageColumn } from '@/components/task-page-column'
 
 export const Route = createFileRoute('/_app/parcels/condition')({
   component: ConditionPage,
@@ -149,7 +150,7 @@ function ConditionPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 xl:flex-row">
+    <TaskPageColumn className="flex flex-col gap-6 xl:flex-row">
       <Card className="w-full max-w-2xl bg-panel">
         <CardHeader>
           <CardTitle className="text-base">{t('nav.condition')}</CardTitle>
@@ -239,6 +240,6 @@ function ConditionPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </TaskPageColumn>
   )
 }
