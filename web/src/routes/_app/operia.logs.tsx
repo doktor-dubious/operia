@@ -61,6 +61,7 @@ const CATEGORIES = [
   'directory',
   'config',
   'assets',
+  'booking',
   'inventory',
   'lockers',
   'shipping',
@@ -236,6 +237,10 @@ function categoryOf(action: string): string {
     case 'asset_flow':
     case 'assets':
       return 'assets'
+    case 'booking':
+    case 'booking_category':
+    case 'booking_resource':
+      return 'booking'
     case 'inventory_item':
       return 'inventory'
     case 'locker':

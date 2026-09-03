@@ -126,6 +126,42 @@
     --status-neutral-to-bad: #D26E25;
     --status-bad: #ad423f;
     --switch-on: #3ecf8e; /* Supabase-brandgrøn (toggle tændt) */
+    /* Bookingkategorier: en identitetspalette, ikke en skala. Farverne siger
+       "hvilken slags ressource", ikke "hvor galt står det til", så de må ikke
+       hentes fra --status-*. Derfor også ens i lys og mørk: en kategori skal
+       have samme farve uanset tema. Tildeles i rækkefølge (se
+       bookingCategoryColorIndex) — nr. 14 genbruger nr. 1.
+       -fg er den tekstfarve der giver >= 4.5:1 på netop den baggrund. */
+    --booking-category-1: #4a4e69;
+    --booking-category-1-fg: #ffffff;
+    --booking-category-2: #ef4144;
+    --booking-category-2-fg: #111111;
+    --booking-category-3: #134074;
+    --booking-category-3-fg: #ffffff;
+    --booking-category-4: #875295;
+    --booking-category-4-fg: #ffffff;
+    --booking-category-5: #39b54a;
+    --booking-category-5-fg: #111111;
+    --booking-category-6: #335c8c;
+    --booking-category-6-fg: #ffffff;
+    --booking-category-7: #7a4f5a;
+    --booking-category-7-fg: #ffffff;
+    --booking-category-8: #ad423f;
+    --booking-category-8-fg: #ffffff;
+    --booking-category-9: #25693e;
+    --booking-category-9-fg: #ffffff;
+    --booking-category-10: #a88c7d;
+    --booking-category-10-fg: #111111;
+    --booking-category-11: #a0522d;
+    --booking-category-11-fg: #ffffff;
+    --booking-category-12: #8b7d6b;
+    --booking-category-12-fg: #111111;
+    --booking-category-13: #5c4033;
+    --booking-category-13-fg: #ffffff;
+    /* Ressourcer uden kategori — bevidst uden kulør, så "ukategoriseret" ikke
+       ligner en 14. kategori. Neutral nok til begge temaer (4.8:1 mod hvid). */
+    --booking-category-none: #6b7280;
+    --booking-category-none-fg: #ffffff;
 }
 
 .dark {

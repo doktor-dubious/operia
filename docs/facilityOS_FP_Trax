@@ -1,0 +1,108 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+FACILITYOS
+----------
+
+I read the parcel page plus the surrounding LogisticsOS product pages (chain of custody, package tracking, inbound logistics, digital mailroom, high-density folders, interoffice shipping, check-in/out, asset auditing, EOL, SKU-level tracking, PO line-item receiving) and the AI/locker/integration blog posts, then checked each candidate gap against our own code rather than against memory.
+
+Where they have something we genuinely don't
+
+Jeg kiggede på FaciliyOS for se om de havde features som vi manglede, som vi evt. kunne implementerer. Der er 12:
+
+1. Locker vendor integrations. They integrate with ten locker vendors (TZ SMArt, Luxer One, MyPup, Smiota, Parcel Pending, Variocube, StrongPoint, Hublok, Gantner, Metra): drop in locker → auto-notification with locker location + PIN/QR → 24/7 self-pickup → signature optional. This is the single biggest gap — the product is scoped in Operia but not built.
+
+2. Recipient self-service. They have kiosks (touchscreen: check if my package arrived, schedule pickup) and phone-barcode self-pickup from high-density folders. Operia has no receiver-facing surface at all — final receivers get a notification and that's the end of their access.
+
+3. Carrier integrations. UPS/FedEx/USPS visibility on inbound volume, and the USPS Delivery Partner Program auto-generating arrival notifications. Our carriers table is app-owned master data (a name list) — no carrier API, no tracking-number lookup against a carrier.
+
+4. PO line-item receiving / ERP reconciliation. Pull the PO from the ERP, match received items to line items, verify/edit quantities, flag discrepancies, generate a receipt manifest, close the PO. We have zero purchase-order concept and no ERP connector. Distinct product line, not a feature tweak.
+
+5. Depth in inventory (SKU-level tracking). They do lots, expiry/use-by dates, FIFO, bin/shelf/aisle-level locations, bulk pick-pack-stage requests, and physical audits with instant reconciliation. Our inventory_items is flat — sku, quantity, reorder_point, unit, unit_cost, on_order — with handheld goods-in/goods-out/count on the quantity only. No lots, no expiry, no bin level, no movement journal.
+
+6. Approval workflows ("Advanced Mode"). Asset movements, ownership changes and retirement requests route to a designated reviewer who approves/declines, with notifications. Grep finds no approval concept anywhere in our migrations. For regulated/government buyers this is usually a hard requirement.
+
+7. Structured end-of-life. Retirement reason + disposition method (recycled / donated / sold / auctioned / disposed) + surplus reporting for finance. We have retired and written_off statuses and nothing else — no disposition capture, no surplus report.
+
+8. Asset audit / stocktake campaigns. A scan-to-verify pass that updates location, records condition + photo, and produces a reconciliation report. We have asset_events and condition capture, but no audit run as a workflow.
+
+9. Maintenance-due and CapEx tracking. They flag high-expenditure assets and track maintenance due dates / approaching retirement. We store purchased_at, purchase_price, warranty_until — but no maintenance schedule and no CapEx flag.
+
+10. Mail sorter hardware (OPEX, Fluence) and outbound shipping via 2Ship — batch load-and-scan sorters, and a consolidated multi-carrier shipping history with cost analysis.
+
+11. Scheduled report delivery + Excel export. They advertise automated report delivery to leadership. Ours renders PDF/Word/CSV on demand only; there is no scheduler and no .xlsx.
+
+12. High-density barcode mail folders — barcoded folders in bins replacing physical mailboxes, reusable on clear. A physical-process product we have no analogue for.
+
+13. Platform breadth. FacilityOS bundles VisitorOS, ContractorOS and EmergencyOS around the same facility buyer. Not parcel features, but it's what they sell against.
+
+
+Where they don't reach us
+
+Worth knowing, because most of these are structural rather than catch-up-able in a sprint:
+
+Der er også nogle punkter Operia allerede har, som FacilityOS mangler:
+
+- GDPR/NIS2 layer. SAR export, retention schedules with purge, anonymize-instead-of-delete RPCs, ROPA, breach register, free-text field register, DPA/subprocessor docs, AI disclosure gate, read-audit, immutable parcel_events. Their pages say essentially nothing beyond "secure audit trails" — they're a US product.
+- Booking (rooms/vehicles/equipment) — no equivalent on their side.
+- Route planning with real map providers (ORS + Google).
+- Employee directory as system of record: Entra ID Graph sync plus CSV/SFTP/email import with dry-run preview and import log. They only offer Excel/ServiceNow import, and only for assets.
+- White-labeling depth: label designer, home/handheld design editors, notification templates, and per-tenant text overrides on i18n keys.
+- Multi-tenant platform layer: product/feature entitlements with expiry, impersonation, billing, per-company login-security policy, passkeys/biometrics.
+- NFC/MIFARE card handover, handling classes, proxy collection, "left at location" rules.
+- Danish-first localisation. For the DK/EU market this is not a small thing.
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+FP TRAX
+-------
+
+FP Trax is a much closer competitor than FacilityOS — European, Nordic reference customers (Chalmers, University of Gothenburg, Skandia), publicly priced from €290/month with a 30-day trial. I read all eight product pages and checked each candidate gap against our repo.
+
+Where they have something we genuinely don't
+
+1. Teams and Slack as notification channels. Our notification_channel enum is literally ('email', 'sms') (20260718090000_parcel_notifications.sql). They notify by email, SMS, Teams and Slack. For an office-parcel product where the recipient sits in Teams all day, this is a cheap, high-visibility gap.
+
+2. Employee/recipient portal — and it's in their basic tier, not an add-on. Second competitor in a row. Our final receivers get a notification and have no login of any kind.
+
+3. SSO (OpenID Connect/OAuth via Entra) + MFA. We sync employees from Entra via Graph, but authentication is still email/password + passkeys. No SSO, no MFA. Already flagged as planned in CLAUDE.md for NIS2 — this confirms it's table stakes, not a nice-to-have.
+
+4. Customer-facing REST API + webhooks. They sell an API for ERP/HR/procurement/facilities integration and outbound webhooks on status change. We have inbound integrations (SFTP, email, Entra) and log drains, but nothing a customer's own systems can call or subscribe to.
+
+5. Live smart locker integrations — Flexity, Cleveron, RENZ. PIN/QR access, prebooked slot reservation, direct delivery without booking, returns through the locker, and assets issued via locker with the borrower identified by their collection code. We have a keynius_bank_id column and an in_locker status; nothing calls any locker API. Both competitors have this live and we don't — that's now the clearest single gap in the product.
+
+6. Private Parcels — an entire commercial module we lack. Employees get their personal online shopping delivered to the workplace: own FP Trax account, unique address ID, carriers bulk-drop at one point, pickup code, returns from the same desk. Sold on HR/talent and ESG (fewer failed home deliveries) rather than logistics. It monetises the mailroom you've already digitised.
+
+7. Laundry / workwear & PPE management. Full garment lifecycle from RFID-tag import to retirement: locker bundle assignment, QR/PIN collection proof, return units, HR-driven reassignment when staff change roles, ISO audit reporting, works with in-house or third-party laundries. Nothing comparable on our side.
+
+8. Inventory withdrawal logging with person + department attribution. This is a bigger gap than I expected. They log who took what and when, allocate consumption cost per department, and produce period-filtered consumption reports. Our inventory_items is one row per item whose quantity gets updated in place — there is no movement table at all, so no "who withdrew it", no consumption history, no departmental cost allocation. Handheld goods-in/goods-out/count writes the number and loses the story.
+
+9. RFID on assets. "Works with barcodes, QR codes and RFID tags." We do barcode/QR, plus NFC cards for handover signatures only.
+
+10. Asset lifecycle alerts and financial fields. Notifications when equipment hits a service or upgrade threshold, plus current value, insurance details and proof of purchase. We have purchased_at, purchase_price, warranty_until and asset_documents, and loan-due reminders — but no service/upgrade thresholds, no insurance or current-value tracking.
+
+11. Scheduled reports (their add-on, automated distribution). Ours are on-demand PDF/Word/CSV only. Same gap FacilityOS showed.
+
+12. Hardware as part of the offer. Pre-configured fixed and handheld scanners, desktop and industrial label printers, ruggedised phones/tablets, locker banks, branded yellow routing labels, consumables. We're software-only — fine as a strategy, but it's a procurement answer we currently don't have.
+
+13. GLN scanning. Their app scans QR, barcode and GLN numbers. Relevant for Nordic/EU public-sector buyers; not handled in our scan path.
+
+Parity — don't chase these
+
+Worth stating explicitly because several look like gaps and aren't: batch intake (their "Multi-Shipment bundling" — our BatchItem flow in parcel-receive-form.tsx), offline scanning (LocalStore.kt has a real pending-receive queue), photo + digital signature, authorised-colleague pickup with dual-name recording, letter handling, Entra/HR directory sync, flexible dashboards with filtering, label printing, search/export, and per-role mobile views (their "Mobile Profiles" ≈ our handheld design + TILE_ROLES).
+
+Where we're ahead
+
+- GDPR/NIS2 depth. They're EU and say "compliance ready" and "audit-ready", but nothing approaching our SAR export, retention schedules with purge, anonymize-instead-of-delete RPCs, ROPA, breach register, free-text field register, DPA/subprocessor docs, read-audit and immutable parcel_events.
+- AI label reading with provider choice, disclosure gate and the deterministic fold+fuzzy matching layer. FP Trax has no AI intake at all — notable, since FacilityOS does.
+- Booking (rooms/vehicles/equipment) and route planning with real map providers.
+- NFC/MIFARE card handover; handling classes with proxy-collection and left-at-location rules; condition capture at intake (preset + note + photo).
+- Multi-tenant platform layer: per-product/feature entitlements with expiry, impersonation, billing, per-company login-security policy, biometric/passkey login.
+- White-labeling depth: label designer, home and handheld design editors, notification templates, per-tenant text overrides on i18n keys.
+- Import pipeline with dry-run preview and import log across parcels, assets and inventory — theirs is bulk import only.
+
+The pattern across both competitors
+
+Three things showed up in both analyses and I'd treat them as the real backlog: live locker integration (we have a stub, both of them ship it), a recipient self-service portal (both have it; FP Trax includes it in the base
+plan), and scheduled report delivery. Add SSO/MFA and Teams/Slack notifications for FP Trax specifically — those are the ones a Nordic buyer will ask about in the first meeting.
+
+Usual caveat: these are marketing pages, so absence from a page isn't proof of absence from the product. The gaps above are ones I verified against our own code, not just against their copy.

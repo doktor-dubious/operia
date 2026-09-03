@@ -134,6 +134,17 @@ gaps in `../compliance-map.md`.
 | **Transfers** | As §3 |
 | **Retention** | Borrower contact details **and notification recipients are cleared automatically when the asset is returned**; returned loans are removed after the per-company `asset_loans` window. `asset_events` is append-only (id references only); documents and photos are deletable by platform admins |
 
+## 9b. Resource booking (Booking product)
+
+| | |
+|---|---|
+| **Purpose** | Reserve internal resources (meeting rooms, vehicles, equipment) for future time intervals; prevent double-booking |
+| **Data subjects** | Employees (the booking's counterparty and the user who created it) |
+| **Personal data** | Employee reference (FK to the directory — no contact copy), booking interval, free-text purpose/title, actor user ids in `booking_events` |
+| **Recipients** | Internal only (no notifications in v1) |
+| **Transfers** | None |
+| **Retention** | Terminal bookings (held or cancelled) and their events are removed after the per-company `bookings` window; future/active bookings are never purged. Erasure of the person = anonymizing the employee row (the booking holds only the FK); the free-text title is searched by the Art. 15 export and leaves with the booking row |
+
 ## 10. Authentication and access management
 
 | | |

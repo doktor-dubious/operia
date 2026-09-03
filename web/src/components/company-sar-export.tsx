@@ -30,6 +30,9 @@ const SECTION_ORDER = [
   'notifications',
   'asset_loans',
   'asset_events_as_actor',
+  'bookings_as_subject',
+  'bookings_mentioning',
+  'booking_events_as_actor',
   'files',
   'audit_as_actor',
 ]

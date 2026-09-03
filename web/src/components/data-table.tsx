@@ -8,7 +8,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Check,
   ChevronsUpDown,
+  Filter,
   Focus,
   LayoutGrid,
   List,
@@ -30,8 +32,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -60,6 +65,25 @@ export type ColumnDef<Row> = {
   sortValue?: (row: Row) => string | number | null
   render?: (row: Row) => React.ReactNode
   className?: string
+  // Kolonnefilter: tragt-ikon i overskriften der åbner en menu med
+  // afkrydsningsvalg. Tomt valg = ingen filtrering på kolonnen.
+  filter?: {
+    // disabled = valget vises, men kan ikke vælges (fx en platform der endnu
+    // ikke er understøttet) — så filtret røber hvad der er på vej.
+    options: { value: string; label: string; disabled?: boolean }[]
+    valueOf: (row: Row) => string
+    // Antal kolonner i menuen — sider har for mange valg til én søjle.
+    menuColumns?: number
+    // Søgefelt over listen. Til kolonner med mange valg.
+    searchable?: boolean
+  }
+}
+
+// Ekstra punkter i checkboks-menuen, under en skillelinje. Udvælgelsen sker på
+// de synlige (filtrerede) rækker, så "Vælg ændrede" respekterer filtrene.
+export type SelectionMenuItem<Row> = {
+  label: string
+  select: (rows: Row[]) => Row[]
 }
 
 const PAGE_SIZE = 10
@@ -83,6 +107,7 @@ type PersistedState = {
   selected: string[]
   onlySelected: boolean
   view: 'list' | 'grid'
+  filters: Record<string, string[]>
 }
 
 // Gittervisning giver kun mening for små tabeller — over denne grænse skjules
@@ -97,6 +122,130 @@ function loadTableState(storageKey: string): Partial<PersistedState> {
   }
 }
 
+// Overskriftscellens indhold. Uden anker forankrer Radix popoveren til
+// triggeren (tragt-ikonet); med anker forankres den til hele cellen.
+function Header({ wide, children }: { wide: boolean; children: React.ReactNode }) {
+  const row = <div className="flex items-center gap-1">{children}</div>
+  return wide ? row : <PopoverAnchor asChild>{row}</PopoverAnchor>
+}
+
+// Kolonnefilter: et popover-panel frem for en menu. Radix' DropdownMenu fanger
+// tastetryk til sin egen typeahead, så et søgefelt inde i den mister tegn —
+// derfor Popover, som lader inputtet være et almindeligt input. Panelet ejer
+// også sin egen bredde, hvilket en menu ikke gjorde: fleresøjlede valg løb ud
+// over menuens kant og klippede fluebenet af.
+function ColumnFilter({
+  label,
+  options,
+  active,
+  columns,
+  searchable,
+  onToggle,
+  onClear,
+  children,
+}: {
+  label: string
+  options: { value: string; label: string; disabled?: boolean }[]
+  active: string[]
+  columns: number
+  searchable?: boolean
+  onToggle: (value: string) => void
+  onClear: () => void
+  children: React.ReactNode // overskriftens egen etiket/sorteringsknap
+}) {
+  const { t } = useTranslation()
+  const [query, setQuery] = useState('')
+  // Flersøjlede paneler er brede og centreres om tragt-ikonet. Smalle paneler
+  // forankres derimod til HELE overskriftscellen, så venstrekanten flugter med
+  // kolonnen — ikke med ikonet, der sidder til højre for kolonneteksten.
+  const wide = columns > 1
+
+  const shown = query.trim()
+    ? options.filter((o) => o.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options
+
+  return (
+    <Popover onOpenChange={(open) => !open && setQuery('')}>
+      <Header wide={wide}>
+        {children}
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 hover:bg-accent',
+              active.length > 0 && 'bg-accent text-foreground',
+            )}
+            title={label}
+            aria-label={label}
+          >
+            <Filter className="size-3" />
+            {active.length > 0 && <span className="text-[10px] leading-none">{active.length}</span>}
+          </button>
+        </PopoverTrigger>
+      </Header>
+      <PopoverContent align={wide ? 'center' : 'start'} className="w-auto gap-1 p-1">
+        <button
+          type="button"
+          disabled={active.length === 0}
+          onClick={onClear}
+          className="cursor-pointer rounded-md px-1.5 py-1 text-left text-xs hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+        >
+          {t('dataTable.filterClear')}
+        </button>
+        <div className="-mx-1 h-px bg-border" />
+        {/* Søgefeltet har samme udseende som virksomhedsvælgerens (CommandInput). */}
+        {searchable && (
+          <InputGroup className="mb-0.5 rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+            <input
+              data-slot="input-group-control"
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('dataTable.filterSearch')}
+              className="w-full min-w-0 bg-transparent text-sm outline-hidden"
+            />
+            <InputGroupAddon>
+              <Search className="size-4 shrink-0 opacity-50" />
+            </InputGroupAddon>
+          </InputGroup>
+        )}
+        <div
+          // Fast søjlebredde giver panelet en veldefineret bredde, så
+          // fluebenet altid har plads inden for kanten.
+          className="grid max-h-[26rem] overflow-y-auto"
+          style={{ gridTemplateColumns: `repeat(${columns}, ${columns > 1 ? '11rem' : 'minmax(9rem, auto)'})` }}
+        >
+          {shown.length === 0 && (
+            <span className="px-1.5 py-1 text-xs text-muted-foreground">
+              {t('dataTable.noRows')}
+            </span>
+          )}
+          {shown.map((opt) => {
+            const checked = active.includes(opt.value)
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="checkbox"
+                aria-checked={checked}
+                disabled={opt.disabled}
+                onClick={() => onToggle(opt.value)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-1.5 rounded-md py-1 pr-1.5 pl-1.5 text-left text-xs hover:bg-accent',
+                  opt.disabled && 'pointer-events-none opacity-50',
+                )}
+              >
+                <Check className={cn('size-3.5 shrink-0', !checked && 'invisible')} />
+                <span className="truncate">{opt.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function DataTable<Row extends { id: string }>({
   rows,
   columns,
@@ -109,6 +258,7 @@ export function DataTable<Row extends { id: string }>({
   onRowClick,
   activeRowId,
   toolbar,
+  selectionMenuItems,
 }: {
   rows: Row[]
   columns: ColumnDef<Row>[]
@@ -121,6 +271,7 @@ export function DataTable<Row extends { id: string }>({
   onRowClick?: (row: Row) => void
   activeRowId?: string | null
   toolbar?: React.ReactNode
+  selectionMenuItems?: SelectionMenuItem<Row>[]
 }) {
   const { t } = useTranslation()
   // Skjuler sig selv når detaljepanelet er maksimeret, så siderne ikke hver
@@ -132,6 +283,7 @@ export function DataTable<Row extends { id: string }>({
   const [page, setPage] = useState(initial.page ?? 1)
   const [selected, setSelected] = useState<Set<string>>(new Set(initial.selected ?? []))
   const [stars, setStars] = useState<Set<string>>(() => loadStars(storageKey))
+  const [filters, setFilters] = useState<Record<string, string[]>>(initial.filters ?? {})
   const [onlySelected, setOnlySelected] = useState(initial.onlySelected ?? false)
   const [view, setView] = useState<'list' | 'grid'>(initial.view ?? 'list')
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -144,9 +296,17 @@ export function DataTable<Row extends { id: string }>({
   }, [stars, storageKey])
 
   useEffect(() => {
-    const state: PersistedState = { query, sort, page, selected: [...selected], onlySelected, view }
+    const state: PersistedState = {
+      query,
+      sort,
+      page,
+      selected: [...selected],
+      onlySelected,
+      view,
+      filters,
+    }
     localStorage.setItem(`operia-table-${storageKey}`, JSON.stringify(state))
-  }, [query, sort, page, selected, onlySelected, view, storageKey])
+  }, [query, sort, page, selected, onlySelected, view, filters, storageKey])
 
   // Rækker der er forsvundet (slettet/omfiltreret) skal ikke spøge i valget
   useEffect(() => {
@@ -162,13 +322,40 @@ export function DataTable<Row extends { id: string }>({
     if (selected.size === 0) setOnlySelected(false)
   }, [selected])
 
+  // Aktive kolonnefiltre parret med deres kolonne, så filtreringen kun løber
+  // gennem de kolonner der faktisk har et valg.
+  const activeFilters = useMemo(
+    () =>
+      columns
+        .filter((col) => col.filter && (filters[col.key]?.length ?? 0) > 0)
+        .map((col) => ({ valueOf: col.filter!.valueOf, allowed: new Set(filters[col.key]) })),
+    [columns, filters],
+  )
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     let result = q ? rows.filter((row) => searchText(row).toLowerCase().includes(q)) : rows
+    if (activeFilters.length > 0) {
+      result = result.filter((row) => activeFilters.every((f) => f.allowed.has(f.valueOf(row))))
+    }
     if (onlySelected && selected.size > 0) result = result.filter((row) => selected.has(row.id))
     return result
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, query, onlySelected, selected])
+  }, [rows, query, activeFilters, onlySelected, selected])
+
+  const toggleFilter = (colKey: string, value: string) => {
+    setFilters((prev) => {
+      const current = prev[colKey] ?? []
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value]
+      const out = { ...prev }
+      if (next.length === 0) delete out[colKey]
+      else out[colKey] = next
+      return out
+    })
+    setPage(1)
+  }
 
   const sorted = useMemo(() => {
     if (!sort) return filtered
@@ -518,33 +705,75 @@ export function DataTable<Row extends { id: string }>({
                     >
                       {t('dataTable.deselectAll')}
                     </DropdownMenuItem>
+                    {selectionMenuItems && selectionMenuItems.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        {selectionMenuItems.map((item) => (
+                          <DropdownMenuItem
+                            key={item.label}
+                            className="cursor-pointer text-xs"
+                            onClick={() =>
+                              setSelected(new Set(item.select(filtered).map((r) => r.id)))
+                            }
+                          >
+                            {item.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableHead>
-              {columns.map((col) => (
-                <TableHead key={col.key} className={col.className}>
-                  {col.sortable ? (
-                    <button
-                      type="button"
-                      className="flex cursor-pointer items-center gap-1 font-medium hover:text-foreground"
-                      onClick={() => toggleSort(col.key)}
-                    >
-                      {col.header}
-                      {sort?.key === col.key ? (
-                        sort.dir === 'asc' ? (
-                          <ArrowUp className="size-3" />
-                        ) : (
-                          <ArrowDown className="size-3" />
-                        )
+              {columns.map((col) => {
+                const active = filters[col.key] ?? []
+                return (
+                  <TableHead key={col.key} className={col.className}>
+                    {(() => {
+                      const label = col.sortable ? (
+                        <button
+                          type="button"
+                          className="flex cursor-pointer items-center gap-1 font-medium hover:text-foreground"
+                          onClick={() => toggleSort(col.key)}
+                        >
+                          {col.header}
+                          {sort?.key === col.key ? (
+                            sort.dir === 'asc' ? (
+                              <ArrowUp className="size-3" />
+                            ) : (
+                              <ArrowDown className="size-3" />
+                            )
+                          ) : (
+                            <ChevronsUpDown className="size-3 text-muted-foreground/60" />
+                          )}
+                        </button>
                       ) : (
-                        <ChevronsUpDown className="size-3 text-muted-foreground/60" />
-                      )}
-                    </button>
-                  ) : (
-                    col.header
-                  )}
-                </TableHead>
-              ))}
+                        col.header
+                      )
+                      if (!col.filter) return <div className="flex items-center gap-1">{label}</div>
+                      return (
+                        <ColumnFilter
+                          label={col.header}
+                          options={col.filter.options}
+                          active={active}
+                          columns={col.filter.menuColumns ?? 1}
+                          searchable={col.filter.searchable}
+                          onToggle={(value) => toggleFilter(col.key, value)}
+                          onClear={() => {
+                            setFilters((prev) => {
+                              const out = { ...prev }
+                              delete out[col.key]
+                              return out
+                            })
+                            setPage(1)
+                          }}
+                        >
+                          {label}
+                        </ColumnFilter>
+                      )
+                    })()}
+                  </TableHead>
+                )
+              })}
               <TableHead className="w-10 text-right">
                 <Star className="ml-auto size-3.5 text-muted-foreground" />
               </TableHead>

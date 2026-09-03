@@ -891,7 +891,8 @@ export function ParcelReceiveForm({
           <p className="text-xs text-muted-foreground">{t('assetsPage.barcodeUrlInlineHint')}</p>
         )}
         {!batchMode && (
-          /* Ulæselig stregkode/QR-kode: generér en ny kode og print en label. */
+          /* Ulæselig stregkode/QR-kode: generér en ny kode, eller læs labelen med AI.
+             Selve print-knappen står nederst ved Modtag-knappen. */
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -903,17 +904,6 @@ export function ParcelReceiveForm({
             >
               <Wand2 className="size-3.5" />
               {generating ? t('common.loading') : t('receive.generateBarcode')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              disabled={!labelDesign || !normalizeScan(barcode)}
-              onClick={printCurrentLabel}
-            >
-              <Printer className="size-3.5" />
-              {t('receive.printLabel')}
             </Button>
             <AiLabelScan companyId={companyId} onFields={applyAiFields} />
             <span className="text-xs text-muted-foreground">{t('receive.unreadableHint')}</span>
@@ -1186,9 +1176,23 @@ export function ParcelReceiveForm({
             {saving ? t('common.loading') : t('receive.finishBatch', { count: batchItems.length })}
           </Button>
         ) : (
-          <Button type="submit" disabled={saving || (!barcode.trim() && !receiver)}>
-            {saving ? t('common.loading') : t('nav.receive')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Print af labelen hører til lige før pakken gemmes — koden er
+                indtastet/genereret på det tidspunkt, så mærkaten kan sættes
+                på pakken med det samme. */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!labelDesign || !normalizeScan(barcode)}
+              onClick={printCurrentLabel}
+            >
+              <Printer className="size-3.5" />
+              {t('receive.printLabel')}
+            </Button>
+            <Button type="submit" disabled={saving || (!barcode.trim() && !receiver)}>
+              {saving ? t('common.loading') : t('nav.receive')}
+            </Button>
+          </div>
         )}
       </div>
     </form>

@@ -37,6 +37,17 @@ GDPR data segregation between customers and NIS2 access control in one mechanism
   RLS is the enforcement). Destructive UI flows verify returned row counts to
   detect RLS denials (`employees.tsx`, `operia.users.tsx`).
 
+- `20260829090100_booking_core.sql` — Booking product: `booking_categories` /
+  `booking_resources` / `bookings` / `booking_events` repeat the tenant pattern;
+  `booking_resources_guard()` and `bookings_guard()` re-validate that FK'd
+  category/asset/resource/employee belong to the company (FK lookups bypass RLS).
+  `bookings` has **no write policy at all** — writes go exclusively through the
+  SECURITY DEFINER RPCs `create_booking`/`update_booking`/`cancel_booking`, which
+  re-check `can_operate_bookings()` (manager/booking_manager/booking_handler)
+  server-side. Double-booking is prevented in the database itself: a `btree_gist`
+  exclusion constraint on `(resource_id, tstzrange(starts_at, ends_at))` for
+  status `booked`, so a race between two clients cannot double-book.
+
 ## 2. Immutable audit trail (N)
 
 - `20260710031953_parcels.sql` — `parcel_events` is the chain-of-custody log:
@@ -64,6 +75,12 @@ GDPR data segregation between customers and NIS2 access control in one mechanism
   under the transaction-local GUC set by `run_retention_purge()` (see §6);
   clients still lack the DELETE privilege entirely.
 
+- `20260829090100_booking_core.sql` — `booking_events` is append-only exactly like
+  `asset_events`: UPDATE/DELETE revoked + `block_mutation()` trigger, select-only
+  RLS, written only by the booking RPCs. `detail` carries id references and
+  timestamps only — never names or the free-text title (the log can never be
+  scrubbed).
+
 ## 3. Audit coverage (N)
 
 Server-side `SECURITY DEFINER` triggers write every auditable change to `audit_log`:
@@ -87,6 +104,13 @@ Server-side `SECURITY DEFINER` triggers write every auditable change to `audit_l
 - Gateway events: `log_gateway_event()` (`20260714120000`) is the service-role-only
   entry point edge functions use to log `data_transfer.*` (logins, uploads,
   deletes, spoof rejections) with IP/protocol.
+
+- `20260829090200_booking_gdpr_audit.sql` — taxonomy: `booking.*` /
+  `booking_category.*` / `booking_resource.*` map to category `booking` in
+  `audit_category()`. Every booking event is mirrored into `audit_log` by
+  `audit_booking_events()` (created/updated/cancelled); masterdata changes by
+  `audit_booking_categories()` / `audit_booking_resources()`. Client mirror
+  updated in `operia.logs.tsx`.
 
 ## 4. Log drain / SIEM forwarding (N)
 
@@ -149,6 +173,13 @@ personal data is removed instead.
   created (`is_manual`) rows.
 - FKs like `parcels.receiver_employee_id` are `on delete set null` — removing a
   person never destroys operational history.
+
+- Bookings (`20260829090100_booking_core.sql`) follow the FK-only pattern:
+  `bookings.employee_id` references the directory and holds no contact copy, so
+  anonymizing the employee row **is** the erasure — same stance as
+  `parcels.receiver_employee_id` / `assets.assigned_to_employee_id`. No
+  open-booking gate on anonymization is needed: bookings are time-bounded,
+  unlike parcels.
 
 ## 6. Retention & data minimization (G, N)
 
@@ -216,6 +247,16 @@ personal data is removed instead.
   `cleanupLogos` when the per-company logo/appearance editors were removed
   (2026-07-28) — there is no longer a "keep the current logo" case, and files are
   only purged on delete, not on every save.
+
+- `20260829090200_booking_gdpr_audit.sql` — ninth retention category `bookings`:
+  purges only **terminal** bookings (cancelled ones measured from `cancelled_at`,
+  held ones from `ends_at`), deleting their `booking_events` first (`restrict`
+  FK). Future and active bookings are never touched by a window.
+  `20260903140000_booking_purge_cancelled_window.sql` repaired the predicate:
+  the `ends_at` arm was missing its `status = 'booked'` filter, so a cancelled
+  booking whose *end time* had aged out (a retroactively registered one) was
+  deleted on the `ends_at` clock instead of the `cancelled_at` clock — i.e.
+  before its window had run.
 
 ## 7. Secrets & credential handling (N)
 
@@ -524,6 +565,13 @@ customer, the one deciding how long the *controller's* data lives. Now:
   files whose `parcel_documents` row is gone while the parcel survives (an erasure
   where the file removal failed) are now swept as orphans after a one-day grace.
 
+- `20260829090200_booking_gdpr_audit.sql` — the `bookings` category is wired into
+  all per-company retention touchpoints: `platform_settings.bookings_retention_days`,
+  `company_retention.bookings_days`, both arms of `retention_days()`, and the
+  `v_cols` array of `audit_platform_retention()` (the exact untraceable-default
+  gap `20260814170000` closed for the first eight). UI: `RETENTION_CATEGORIES`
+  in `web/src/components/retention-fields.tsx`.
+
 ## 16. Subject access export — Art. 15 (G)
 
 Added 2026-08-14, `20260814150000_sar_export.sql`. `sar_export(company, employee, query)`
@@ -561,6 +609,12 @@ gathers everything Operia holds about one person, server-side.
 - Verified 2026-08-14 against live demo data: keyed lookup returned 26 parcels /
   51 events / 4 notifications for one employee; free-text `Anita Trampedach`
   returned 7 parcels naming her without a foreign key.
+
+- `20260829090200_booking_gdpr_audit.sql` — three new SAR sections:
+  `bookings_as_subject` (keyed on `employee_id`), `bookings_mentioning`
+  (word-anchored `fold_contains` on the free-text purpose/title) and
+  `booking_events_as_actor`. Client: `SECTION_ORDER` + labels in
+  `web/src/components/company-sar-export.tsx`.
 
 ## 17. Free text and provider errors (G)
 
@@ -602,6 +656,11 @@ rather than decided (`20260814190000_parcel_documents_erasure.sql`):
   so since 2026-08-01 an erasure of chain-of-custody documentation did not surface in the
   warning-level filter the weekly log review depends on. Now `warning`; stored levels
   recomputed (append-only content untouched, only the generated column).
+
+- `bookings.title` (purpose) and `booking_resources.description` are free text —
+  registered in `docs/gdpr/free-text-fields.md`. The title is searched by the SAR
+  export and leaves the system with the booking row (retention purge); it is
+  deliberately kept out of the immutable `booking_events`/`audit_log`.
 
 ## Known gaps / roadmap
 

@@ -94,7 +94,7 @@ export const PRODUCT_TILES: ProductTile[] = [
   { product: 'iot', entitlement: 'iot', labelKey: 'iot', href: '/products/iot', icon: Radio, colors: { metro: '#00aba9', ocean: '#0d9488', sunset: '#e11d48', forest: '#047857', berry: '#9333ea' } },
   { product: 'shipping', entitlement: 'shipping', labelKey: 'shipping', href: '/products/shipping', icon: Ship, colors: { metro: '#e3a21a', ocean: '#0891b2', sunset: '#f59e0b', forest: '#a16207', berry: '#c026d3' } },
   { product: 'routes', entitlement: 'routes', labelKey: 'routes', href: '/products/routes', icon: RouteIcon, colors: { metro: '#b91d47', ocean: '#5b21b6', sunset: '#be123c', forest: '#166534', berry: '#a21caf' } },
-  { product: 'booking', entitlement: 'booking', labelKey: 'booking', href: '/products/booking', icon: CalendarRange, colors: { metro: '#9f00a7', ocean: '#7c3aed', sunset: '#c026d3', forest: '#365314', berry: '#7c3aed' } },
+  { product: 'booking', entitlement: 'booking', labelKey: 'booking', href: '/booking/calendar', icon: CalendarRange, colors: { metro: '#9f00a7', ocean: '#7c3aed', sunset: '#c026d3', forest: '#365314', berry: '#7c3aed' } },
 ]
 
 export function tileColor(tile: ProductTile, theme: HomeTheme): string {

@@ -39,6 +39,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_text_override: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          lang: string
+          platform: string
+          text_key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          lang: string
+          platform: string
+          text_key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          lang?: string
+          platform?: string
+          text_key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_text_override_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_users: {
         Row: {
           company_id: string
@@ -564,6 +605,220 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_categories: {
+        Row: {
+          color_index: number | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          color_index?: number | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          color_index?: number | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_events: {
+        Row: {
+          actor_user_id: string | null
+          booking_id: string
+          company_id: string
+          created_at: string
+          detail: Json
+          event_type: string
+          id: number
+        }
+        Insert: {
+          actor_user_id?: string | null
+          booking_id: string
+          company_id: string
+          created_at?: string
+          detail?: Json
+          event_type: string
+          id?: never
+        }
+        Update: {
+          actor_user_id?: string | null
+          booking_id?: string
+          company_id?: string
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_resources: {
+        Row: {
+          asset_id: string | null
+          capacity: number | null
+          category_id: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          name: string
+          time_mode: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          capacity?: number | null
+          category_id?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name: string
+          time_mode?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          capacity?: number | null
+          category_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          name?: string
+          time_mode?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_resources_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_resources_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "booking_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_resources_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          all_day: boolean
+          booked_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          ends_at: string
+          id: string
+          resource_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          title: string | null
+        }
+        Insert: {
+          all_day?: boolean
+          booked_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          company_id: string
+          created_at?: string
+          employee_id?: string | null
+          ends_at: string
+          id?: string
+          resource_id: string
+          starts_at: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          title?: string | null
+        }
+        Update: {
+          all_day?: boolean
+          booked_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string | null
+          ends_at?: string
+          id?: string
+          resource_id?: string
+          starts_at?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "booking_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carrier_agreements: {
         Row: {
           account_no: string | null
@@ -662,6 +917,8 @@ export type Database = {
           asset_reminder_2_days: number | null
           asset_reminder_2_enabled: boolean | null
           asset_reminder_max: number | null
+          booking_retro_allowed: boolean
+          booking_time_mode: string
           created_at: string
           default_currency: string
           default_language: string
@@ -714,6 +971,8 @@ export type Database = {
           asset_reminder_2_days?: number | null
           asset_reminder_2_enabled?: boolean | null
           asset_reminder_max?: number | null
+          booking_retro_allowed?: boolean
+          booking_time_mode?: string
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -766,6 +1025,8 @@ export type Database = {
           asset_reminder_2_days?: number | null
           asset_reminder_2_enabled?: boolean | null
           asset_reminder_max?: number | null
+          booking_retro_allowed?: boolean
+          booking_time_mode?: string
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -1177,6 +1438,7 @@ export type Database = {
         Row: {
           asset_loans_days: number | null
           audit_days: number | null
+          bookings_days: number | null
           company_id: string
           employees_days: number | null
           imports_days: number | null
@@ -1189,6 +1451,7 @@ export type Database = {
         Insert: {
           asset_loans_days?: number | null
           audit_days?: number | null
+          bookings_days?: number | null
           company_id: string
           employees_days?: number | null
           imports_days?: number | null
@@ -1201,6 +1464,7 @@ export type Database = {
         Update: {
           asset_loans_days?: number | null
           audit_days?: number | null
+          bookings_days?: number | null
           company_id?: string
           employees_days?: number | null
           imports_days?: number | null
@@ -2382,6 +2646,9 @@ export type Database = {
           asset_reminder_2_enabled: boolean
           asset_reminder_max: number
           audit_retention_days: number | null
+          booking_retro_allowed: boolean
+          booking_time_mode: string
+          bookings_retention_days: number | null
           cost_per_email: number
           cost_per_sms: number
           default_currency: string
@@ -2454,6 +2721,9 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          booking_retro_allowed?: boolean
+          booking_time_mode?: string
+          bookings_retention_days?: number | null
           cost_per_email?: number
           cost_per_sms?: number
           default_currency?: string
@@ -2526,6 +2796,9 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          booking_retro_allowed?: boolean
+          booking_time_mode?: string
+          bookings_retention_days?: number | null
           cost_per_email?: number
           cost_per_sms?: number
           default_currency?: string
@@ -2701,54 +2974,6 @@ export type Database = {
         }
         Relationships: []
       }
-      product_text_override: {
-        Row: {
-          company_id: string
-          created_at: string
-          id: string
-          lang: string
-          product_key: string
-          text_key: string
-          updated_at: string
-          value: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          id?: string
-          lang?: string
-          product_key: string
-          text_key: string
-          updated_at?: string
-          value: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          id?: string
-          lang?: string
-          product_key?: string
-          text_key?: string
-          updated_at?: string
-          value?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_text_override_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_text_override_product_key_fkey"
-            columns: ["product_key"]
-            isOneToOne: false
-            referencedRelation: "product_catalog"
-            referencedColumns: ["key"]
-          },
-        ]
-      }
       routes: {
         Row: {
           company_id: string
@@ -2834,6 +3059,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_leads: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          email_error: string | null
+          email_sent: boolean
+          id: string
+          ip: unknown
+          name: string | null
+          params: Json
+          theme: string
+          total_kr: number
+          user_agent: string | null
+          want_demo: boolean
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          ip?: unknown
+          name?: string | null
+          params?: Json
+          theme?: string
+          total_kr?: number
+          user_agent?: string | null
+          want_demo?: boolean
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          email_error?: string | null
+          email_sent?: boolean
+          id?: string
+          ip?: unknown
+          name?: string | null
+          params?: Json
+          theme?: string
+          total_kr?: number
+          user_agent?: string | null
+          want_demo?: boolean
+        }
+        Relationships: []
       }
       storage_locations: {
         Row: {
@@ -2977,6 +3250,15 @@ export type Database = {
         Args: { p_ids: string[]; p_label?: string }
         Returns: number
       }
+      assert_booking_not_retro: {
+        Args: {
+          p_all_day: boolean
+          p_company_id: string
+          p_ends_at: string
+          p_starts_at: string
+        }
+        Returns: undefined
+      }
       asset_flow_note: {
         Args: { p_asset_id: string; p_company_id: string; p_note: string }
         Returns: undefined
@@ -2987,11 +3269,14 @@ export type Database = {
       }
       audit_category: { Args: { p_action: string }; Returns: string }
       audit_level: {
-        Args: { p_action: string; p_detail: Json }
+        Args: { p_action: string; p_detail?: Json }
         Returns: string
       }
+      can_manage_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_operate_assets: { Args: { p_company_id: string }; Returns: boolean }
+      can_operate_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
+      cancel_booking: { Args: { p_booking_id: string }; Returns: undefined }
       checkin_asset: {
         Args: {
           p_asset_id: string
@@ -3032,9 +3317,24 @@ export type Database = {
           id: string
         }[]
       }
+      create_booking: {
+        Args: {
+          p_all_day?: boolean
+          p_employee_id: string
+          p_ends_at: string
+          p_resource_id: string
+          p_starts_at: string
+          p_title?: string
+        }
+        Returns: string
+      }
       current_company_id: { Args: never; Returns: string }
       employee_has_open_parcels: {
         Args: { p_employee_id: string }
+        Returns: boolean
+      }
+      fold_contains: {
+        Args: { p_haystack: string; p_needle: string }
         Returns: boolean
       }
       fold_name: { Args: { p_text: string }; Returns: string }
@@ -3187,10 +3487,6 @@ export type Database = {
         Returns: number
       }
       renumber_asset: { Args: { p_asset_id: string }; Returns: string }
-      replace_product_texts: {
-        Args: { p_company_id: string; p_overrides: Json; p_product_key: string }
-        Returns: undefined
-      }
       retention_days: {
         Args: { p_category: string; p_company_id: string }
         Returns: number
@@ -3218,6 +3514,10 @@ export type Database = {
           p_vendor?: string
         }
         Returns: undefined
+      }
+      set_app_texts: {
+        Args: { p_company_id: string; p_entries: Json; p_platform: string }
+        Returns: Json
       }
       set_company_sftp_password: {
         Args: { p_company_id: string; p_password: string }
@@ -3249,6 +3549,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_booking: {
+        Args: {
+          p_all_day?: boolean
+          p_booking_id: string
+          p_employee_id: string
+          p_ends_at: string
+          p_resource_id: string
+          p_starts_at: string
+          p_title?: string
+        }
+        Returns: undefined
+      }
       write_off_asset: {
         Args: { p_asset_id: string; p_note?: string }
         Returns: undefined
@@ -3271,6 +3583,8 @@ export type Database = {
         | "route_planner_handler"
         | "route_planner_manager"
         | "handheld_route_planner"
+        | "booking_manager"
+        | "booking_handler"
       asset_status:
         | "in_stock"
         | "assigned"
@@ -3279,6 +3593,7 @@ export type Database = {
         | "retired"
         | "written_off"
       batch_status: "open" | "finished"
+      booking_status: "booked" | "cancelled"
       notification_channel: "email" | "sms"
       notification_kind:
         | "arrival"
@@ -3313,12 +3628,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3342,11 +3657,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3367,11 +3682,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3392,11 +3707,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3409,11 +3724,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3444,6 +3759,8 @@ export const Constants = {
         "route_planner_handler",
         "route_planner_manager",
         "handheld_route_planner",
+        "booking_manager",
+        "booking_handler",
       ],
       asset_status: [
         "in_stock",
@@ -3454,6 +3771,7 @@ export const Constants = {
         "written_off",
       ],
       batch_status: ["open", "finished"],
+      booking_status: ["booked", "cancelled"],
       notification_channel: ["email", "sms"],
       notification_kind: [
         "arrival",

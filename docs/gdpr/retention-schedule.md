@@ -30,7 +30,7 @@ Every purge writes `retention.purged` (or `retention.anonymized`) to the audit l
 the row count and the window used. Every change to a window writes `retention.company_changed`
 with the before/after values.
 
-## The eight categories
+## The nine categories
 
 | Category | Covers | Expiry action | Notes |
 |---|---|---|---|
@@ -42,12 +42,14 @@ with the before/after values.
 | **asset_loans** | Returned asset loans | Delete | Borrower name, address, e-mail and phone are already cleared on return; the window removes the remaining history. Active loans are untouched |
 | **employees** | Inactive employees | **Anonymize, never delete** | The row must survive — parcel history references it. Only employees with no open parcels; already-anonymized rows are skipped. Measured from `retired_at`, else last change |
 | **routes** | Saved route plans (addresses + coordinates) | Delete | |
+| **bookings** | Terminal bookings (`bookings` + their `booking_events`) | Delete | Held bookings measured from `ends_at`, cancelled ones from `cancelled_at`. Future and active bookings are never deleted by a window |
 
 ## Deliberately without a window
 
 | What | Why |
 |---|---|
 | `parcel_events` on its own | It is the chain of custody. Its lifetime follows the parcel, and an erasure request is met by **anonymizing the person** the event references, not by rewriting history |
+| `booking_events` on its own | Same reasoning: the events follow the booking and leave the system only with it (the `bookings` purge deletes events first) |
 | Companies, locations, handling classes, carriers | Configuration, not personal data |
 | The feedback inbox | DCA is controller there; screenshots are deleted with the feedback row and orphans swept daily |
 | Sales leads (`sales_leads`, public savings calculator) | DCA is controller there; a **fixed 12-month window** applies instead — the `sales-leads-purge` pg_cron job (02:20) deletes the whole row incl. IP/user agent. Not customer-configurable because no customer is involved |
@@ -69,6 +71,7 @@ internal parcel operation, to be adjusted to the customer's own documentation ne
 | asset_loans | 12–24 months | Matches the parcel record |
 | employees | 6–12 months after deactivation | The retirement sweep already anonymizes automatically once the last parcel closes; this catches employees who never had one |
 | routes | 6–12 months | Planning data, rarely needed once driven |
+| bookings | 12–24 months | Room/vehicle usage history is occasionally needed for disputes and utilization questions; the free-text purpose ages out with it |
 
 ## Open items
 

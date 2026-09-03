@@ -4,6 +4,7 @@ import {
   ArrowLeftToLine,
   ArrowRightFromLine,
   Boxes,
+  CalendarCheck,
   CalendarRange,
   Camera,
   CirclePlus,
@@ -102,6 +103,7 @@ export const navGroups: NavGroup[] = [
     // søg) + registret og dets stamdata. Gates på assets-produktet pr. punkt.
     labelKey: 'groupAssetManagement',
     items: [
+      { labelKey: 'assetCalendar', href: '/assets/calendar', icon: CalendarRange, productKey: 'assets' },
       { labelKey: 'assetBoard', href: '/assets/board', icon: Boxes, productKey: 'assets' },
       { labelKey: 'assets', href: '/assets', icon: Archive, productKey: 'assets' },
       { labelKey: 'assetCheckout', href: '/assets/checkout', icon: ArrowRightFromLine, productKey: 'assets' },
@@ -146,13 +148,22 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Booking-modulet: kalenderen er hovedsiden; liste + stamdata bagved.
+    labelKey: 'groupBooking',
+    items: [
+      { labelKey: 'bookingCalendar', href: '/booking/calendar', icon: CalendarRange, productKey: 'booking' },
+      { labelKey: 'bookingList', href: '/booking', icon: CalendarCheck, productKey: 'booking' },
+      { labelKey: 'bookingResources', href: '/booking/resources', icon: Boxes, productKey: 'booking' },
+      { labelKey: 'bookingCategories', href: '/booking/categories', icon: Tag, productKey: 'booking' },
+    ],
+  },
+  {
     labelKey: 'groupProducts',
     items: [
       { labelKey: 'lockers', href: '/products/lockers', icon: Lock, productKey: 'lockers' },
       { labelKey: 'iot', href: '/products/iot', icon: Radio, productKey: 'iot' },
       { labelKey: 'shipping', href: '/products/shipping', icon: Ship, productKey: 'shipping' },
       { labelKey: 'routes', href: '/products/routes', icon: Route, productKey: 'routes' },
-      { labelKey: 'booking', href: '/products/booking', icon: CalendarRange, productKey: 'booking' },
     ],
   },
 ]
@@ -232,6 +243,7 @@ export const configureConfigSections: ConfigNavSection[] = [
   {
     labelKey: 'sectionMessaging',
     items: [
+      { labelKey: 'configureTexts', href: '/configure/texts' },
       { labelKey: 'configureTemplates', href: '/configure/templates' },
       { labelKey: 'configureNotifications', href: '/configure/notifications' },
     ],
@@ -240,6 +252,7 @@ export const configureConfigSections: ConfigNavSection[] = [
     labelKey: 'sectionData',
     items: [
       { labelKey: 'configureAssetData', href: '/configure/asset-data', productKey: 'assets' },
+      { labelKey: 'configureBooking', href: '/configure/booking', productKey: 'booking' },
       { labelKey: 'configureDataTransfer', href: '/configure/data-transfer' },
       { labelKey: 'configureIntegrations', href: '/configure/integrations' },
       { labelKey: 'configureLogDrains', href: '/configure/log-drains' },
@@ -287,6 +300,7 @@ export const operiaConfigSections: ConfigNavSection[] = [
       { labelKey: 'operiaHomeDesign', href: '/operia/home-design' },
       { labelKey: 'operiaHandheldDesign', href: '/operia/handheld-design' },
       { labelKey: 'operiaLocalization', href: '/operia/localization' },
+      { labelKey: 'operiaTexts', href: '/operia/texts' },
       { labelKey: 'operiaTemplates', href: '/operia/templates' },
       { labelKey: 'operiaNotifications', href: '/operia/notifications' },
     ],
@@ -295,6 +309,7 @@ export const operiaConfigSections: ConfigNavSection[] = [
     labelKey: 'sectionData',
     items: [
       { labelKey: 'operiaAssetData', href: '/operia/asset-data' },
+      { labelKey: 'operiaBooking', href: '/operia/booking' },
       { labelKey: 'operiaDataTransfer', href: '/operia/data-transfer' },
       { labelKey: 'operiaIntegrations', href: '/operia/integrations' },
       { labelKey: 'operiaRetention', href: '/operia/retention' },
@@ -343,6 +358,7 @@ export const SIMPLE_NAV_HREFS = [
   '/parcels/move',
   '/parcels/condition',
   '/parcels/search',
+  '/assets/calendar',
   '/assets/board',
   '/assets/checkout',
   '/assets/checkin',
@@ -350,6 +366,7 @@ export const SIMPLE_NAV_HREFS = [
   '/assets/document',
   '/assets/search',
   '/assets/new',
+  '/booking/calendar',
 ]
 
 export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {

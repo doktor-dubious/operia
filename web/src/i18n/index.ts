@@ -9,9 +9,9 @@ import en from './locales/en.json'
 // så et nyt sprog kun skal tilføjes ét sted.
 export const SUPPORTED_LANGUAGES = ['da', 'en'] as const
 
-// Per-tenant tekst-overrides (app_labels) skal lægges som et lag OVENPÅ disse
-// bundter — fx via i18next `postProcessor` eller et ekstra namespace pr. tenant —
-// aldrig ved at redigere sprogfilerne.
+// Per-tenant tekst-overrides (app_labels) lægges som et lag OVENPÅ disse
+// bundter ved kørsel — se lib/text-overrides.ts + hooks/use-text-overrides.ts.
+// Sprogfilerne redigeres aldrig.
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)

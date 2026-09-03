@@ -29,6 +29,7 @@ import { Route as AppParcelsIndexRouteImport } from './routes/_app/parcels.index
 import { Route as AppOperiaIndexRouteImport } from './routes/_app/operia.index'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
 import { Route as AppImportIndexRouteImport } from './routes/_app/import.index'
+import { Route as AppBookingIndexRouteImport } from './routes/_app/booking.index'
 import { Route as AppAssetsIndexRouteImport } from './routes/_app/assets.index'
 import { Route as AppProductsRoutesRouteImport } from './routes/_app/products.routes'
 import { Route as AppProductsProductKeyRouteImport } from './routes/_app/products.$productKey'
@@ -43,6 +44,7 @@ import { Route as AppParcelsDashboardRouteImport } from './routes/_app/parcels.d
 import { Route as AppParcelsConditionRouteImport } from './routes/_app/parcels.condition'
 import { Route as AppParcelsBoardRouteImport } from './routes/_app/parcels.board'
 import { Route as AppOperiaUsersRouteImport } from './routes/_app/operia.users'
+import { Route as AppOperiaTextsRouteImport } from './routes/_app/operia.texts'
 import { Route as AppOperiaTemplatesRouteImport } from './routes/_app/operia.templates'
 import { Route as AppOperiaShippingRouteImport } from './routes/_app/operia.shipping'
 import { Route as AppOperiaRetentionRouteImport } from './routes/_app/operia.retention'
@@ -61,6 +63,7 @@ import { Route as AppOperiaFeedbackRouteImport } from './routes/_app/operia.feed
 import { Route as AppOperiaDataTransferRouteImport } from './routes/_app/operia.data-transfer'
 import { Route as AppOperiaCustomersRouteImport } from './routes/_app/operia.customers'
 import { Route as AppOperiaCarriersRouteImport } from './routes/_app/operia.carriers'
+import { Route as AppOperiaBookingRouteImport } from './routes/_app/operia.booking'
 import { Route as AppOperiaBillingRouteImport } from './routes/_app/operia.billing'
 import { Route as AppOperiaAssetsRouteImport } from './routes/_app/operia.assets'
 import { Route as AppOperiaAssetDataRouteImport } from './routes/_app/operia.asset-data'
@@ -69,6 +72,7 @@ import { Route as AppImportLocalRouteImport } from './routes/_app/import.local'
 import { Route as AppImportExportRouteImport } from './routes/_app/import.export'
 import { Route as AppImportConfigRouteImport } from './routes/_app/import.config'
 import { Route as AppConfigureUsersRouteImport } from './routes/_app/configure.users'
+import { Route as AppConfigureTextsRouteImport } from './routes/_app/configure.texts'
 import { Route as AppConfigureTemplatesRouteImport } from './routes/_app/configure.templates'
 import { Route as AppConfigureShippingRouteImport } from './routes/_app/configure.shipping'
 import { Route as AppConfigureProductsRouteImport } from './routes/_app/configure.products'
@@ -82,8 +86,12 @@ import { Route as AppConfigureIntegrationsRouteImport } from './routes/_app/conf
 import { Route as AppConfigureHomeDesignRouteImport } from './routes/_app/configure.home-design'
 import { Route as AppConfigureHandheldDesignRouteImport } from './routes/_app/configure.handheld-design'
 import { Route as AppConfigureDataTransferRouteImport } from './routes/_app/configure.data-transfer'
+import { Route as AppConfigureBookingRouteImport } from './routes/_app/configure.booking'
 import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
 import { Route as AppConfigureAssetDataRouteImport } from './routes/_app/configure.asset-data'
+import { Route as AppBookingResourcesRouteImport } from './routes/_app/booking.resources'
+import { Route as AppBookingCategoriesRouteImport } from './routes/_app/booking.categories'
+import { Route as AppBookingCalendarRouteImport } from './routes/_app/booking.calendar'
 import { Route as AppAssetsSearchRouteImport } from './routes/_app/assets.search'
 import { Route as AppAssetsNewRouteImport } from './routes/_app/assets.new'
 import { Route as AppAssetsMoveRouteImport } from './routes/_app/assets.move'
@@ -92,6 +100,7 @@ import { Route as AppAssetsDocumentRouteImport } from './routes/_app/assets.docu
 import { Route as AppAssetsCheckoutRouteImport } from './routes/_app/assets.checkout'
 import { Route as AppAssetsCheckinRouteImport } from './routes/_app/assets.checkin'
 import { Route as AppAssetsCategoriesRouteImport } from './routes/_app/assets.categories'
+import { Route as AppAssetsCalendarRouteImport } from './routes/_app/assets.calendar'
 import { Route as AppAssetsBoardRouteImport } from './routes/_app/assets.board'
 import { Route as AppInventoryImportLogRouteImport } from './routes/_app/inventory.import.log'
 import { Route as AppInventoryImportLocalRouteImport } from './routes/_app/inventory.import.local'
@@ -201,6 +210,11 @@ const AppImportIndexRoute = AppImportIndexRouteImport.update({
   path: '/import/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBookingIndexRoute = AppBookingIndexRouteImport.update({
+  id: '/booking/',
+  path: '/booking/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAssetsIndexRoute = AppAssetsIndexRouteImport.update({
   id: '/assets/',
   path: '/assets/',
@@ -269,6 +283,11 @@ const AppParcelsBoardRoute = AppParcelsBoardRouteImport.update({
 const AppOperiaUsersRoute = AppOperiaUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
+const AppOperiaTextsRoute = AppOperiaTextsRouteImport.update({
+  id: '/texts',
+  path: '/texts',
   getParentRoute: () => AppOperiaRoute,
 } as any)
 const AppOperiaTemplatesRoute = AppOperiaTemplatesRouteImport.update({
@@ -361,6 +380,11 @@ const AppOperiaCarriersRoute = AppOperiaCarriersRouteImport.update({
   path: '/carriers',
   getParentRoute: () => AppOperiaRoute,
 } as any)
+const AppOperiaBookingRoute = AppOperiaBookingRouteImport.update({
+  id: '/booking',
+  path: '/booking',
+  getParentRoute: () => AppOperiaRoute,
+} as any)
 const AppOperiaBillingRoute = AppOperiaBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -399,6 +423,11 @@ const AppImportConfigRoute = AppImportConfigRouteImport.update({
 const AppConfigureUsersRoute = AppConfigureUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppConfigureTextsRoute = AppConfigureTextsRouteImport.update({
+  id: '/texts',
+  path: '/texts',
   getParentRoute: () => AppConfigureRoute,
 } as any)
 const AppConfigureTemplatesRoute = AppConfigureTemplatesRouteImport.update({
@@ -473,6 +502,11 @@ const AppConfigureDataTransferRoute =
     path: '/data-transfer',
     getParentRoute: () => AppConfigureRoute,
   } as any)
+const AppConfigureBookingRoute = AppConfigureBookingRouteImport.update({
+  id: '/booking',
+  path: '/booking',
+  getParentRoute: () => AppConfigureRoute,
+} as any)
 const AppConfigureBillingRoute = AppConfigureBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -482,6 +516,21 @@ const AppConfigureAssetDataRoute = AppConfigureAssetDataRouteImport.update({
   id: '/asset-data',
   path: '/asset-data',
   getParentRoute: () => AppConfigureRoute,
+} as any)
+const AppBookingResourcesRoute = AppBookingResourcesRouteImport.update({
+  id: '/booking/resources',
+  path: '/booking/resources',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBookingCategoriesRoute = AppBookingCategoriesRouteImport.update({
+  id: '/booking/categories',
+  path: '/booking/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBookingCalendarRoute = AppBookingCalendarRouteImport.update({
+  id: '/booking/calendar',
+  path: '/booking/calendar',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAssetsSearchRoute = AppAssetsSearchRouteImport.update({
   id: '/assets/search',
@@ -521,6 +570,11 @@ const AppAssetsCheckinRoute = AppAssetsCheckinRouteImport.update({
 const AppAssetsCategoriesRoute = AppAssetsCategoriesRouteImport.update({
   id: '/assets/categories',
   path: '/assets/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssetsCalendarRoute = AppAssetsCalendarRouteImport.update({
+  id: '/assets/calendar',
+  path: '/assets/calendar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAssetsBoardRoute = AppAssetsBoardRouteImport.update({
@@ -588,6 +642,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/stats': typeof AppStatsRoute
   '/assets/board': typeof AppAssetsBoardRoute
+  '/assets/calendar': typeof AppAssetsCalendarRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
   '/assets/checkin': typeof AppAssetsCheckinRoute
   '/assets/checkout': typeof AppAssetsCheckoutRoute
@@ -596,8 +651,12 @@ export interface FileRoutesByFullPath {
   '/assets/move': typeof AppAssetsMoveRoute
   '/assets/new': typeof AppAssetsNewRoute
   '/assets/search': typeof AppAssetsSearchRoute
+  '/booking/calendar': typeof AppBookingCalendarRoute
+  '/booking/categories': typeof AppBookingCategoriesRoute
+  '/booking/resources': typeof AppBookingResourcesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
+  '/configure/booking': typeof AppConfigureBookingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
   '/configure/home-design': typeof AppConfigureHomeDesignRoute
@@ -611,6 +670,7 @@ export interface FileRoutesByFullPath {
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
   '/configure/templates': typeof AppConfigureTemplatesRoute
+  '/configure/texts': typeof AppConfigureTextsRoute
   '/configure/users': typeof AppConfigureUsersRoute
   '/import/config': typeof AppImportConfigRoute
   '/import/export': typeof AppImportExportRoute
@@ -619,6 +679,7 @@ export interface FileRoutesByFullPath {
   '/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
+  '/operia/booking': typeof AppOperiaBookingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
   '/operia/data-transfer': typeof AppOperiaDataTransferRoute
@@ -637,6 +698,7 @@ export interface FileRoutesByFullPath {
   '/operia/retention': typeof AppOperiaRetentionRoute
   '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
+  '/operia/texts': typeof AppOperiaTextsRoute
   '/operia/users': typeof AppOperiaUsersRoute
   '/parcels/board': typeof AppParcelsBoardRoute
   '/parcels/condition': typeof AppParcelsConditionRoute
@@ -651,6 +713,7 @@ export interface FileRoutesByFullPath {
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/products/routes': typeof AppProductsRoutesRoute
   '/assets/': typeof AppAssetsIndexRoute
+  '/booking/': typeof AppBookingIndexRoute
   '/import/': typeof AppImportIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
   '/operia/': typeof AppOperiaIndexRoute
@@ -680,6 +743,7 @@ export interface FileRoutesByTo {
   '/stats': typeof AppStatsRoute
   '/': typeof AppIndexRoute
   '/assets/board': typeof AppAssetsBoardRoute
+  '/assets/calendar': typeof AppAssetsCalendarRoute
   '/assets/categories': typeof AppAssetsCategoriesRoute
   '/assets/checkin': typeof AppAssetsCheckinRoute
   '/assets/checkout': typeof AppAssetsCheckoutRoute
@@ -688,8 +752,12 @@ export interface FileRoutesByTo {
   '/assets/move': typeof AppAssetsMoveRoute
   '/assets/new': typeof AppAssetsNewRoute
   '/assets/search': typeof AppAssetsSearchRoute
+  '/booking/calendar': typeof AppBookingCalendarRoute
+  '/booking/categories': typeof AppBookingCategoriesRoute
+  '/booking/resources': typeof AppBookingResourcesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
+  '/configure/booking': typeof AppConfigureBookingRoute
   '/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
   '/configure/home-design': typeof AppConfigureHomeDesignRoute
@@ -703,6 +771,7 @@ export interface FileRoutesByTo {
   '/configure/products': typeof AppConfigureProductsRoute
   '/configure/shipping': typeof AppConfigureShippingRoute
   '/configure/templates': typeof AppConfigureTemplatesRoute
+  '/configure/texts': typeof AppConfigureTextsRoute
   '/configure/users': typeof AppConfigureUsersRoute
   '/import/config': typeof AppImportConfigRoute
   '/import/export': typeof AppImportExportRoute
@@ -711,6 +780,7 @@ export interface FileRoutesByTo {
   '/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/operia/assets': typeof AppOperiaAssetsRoute
   '/operia/billing': typeof AppOperiaBillingRoute
+  '/operia/booking': typeof AppOperiaBookingRoute
   '/operia/carriers': typeof AppOperiaCarriersRoute
   '/operia/customers': typeof AppOperiaCustomersRoute
   '/operia/data-transfer': typeof AppOperiaDataTransferRoute
@@ -729,6 +799,7 @@ export interface FileRoutesByTo {
   '/operia/retention': typeof AppOperiaRetentionRoute
   '/operia/shipping': typeof AppOperiaShippingRoute
   '/operia/templates': typeof AppOperiaTemplatesRoute
+  '/operia/texts': typeof AppOperiaTextsRoute
   '/operia/users': typeof AppOperiaUsersRoute
   '/parcels/board': typeof AppParcelsBoardRoute
   '/parcels/condition': typeof AppParcelsConditionRoute
@@ -743,6 +814,7 @@ export interface FileRoutesByTo {
   '/products/$productKey': typeof AppProductsProductKeyRoute
   '/products/routes': typeof AppProductsRoutesRoute
   '/assets': typeof AppAssetsIndexRoute
+  '/booking': typeof AppBookingIndexRoute
   '/import': typeof AppImportIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
   '/operia': typeof AppOperiaIndexRoute
@@ -775,6 +847,7 @@ export interface FileRoutesById {
   '/_app/stats': typeof AppStatsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/assets/board': typeof AppAssetsBoardRoute
+  '/_app/assets/calendar': typeof AppAssetsCalendarRoute
   '/_app/assets/categories': typeof AppAssetsCategoriesRoute
   '/_app/assets/checkin': typeof AppAssetsCheckinRoute
   '/_app/assets/checkout': typeof AppAssetsCheckoutRoute
@@ -783,8 +856,12 @@ export interface FileRoutesById {
   '/_app/assets/move': typeof AppAssetsMoveRoute
   '/_app/assets/new': typeof AppAssetsNewRoute
   '/_app/assets/search': typeof AppAssetsSearchRoute
+  '/_app/booking/calendar': typeof AppBookingCalendarRoute
+  '/_app/booking/categories': typeof AppBookingCategoriesRoute
+  '/_app/booking/resources': typeof AppBookingResourcesRoute
   '/_app/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/_app/configure/billing': typeof AppConfigureBillingRoute
+  '/_app/configure/booking': typeof AppConfigureBookingRoute
   '/_app/configure/data-transfer': typeof AppConfigureDataTransferRoute
   '/_app/configure/handheld-design': typeof AppConfigureHandheldDesignRoute
   '/_app/configure/home-design': typeof AppConfigureHomeDesignRoute
@@ -798,6 +875,7 @@ export interface FileRoutesById {
   '/_app/configure/products': typeof AppConfigureProductsRoute
   '/_app/configure/shipping': typeof AppConfigureShippingRoute
   '/_app/configure/templates': typeof AppConfigureTemplatesRoute
+  '/_app/configure/texts': typeof AppConfigureTextsRoute
   '/_app/configure/users': typeof AppConfigureUsersRoute
   '/_app/import/config': typeof AppImportConfigRoute
   '/_app/import/export': typeof AppImportExportRoute
@@ -806,6 +884,7 @@ export interface FileRoutesById {
   '/_app/operia/asset-data': typeof AppOperiaAssetDataRoute
   '/_app/operia/assets': typeof AppOperiaAssetsRoute
   '/_app/operia/billing': typeof AppOperiaBillingRoute
+  '/_app/operia/booking': typeof AppOperiaBookingRoute
   '/_app/operia/carriers': typeof AppOperiaCarriersRoute
   '/_app/operia/customers': typeof AppOperiaCustomersRoute
   '/_app/operia/data-transfer': typeof AppOperiaDataTransferRoute
@@ -824,6 +903,7 @@ export interface FileRoutesById {
   '/_app/operia/retention': typeof AppOperiaRetentionRoute
   '/_app/operia/shipping': typeof AppOperiaShippingRoute
   '/_app/operia/templates': typeof AppOperiaTemplatesRoute
+  '/_app/operia/texts': typeof AppOperiaTextsRoute
   '/_app/operia/users': typeof AppOperiaUsersRoute
   '/_app/parcels/board': typeof AppParcelsBoardRoute
   '/_app/parcels/condition': typeof AppParcelsConditionRoute
@@ -838,6 +918,7 @@ export interface FileRoutesById {
   '/_app/products/$productKey': typeof AppProductsProductKeyRoute
   '/_app/products/routes': typeof AppProductsRoutesRoute
   '/_app/assets/': typeof AppAssetsIndexRoute
+  '/_app/booking/': typeof AppBookingIndexRoute
   '/_app/import/': typeof AppImportIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
   '/_app/operia/': typeof AppOperiaIndexRoute
@@ -870,6 +951,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stats'
     | '/assets/board'
+    | '/assets/calendar'
     | '/assets/categories'
     | '/assets/checkin'
     | '/assets/checkout'
@@ -878,8 +960,12 @@ export interface FileRouteTypes {
     | '/assets/move'
     | '/assets/new'
     | '/assets/search'
+    | '/booking/calendar'
+    | '/booking/categories'
+    | '/booking/resources'
     | '/configure/asset-data'
     | '/configure/billing'
+    | '/configure/booking'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
     | '/configure/home-design'
@@ -893,6 +979,7 @@ export interface FileRouteTypes {
     | '/configure/products'
     | '/configure/shipping'
     | '/configure/templates'
+    | '/configure/texts'
     | '/configure/users'
     | '/import/config'
     | '/import/export'
@@ -901,6 +988,7 @@ export interface FileRouteTypes {
     | '/operia/asset-data'
     | '/operia/assets'
     | '/operia/billing'
+    | '/operia/booking'
     | '/operia/carriers'
     | '/operia/customers'
     | '/operia/data-transfer'
@@ -919,6 +1007,7 @@ export interface FileRouteTypes {
     | '/operia/retention'
     | '/operia/shipping'
     | '/operia/templates'
+    | '/operia/texts'
     | '/operia/users'
     | '/parcels/board'
     | '/parcels/condition'
@@ -933,6 +1022,7 @@ export interface FileRouteTypes {
     | '/products/$productKey'
     | '/products/routes'
     | '/assets/'
+    | '/booking/'
     | '/import/'
     | '/inventory/'
     | '/operia/'
@@ -962,6 +1052,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/'
     | '/assets/board'
+    | '/assets/calendar'
     | '/assets/categories'
     | '/assets/checkin'
     | '/assets/checkout'
@@ -970,8 +1061,12 @@ export interface FileRouteTypes {
     | '/assets/move'
     | '/assets/new'
     | '/assets/search'
+    | '/booking/calendar'
+    | '/booking/categories'
+    | '/booking/resources'
     | '/configure/asset-data'
     | '/configure/billing'
+    | '/configure/booking'
     | '/configure/data-transfer'
     | '/configure/handheld-design'
     | '/configure/home-design'
@@ -985,6 +1080,7 @@ export interface FileRouteTypes {
     | '/configure/products'
     | '/configure/shipping'
     | '/configure/templates'
+    | '/configure/texts'
     | '/configure/users'
     | '/import/config'
     | '/import/export'
@@ -993,6 +1089,7 @@ export interface FileRouteTypes {
     | '/operia/asset-data'
     | '/operia/assets'
     | '/operia/billing'
+    | '/operia/booking'
     | '/operia/carriers'
     | '/operia/customers'
     | '/operia/data-transfer'
@@ -1011,6 +1108,7 @@ export interface FileRouteTypes {
     | '/operia/retention'
     | '/operia/shipping'
     | '/operia/templates'
+    | '/operia/texts'
     | '/operia/users'
     | '/parcels/board'
     | '/parcels/condition'
@@ -1025,6 +1123,7 @@ export interface FileRouteTypes {
     | '/products/$productKey'
     | '/products/routes'
     | '/assets'
+    | '/booking'
     | '/import'
     | '/inventory'
     | '/operia'
@@ -1056,6 +1155,7 @@ export interface FileRouteTypes {
     | '/_app/stats'
     | '/_app/'
     | '/_app/assets/board'
+    | '/_app/assets/calendar'
     | '/_app/assets/categories'
     | '/_app/assets/checkin'
     | '/_app/assets/checkout'
@@ -1064,8 +1164,12 @@ export interface FileRouteTypes {
     | '/_app/assets/move'
     | '/_app/assets/new'
     | '/_app/assets/search'
+    | '/_app/booking/calendar'
+    | '/_app/booking/categories'
+    | '/_app/booking/resources'
     | '/_app/configure/asset-data'
     | '/_app/configure/billing'
+    | '/_app/configure/booking'
     | '/_app/configure/data-transfer'
     | '/_app/configure/handheld-design'
     | '/_app/configure/home-design'
@@ -1079,6 +1183,7 @@ export interface FileRouteTypes {
     | '/_app/configure/products'
     | '/_app/configure/shipping'
     | '/_app/configure/templates'
+    | '/_app/configure/texts'
     | '/_app/configure/users'
     | '/_app/import/config'
     | '/_app/import/export'
@@ -1087,6 +1192,7 @@ export interface FileRouteTypes {
     | '/_app/operia/asset-data'
     | '/_app/operia/assets'
     | '/_app/operia/billing'
+    | '/_app/operia/booking'
     | '/_app/operia/carriers'
     | '/_app/operia/customers'
     | '/_app/operia/data-transfer'
@@ -1105,6 +1211,7 @@ export interface FileRouteTypes {
     | '/_app/operia/retention'
     | '/_app/operia/shipping'
     | '/_app/operia/templates'
+    | '/_app/operia/texts'
     | '/_app/operia/users'
     | '/_app/parcels/board'
     | '/_app/parcels/condition'
@@ -1119,6 +1226,7 @@ export interface FileRouteTypes {
     | '/_app/products/$productKey'
     | '/_app/products/routes'
     | '/_app/assets/'
+    | '/_app/booking/'
     | '/_app/import/'
     | '/_app/inventory/'
     | '/_app/operia/'
@@ -1282,6 +1390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/booking/': {
+      id: '/_app/booking/'
+      path: '/booking'
+      fullPath: '/booking/'
+      preLoaderRoute: typeof AppBookingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/assets/': {
       id: '/_app/assets/'
       path: '/assets'
@@ -1378,6 +1493,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/operia/users'
       preLoaderRoute: typeof AppOperiaUsersRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
+    '/_app/operia/texts': {
+      id: '/_app/operia/texts'
+      path: '/texts'
+      fullPath: '/operia/texts'
+      preLoaderRoute: typeof AppOperiaTextsRouteImport
       parentRoute: typeof AppOperiaRoute
     }
     '/_app/operia/templates': {
@@ -1506,6 +1628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOperiaCarriersRouteImport
       parentRoute: typeof AppOperiaRoute
     }
+    '/_app/operia/booking': {
+      id: '/_app/operia/booking'
+      path: '/booking'
+      fullPath: '/operia/booking'
+      preLoaderRoute: typeof AppOperiaBookingRouteImport
+      parentRoute: typeof AppOperiaRoute
+    }
     '/_app/operia/billing': {
       id: '/_app/operia/billing'
       path: '/billing'
@@ -1560,6 +1689,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/configure/users'
       preLoaderRoute: typeof AppConfigureUsersRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/configure/texts': {
+      id: '/_app/configure/texts'
+      path: '/texts'
+      fullPath: '/configure/texts'
+      preLoaderRoute: typeof AppConfigureTextsRouteImport
       parentRoute: typeof AppConfigureRoute
     }
     '/_app/configure/templates': {
@@ -1653,6 +1789,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigureDataTransferRouteImport
       parentRoute: typeof AppConfigureRoute
     }
+    '/_app/configure/booking': {
+      id: '/_app/configure/booking'
+      path: '/booking'
+      fullPath: '/configure/booking'
+      preLoaderRoute: typeof AppConfigureBookingRouteImport
+      parentRoute: typeof AppConfigureRoute
+    }
     '/_app/configure/billing': {
       id: '/_app/configure/billing'
       path: '/billing'
@@ -1666,6 +1809,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/configure/asset-data'
       preLoaderRoute: typeof AppConfigureAssetDataRouteImport
       parentRoute: typeof AppConfigureRoute
+    }
+    '/_app/booking/resources': {
+      id: '/_app/booking/resources'
+      path: '/booking/resources'
+      fullPath: '/booking/resources'
+      preLoaderRoute: typeof AppBookingResourcesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/booking/categories': {
+      id: '/_app/booking/categories'
+      path: '/booking/categories'
+      fullPath: '/booking/categories'
+      preLoaderRoute: typeof AppBookingCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/booking/calendar': {
+      id: '/_app/booking/calendar'
+      path: '/booking/calendar'
+      fullPath: '/booking/calendar'
+      preLoaderRoute: typeof AppBookingCalendarRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/assets/search': {
       id: '/_app/assets/search'
@@ -1721,6 +1885,13 @@ declare module '@tanstack/react-router' {
       path: '/assets/categories'
       fullPath: '/assets/categories'
       preLoaderRoute: typeof AppAssetsCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assets/calendar': {
+      id: '/_app/assets/calendar'
+      path: '/assets/calendar'
+      fullPath: '/assets/calendar'
+      preLoaderRoute: typeof AppAssetsCalendarRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/assets/board': {
@@ -1792,6 +1963,7 @@ declare module '@tanstack/react-router' {
 interface AppConfigureRouteChildren {
   AppConfigureAssetDataRoute: typeof AppConfigureAssetDataRoute
   AppConfigureBillingRoute: typeof AppConfigureBillingRoute
+  AppConfigureBookingRoute: typeof AppConfigureBookingRoute
   AppConfigureDataTransferRoute: typeof AppConfigureDataTransferRoute
   AppConfigureHandheldDesignRoute: typeof AppConfigureHandheldDesignRoute
   AppConfigureHomeDesignRoute: typeof AppConfigureHomeDesignRoute
@@ -1805,12 +1977,14 @@ interface AppConfigureRouteChildren {
   AppConfigureProductsRoute: typeof AppConfigureProductsRoute
   AppConfigureShippingRoute: typeof AppConfigureShippingRoute
   AppConfigureTemplatesRoute: typeof AppConfigureTemplatesRoute
+  AppConfigureTextsRoute: typeof AppConfigureTextsRoute
   AppConfigureUsersRoute: typeof AppConfigureUsersRoute
 }
 
 const AppConfigureRouteChildren: AppConfigureRouteChildren = {
   AppConfigureAssetDataRoute: AppConfigureAssetDataRoute,
   AppConfigureBillingRoute: AppConfigureBillingRoute,
+  AppConfigureBookingRoute: AppConfigureBookingRoute,
   AppConfigureDataTransferRoute: AppConfigureDataTransferRoute,
   AppConfigureHandheldDesignRoute: AppConfigureHandheldDesignRoute,
   AppConfigureHomeDesignRoute: AppConfigureHomeDesignRoute,
@@ -1824,6 +1998,7 @@ const AppConfigureRouteChildren: AppConfigureRouteChildren = {
   AppConfigureProductsRoute: AppConfigureProductsRoute,
   AppConfigureShippingRoute: AppConfigureShippingRoute,
   AppConfigureTemplatesRoute: AppConfigureTemplatesRoute,
+  AppConfigureTextsRoute: AppConfigureTextsRoute,
   AppConfigureUsersRoute: AppConfigureUsersRoute,
 }
 
@@ -1835,6 +2010,7 @@ interface AppOperiaRouteChildren {
   AppOperiaAssetDataRoute: typeof AppOperiaAssetDataRoute
   AppOperiaAssetsRoute: typeof AppOperiaAssetsRoute
   AppOperiaBillingRoute: typeof AppOperiaBillingRoute
+  AppOperiaBookingRoute: typeof AppOperiaBookingRoute
   AppOperiaCarriersRoute: typeof AppOperiaCarriersRoute
   AppOperiaCustomersRoute: typeof AppOperiaCustomersRoute
   AppOperiaDataTransferRoute: typeof AppOperiaDataTransferRoute
@@ -1853,6 +2029,7 @@ interface AppOperiaRouteChildren {
   AppOperiaRetentionRoute: typeof AppOperiaRetentionRoute
   AppOperiaShippingRoute: typeof AppOperiaShippingRoute
   AppOperiaTemplatesRoute: typeof AppOperiaTemplatesRoute
+  AppOperiaTextsRoute: typeof AppOperiaTextsRoute
   AppOperiaUsersRoute: typeof AppOperiaUsersRoute
   AppOperiaIndexRoute: typeof AppOperiaIndexRoute
 }
@@ -1861,6 +2038,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaAssetDataRoute: AppOperiaAssetDataRoute,
   AppOperiaAssetsRoute: AppOperiaAssetsRoute,
   AppOperiaBillingRoute: AppOperiaBillingRoute,
+  AppOperiaBookingRoute: AppOperiaBookingRoute,
   AppOperiaCarriersRoute: AppOperiaCarriersRoute,
   AppOperiaCustomersRoute: AppOperiaCustomersRoute,
   AppOperiaDataTransferRoute: AppOperiaDataTransferRoute,
@@ -1879,6 +2057,7 @@ const AppOperiaRouteChildren: AppOperiaRouteChildren = {
   AppOperiaRetentionRoute: AppOperiaRetentionRoute,
   AppOperiaShippingRoute: AppOperiaShippingRoute,
   AppOperiaTemplatesRoute: AppOperiaTemplatesRoute,
+  AppOperiaTextsRoute: AppOperiaTextsRoute,
   AppOperiaUsersRoute: AppOperiaUsersRoute,
   AppOperiaIndexRoute: AppOperiaIndexRoute,
 }
@@ -1901,6 +2080,7 @@ interface AppRouteChildren {
   AppStatsRoute: typeof AppStatsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAssetsBoardRoute: typeof AppAssetsBoardRoute
+  AppAssetsCalendarRoute: typeof AppAssetsCalendarRoute
   AppAssetsCategoriesRoute: typeof AppAssetsCategoriesRoute
   AppAssetsCheckinRoute: typeof AppAssetsCheckinRoute
   AppAssetsCheckoutRoute: typeof AppAssetsCheckoutRoute
@@ -1909,6 +2089,9 @@ interface AppRouteChildren {
   AppAssetsMoveRoute: typeof AppAssetsMoveRoute
   AppAssetsNewRoute: typeof AppAssetsNewRoute
   AppAssetsSearchRoute: typeof AppAssetsSearchRoute
+  AppBookingCalendarRoute: typeof AppBookingCalendarRoute
+  AppBookingCategoriesRoute: typeof AppBookingCategoriesRoute
+  AppBookingResourcesRoute: typeof AppBookingResourcesRoute
   AppImportConfigRoute: typeof AppImportConfigRoute
   AppImportExportRoute: typeof AppImportExportRoute
   AppImportLocalRoute: typeof AppImportLocalRoute
@@ -1926,6 +2109,7 @@ interface AppRouteChildren {
   AppProductsProductKeyRoute: typeof AppProductsProductKeyRoute
   AppProductsRoutesRoute: typeof AppProductsRoutesRoute
   AppAssetsIndexRoute: typeof AppAssetsIndexRoute
+  AppBookingIndexRoute: typeof AppBookingIndexRoute
   AppImportIndexRoute: typeof AppImportIndexRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
   AppParcelsIndexRoute: typeof AppParcelsIndexRoute
@@ -1953,6 +2137,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppStatsRoute: AppStatsRoute,
   AppIndexRoute: AppIndexRoute,
   AppAssetsBoardRoute: AppAssetsBoardRoute,
+  AppAssetsCalendarRoute: AppAssetsCalendarRoute,
   AppAssetsCategoriesRoute: AppAssetsCategoriesRoute,
   AppAssetsCheckinRoute: AppAssetsCheckinRoute,
   AppAssetsCheckoutRoute: AppAssetsCheckoutRoute,
@@ -1961,6 +2146,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppAssetsMoveRoute: AppAssetsMoveRoute,
   AppAssetsNewRoute: AppAssetsNewRoute,
   AppAssetsSearchRoute: AppAssetsSearchRoute,
+  AppBookingCalendarRoute: AppBookingCalendarRoute,
+  AppBookingCategoriesRoute: AppBookingCategoriesRoute,
+  AppBookingResourcesRoute: AppBookingResourcesRoute,
   AppImportConfigRoute: AppImportConfigRoute,
   AppImportExportRoute: AppImportExportRoute,
   AppImportLocalRoute: AppImportLocalRoute,
@@ -1978,6 +2166,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProductsProductKeyRoute: AppProductsProductKeyRoute,
   AppProductsRoutesRoute: AppProductsRoutesRoute,
   AppAssetsIndexRoute: AppAssetsIndexRoute,
+  AppBookingIndexRoute: AppBookingIndexRoute,
   AppImportIndexRoute: AppImportIndexRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
   AppParcelsIndexRoute: AppParcelsIndexRoute,

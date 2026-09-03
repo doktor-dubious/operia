@@ -22,7 +22,8 @@ It also contains a live `CRON_SECRET` in its SQL — one more reason it stays ou
 Functional scope covered by the prototype (parcels are the core deliverable; the rest are
 feature-gated add-on products): parcel intake/handover/relocation/history, dashboard + exception
 management, employee/department directory, asset & inventory management, smart lockers, IoT
-sensors, shipping, route planning, room booking, white-labeling (branding/labels/layouts),
+sensors, shipping, route planning, booking (rooms, vehicles, equipment — superseded the
+prototype's room-booking product 2026-08-29), white-labeling (branding/labels/layouts),
 notification templates, reminders.
 
 ## Tech stack (settled — don't re-litigate)
@@ -58,8 +59,12 @@ notification templates, reminders.
   - *Modern*: navigation collapsed into the bottom-left dropdown.
 - **Theme**: defaults to **system**, user override to light/dark. Both themes fully defined.
 - **User dropdown**: must NOT contain "Feature preview" or "Timezone" items (explicitly excluded).
-- **UI language is Danish first**, English fallback. Per-tenant text overrides (`app_labels`
-  concept) layer **on top of** i18n resources at lookup time — never edited into locale files.
+- **UI language is Danish first**, English fallback. Per-tenant text overrides (`app_labels`)
+  layer **on top of** i18n resources at lookup time — never edited into locale files. Built
+  2026-09-03: table `app_text_override` keyed on the *i18n key itself*, two layers (platform
+  default = `company_id is null`, then the customer's own), edited on `/operia/texts` and
+  `/configure/texts`, applied at runtime by `hooks/use-text-overrides.ts`. Category/page metadata
+  per i18n namespace lives in `lib/app-texts.ts` — a new namespace must be added there.
 
 ## Architecture principles
 

@@ -1,9 +1,7 @@
 # Breach register
 
-GDPR **Art. 33(5)**: every personal data breach must be documented — including the ones that were
-*not* notified, with the reasoning for that decision. This file is that documentation. It also
-holds near misses, the weekly log reviews, and the annual tabletop exercises, because the value of
-the register is the unbroken record, not just the bad days.
+GDPR **Art. 33(5)**: every personal data breach must be documented — including the ones that were *not* notified, with the reasoning for that decision. This file is that documentation. It also
+holds near misses, the weekly log reviews, and the annual tabletop exercises, because the value of the register is the unbroken record, not just the bad days.
 
 Procedure: [`incident-response.md`](incident-response.md) · **Owner:** DCA Logic privacy owner.
 
@@ -50,8 +48,7 @@ Procedure: [`incident-response.md`](incident-response.md) · **Owner:** DCA Logi
 
 ## Detection reviews
 
-Weekly review of Operia → Logs at error and warning level (see incident-response.md §7).
-Log a line even when nothing is found — the gap in this table *is* the finding.
+Weekly review of Operia → Logs at error and warning level (see incident-response.md §7). Log a line even when nothing is found — the gap in this table *is* the finding.
 
 | Date | Reviewer | Period covered | Findings |
 |---|---|---|---|

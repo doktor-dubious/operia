@@ -34,6 +34,7 @@ export const RETENTION_CATEGORIES = [
   { key: 'assetLoans', column: 'asset_loans_days', platform: 'asset_loans_retention_days' },
   { key: 'employees', column: 'employees_days', platform: 'employees_retention_days' },
   { key: 'routes', column: 'routes_days', platform: 'routes_retention_days' },
+  { key: 'bookings', column: 'bookings_days', platform: 'bookings_retention_days' },
 ] as const
 
 type Form = Record<string, string>

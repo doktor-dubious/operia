@@ -25,6 +25,12 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// Nye i18n-navnerum skal placeres i app-texts.ts' NAMESPACE_META, ellers kan
+// teksterne ikke findes på Tekster-siden. Advarslen kører kun i udvikling.
+if (import.meta.env.DEV) {
+  void import('@/lib/app-texts').then((m) => m.assertNamespaceCoverage())
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>

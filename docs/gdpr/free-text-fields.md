@@ -62,6 +62,8 @@ anywhere in the system.
 | 10 | `routes.description` | Route description | **Time-limit** | As #9 | |
 | 11 | `storage_locations.notes` | Note on a storage location | **Time-limit** | Configuration data, but "Anna's office" is a real pattern | |
 | 12 | `storage_locations.description` | Description of a location | **Time-limit** | As #11 | |
+| 12a | `bookings.title` | Booking purpose ("Interview with …", "1:1 Anna/Bo") | **Time-limit** | Can name colleagues or external guests by design of use, though the field asks for a purpose. Searched by the SAR export (`bookings_mentioning`); dies with the booking under the `bookings` window. Deliberately never copied into `booking_events`/`audit_log` | |
+| 12b | `booking_resources.description` | Resource description | **Time-limit** | Configuration data, same "Anna's office" pattern as #11 | |
 
 ## Tier 3 — addresses rather than names
 

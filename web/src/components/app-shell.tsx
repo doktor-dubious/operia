@@ -41,6 +41,7 @@ import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useRefreshInterval } from '@/hooks/use-platform-settings'
+import { useTextOverrides } from '@/hooks/use-text-overrides'
 import { useParcelsRealtime } from '@/hooks/use-parcels-realtime'
 import { useSession } from '@/hooks/use-session'
 import { supabase } from '@/lib/supabase'
@@ -738,6 +739,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // alle pakkeskærme — ved siden af auto-refresh'en i HeaderActions, der bliver
   // stående som fallback.
   useParcelsRealtime()
+  // Kundens/platformens tekst-overstyringer lægges oven på i18next her — ét
+  // sted, så hele brugerfladen (også sidemenu og header) får dem.
+  useTextOverrides()
 
   if (navMode === 'modern') {
     return (

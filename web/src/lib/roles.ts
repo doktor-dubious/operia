@@ -131,6 +131,21 @@ export const ROLE_GROUPS: RoleGroup[] = [
       },
     ],
   },
+  {
+    labelKey: 'userDetail.roleGroupBooking',
+    roles: [
+      {
+        value: 'booking_handler',
+        labelKey: 'usersPage.roleBookingHandler',
+        descKey: 'userDetail.roleBookingHandlerDescription',
+      },
+      {
+        value: 'booking_manager',
+        labelKey: 'usersPage.roleBookingManager',
+        descKey: 'userDetail.roleBookingManagerDescription',
+      },
+    ],
+  },
 ]
 
 // Fladt katalog i visningsrækkefølge (manager først) — bruges til badges,
@@ -164,6 +179,7 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/carriers', roles: [] },
   // Aktiv-flowsiderne er åbne for handlers (som pakkeflowet); registret og
   // stamdata forbliver asset_manager-niveau via det brede /assets-præfiks.
+  { prefix: '/assets/calendar', roles: ['asset_handler', 'asset_manager'] },
   { prefix: '/assets/board', roles: ['asset_handler', 'asset_manager'] },
   { prefix: '/assets/checkout', roles: ['asset_handler', 'asset_manager'] },
   { prefix: '/assets/checkin', roles: ['asset_handler', 'asset_manager'] },
@@ -172,6 +188,11 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/assets/search', roles: ['asset_handler', 'asset_manager'] },
   { prefix: '/assets', roles: ['asset_manager'] },
   { prefix: '/inventory', roles: ['inventory_manager'] },
+  // Booking: kalender + liste er åbne for handlers; stamdata (ressourcer og
+  // kategorier) kræver booking_manager via de længere præfikser.
+  { prefix: '/booking/resources', roles: ['booking_manager'] },
+  { prefix: '/booking/categories', roles: ['booking_manager'] },
+  { prefix: '/booking', roles: ['booking_handler', 'booking_manager'] },
   { prefix: '/products/routes', roles: ['route_planner_manager'] },
   { prefix: '/products', roles: [] },
   // Persondata-siden rummer indsigtsudtrækket, som sar_export i databasen
@@ -213,6 +234,7 @@ const SECTION_ROLES: Record<string, AppRole[]> = {
   assets: ['asset_handler', 'asset_manager', 'handheld_asset_handler'],
   lager: ['inventory_handler', 'inventory_manager', 'handheld_inventory_handler'],
   routes: ['route_planner_handler', 'route_planner_manager', 'handheld_route_planner'],
+  booking: ['booking_handler', 'booking_manager'],
 }
 
 // Bedste destination for en produktflise ud fra brugerens adgang: produktets
@@ -235,7 +257,7 @@ export function productTileHref(href: string, access: AccessInfo): string {
 export function canSeeProductTile(product: string, href: string, access: AccessInfo): boolean {
   if (access.isPlatformAdmin || access.isManager) return true
   const roles = SECTION_ROLES[product]
-  if (!roles) return false // lockers/iot/shipping/booking: kun manager indtil videre
+  if (!roles) return false // lockers/iot/shipping: kun manager indtil videre
   if (!roles.some((r) => access.roles.has(r))) return false
   // Vis kun flisen hvis den fører et sted hen, rollen faktisk kan åbne — ellers
   // er den et blindspor (fx en ren handheld_parcel_handler uden web-sider).
