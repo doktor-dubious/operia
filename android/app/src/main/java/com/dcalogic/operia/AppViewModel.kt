@@ -368,14 +368,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
                 // Effektive ankomstbesked-indstillinger (samme regler som
                 // dispatch-parcel-notifications): virksomheds-override ?? platform,
-                // SMS-kanalen kræver desuden sms_notifications-tilvalget. Bruges
+                // og alt andet end e-mail kræver kanalens tilvalg. Bruges
                 // kun til intake-advarslen — featureRows (ikke has()) fordi has()
                 // er default-open før hh_*-opsætning.
                 val coNotify = coNotifyD.await()
                 val pfNotify = pfNotifyD.await()
                 if (coNotify != null && pfNotify != null) {
-                    val hasSmsFeature = featureRows.orEmpty().any {
-                        it.feature_key == "sms_notifications" &&
+                    fun hasFeature(key: String) = featureRows.orEmpty().any {
+                        it.feature_key == key &&
                             (it.valid_until == null || it.valid_until >= today)
                     }
                     notifyPrefs = com.dcalogic.operia.data.NotifyPrefs(
@@ -383,7 +383,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             (coNotify.parcel_arrival_enabled ?: pfNotify.parcel_arrival_enabled),
                         emailOn = coNotify.notify_email_enabled ?: pfNotify.notify_email_enabled,
                         smsOn = (coNotify.notify_sms_enabled ?: pfNotify.notify_sms_enabled) &&
-                            hasSmsFeature,
+                            hasFeature("sms_notifications"),
+                        teamsOn = (coNotify.notify_teams_enabled ?: pfNotify.notify_teams_enabled) &&
+                            hasFeature("teams_notifications"),
+                        slackOn = (coNotify.notify_slack_enabled ?: pfNotify.notify_slack_enabled) &&
+                            hasFeature("slack_notifications"),
                     )
                 }
 

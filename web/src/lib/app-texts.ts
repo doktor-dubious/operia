@@ -65,6 +65,7 @@ const NAMESPACE_META: Record<string, NamespaceMeta> = {
   companyDataTransfer: { category: 'config', page: { da: 'Dataoverførsel', en: 'Data transfer' } },
   companyEntra: { category: 'config', page: { da: 'Entra ID', en: 'Entra ID' } },
   companyPrivacy: { category: 'config', page: { da: 'Privatliv', en: 'Privacy' } },
+  companySlack: { category: 'config', page: { da: 'Slack', en: 'Slack' } },
   companySwitcher: { category: 'general', page: { da: 'Virksomhedsskifter', en: 'Company switcher' } },
   condition: { category: 'parcels', page: { da: 'Tilstand', en: 'Condition' } },
   configureConfig: { category: 'config', page: { da: 'Konfigurér-menu', en: 'Configure menu' } },

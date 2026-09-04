@@ -29,17 +29,38 @@ export function isServiceRole(token: string, serviceKey: string): boolean {
 // læsbar tekst (logsPage.msg.reason*), i stedet for at vise et råt Resend/Gateway-
 // API-svar. En 422 fra Resend ('validation_error') eller vores egen for-check
 // betyder en ugyldig modtageradresse — den hyppige tastefejl (komma o.l.).
-export function classifySendError(err: string, channel: 'email' | 'sms'): string {
+//
+// `channel` tages som streng (ikke Channel-typen) med vilje: channels.ts
+// importerer render/renderHtml herfra, og en typeimport den anden vej ville
+// lukke en cirkel. Ukendte kanaler falder tilbage på en generisk kode frem for
+// at blive fejlklassificeret som SMS.
+export function classifySendError(err: string, channel: string): string {
   const e = (err || '').toLowerCase()
-  if (channel === 'email') {
-    if (e.includes('invalid_email') || e.includes('validation_error') || e.includes('resend_422'))
-      return 'invalid_email'
-    if (e.includes('not_configured')) return 'email_not_configured'
-    return 'email_error'
+  const notConfigured = e.includes('not_configured')
+  switch (channel) {
+    case 'email':
+      if (e.includes('invalid_email') || e.includes('validation_error') || e.includes('resend_422'))
+        return 'invalid_email'
+      return notConfigured ? 'email_not_configured' : 'email_error'
+    case 'sms':
+      if (e.includes('invalid_recipient')) return 'invalid_phone'
+      return notConfigured ? 'sms_not_configured' : 'sms_error'
+    case 'teams':
+      // Ingen objekt-id på medarbejderen (typisk: kunden kører CSV-import og
+      // ikke AD-synkronisering) er en anden fejl end "kanalen mangler opsætning".
+      if (e.includes('no_recipient') || e.includes('user_not_found')) return 'invalid_teams_user'
+      return notConfigured ? 'teams_not_configured' : 'teams_error'
+    case 'slack':
+      if (e.includes('users_not_found') || e.includes('no_recipient')) return 'invalid_slack_user'
+      // Kunden har afinstalleret appen (eller tilbagekaldt tokenet): kanalen er
+      // død indtil nogen forbinder igen. Egen kode, fordi handlingen er en
+      // anden end ved en almindelig sendefejl.
+      if (e.includes('token_revoked') || e.includes('invalid_auth') ||
+          e.includes('account_inactive')) return 'slack_auth_revoked'
+      return notConfigured ? 'slack_not_configured' : 'slack_error'
+    default:
+      return notConfigured ? 'channel_not_configured' : 'channel_error'
   }
-  if (e.includes('invalid_recipient')) return 'invalid_phone'
-  if (e.includes('not_configured')) return 'sms_not_configured'
-  return 'sms_error'
 }
 
 // Erstat {{snake_case}}-tokens; ukendte tokens efterlades urørt.
@@ -162,9 +183,22 @@ export function inQuietHours(nowMin: number, start: string | null, end: string |
 // når pakken/udlånet siden anonymiseres. Maskeringen bevarer det man fejlsøger
 // på (hvilken slags adresse, hvilket domæne, de sidste cifre) uden at gemme
 // selve identifikatoren.
-export function maskRecipient(value: string | null | undefined): string | null {
+// `channel` er valgfri: aktiv-påmindelserne kalder stadig med ét argument, og
+// e-mail/SMS genkendes fint på formen. Den er nødvendig for de kanaler hvor
+// adressen er et ugennemsigtigt id — et Entra-objekt-id er en UUID, og
+// cifferstien nedenfor ville hakke den i stykker til noget der ligner et
+// telefonnummer. Et id er stadig en personhenførbar identifikator, så det
+// maskeres; de sidste tegn bevares, så to rækker kan skelnes under fejlsøgning.
+export function maskRecipient(
+  value: string | null | undefined,
+  channel?: string,
+): string | null {
   const v = (value ?? '').trim()
   if (!v) return null
+  // Teams adresserer altid på et objekt-id; Slack kan gøre begge dele (id-
+  // tilsidesættelse eller e-mail), så dér afgøres det af værdiens form.
+  if (channel === 'teams') return maskOpaqueId(v)
+  if (channel === 'slack' && !v.includes('@')) return maskOpaqueId(v)
   const at = v.indexOf('@')
   if (at > 0) {
     const local = v.slice(0, at)
@@ -174,6 +208,15 @@ export function maskRecipient(value: string | null | undefined): string | null {
   const digits = v.replace(/\D/g, '')
   if (digits.length >= 4) return `${'*'.repeat(digits.length - 4)}${digits.slice(-4)}`
   return '****'
+}
+
+// Ugennemsigtigt id (Entra-objekt-id, Slack-bruger-id): behold de sidste 4 tegn
+// som telefonnumre, stjernemarkér resten. Længden bevares ikke ud over 24 tegn,
+// så en lang identifikator ikke fylder loggen.
+function maskOpaqueId(v: string): string {
+  if (v.length <= 4) return '****'
+  const stars = Math.min(v.length - 4, 20)
+  return `${'*'.repeat(stars)}${v.slice(-4)}`
 }
 
 // Rens en fejltekst fra en udbyder, før den GEMMES.
@@ -198,6 +241,14 @@ export function sanitizeProviderError(
   return v
     // E-mailadresser, uanset hvor i teksten de står.
     .replace(/[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+/g, (m) => maskRecipient(m) ?? '***')
+    // GUID'er: Teams/Graph citerer rutinemæssigt bruger- og tenant-objekt-id'et
+    // i sine fejlsvar, og et objekt-id er en personhenførbar identifikator.
+    // Cifferreglen nedenfor fanger dem ikke (bindestreger bryder matchet), så
+    // de maskeres for sig — ellers ville de lande uslettelige i audit_log.
+    .replace(
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      (m) => maskRecipient(m, 'teams') ?? '***',
+    )
     // Telefonnumre: 8+ cifre i træk, evt. med mellemrum eller parenteser.
     // Bindestreger og koloner bryder bevidst et match, så datoer og
     // klokkeslæt ('2026-08-14 03:22') står læseligt tilbage — korte tal

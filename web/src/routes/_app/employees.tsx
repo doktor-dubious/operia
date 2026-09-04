@@ -63,7 +63,7 @@ function useRows(companyId: string | null) {
       const { data, error } = await supabase
         .from('employees')
         .select(
-          'id, full_name, first_name, last_name, initials, email, phone, employee_no, nfc_card_id, role, language, is_active, is_manual, department_id, department:departments (name)',
+          'id, full_name, first_name, last_name, initials, email, phone, slack_user_id, employee_no, nfc_card_id, role, language, is_active, is_manual, department_id, department:departments (name)',
         )
         .eq('company_id', companyId!)
         .order('full_name')
@@ -268,6 +268,7 @@ function EmployeeDetailPane({
   const [role, setRole] = useState(row.role ?? '')
   const [employeeNo, setEmployeeNo] = useState(row.employee_no ?? '')
   const [nfcCardId, setNfcCardId] = useState(row.nfc_card_id ?? '')
+  const [slackUserId, setSlackUserId] = useState(row.slack_user_id ?? '')
   const [language, setLanguage] = useState(row.language)
   const [isActive, setIsActive] = useState(row.is_active)
   const [saving, setSaving] = useState(false)
@@ -283,6 +284,7 @@ function EmployeeDetailPane({
     role !== (row.role ?? '') ||
     employeeNo !== (row.employee_no ?? '') ||
     nfcCardId !== (row.nfc_card_id ?? '') ||
+    slackUserId !== (row.slack_user_id ?? '') ||
     language !== row.language ||
     isActive !== row.is_active
 
@@ -329,6 +331,9 @@ function EmployeeDetailPane({
       role: role.trim() || null,
       employee_no: employeeNo.trim() || null,
       nfc_card_id: nfcCardId.trim() || null,
+      // Databasen normaliserer (trim + versaler) og afviser alt der ikke ligner
+      // et medlems-id — se employees_slack_user_id_format.
+      slack_user_id: slackUserId.trim().toUpperCase() || null,
       language,
       is_active: isActive,
     })
@@ -345,6 +350,7 @@ function EmployeeDetailPane({
     setRole(row.role ?? '')
     setEmployeeNo(row.employee_no ?? '')
     setNfcCardId(row.nfc_card_id ?? '')
+    setSlackUserId(row.slack_user_id ?? '')
     setLanguage(row.language)
     setIsActive(row.is_active)
   }
@@ -426,6 +432,14 @@ function EmployeeDetailPane({
                 value={nfcCardId}
                 className="font-mono"
                 onChange={(e) => setNfcCardId(e.target.value)}
+              />
+            </Field>
+            <Field label={t('employeeDetail.slackUserId')} info={t('employeeDetail.slackUserIdHint')}>
+              <Input
+                value={slackUserId}
+                className="font-mono"
+                placeholder={t('employeeDetail.slackUserIdPlaceholder')}
+                onChange={(e) => setSlackUserId(e.target.value)}
               />
             </Field>
             <Field label={t('employeeDetail.language')}>

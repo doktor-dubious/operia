@@ -21,11 +21,13 @@ import {
   DEFAULT_STATUS_TIME,
   ParcelFlowFields,
   QuietHoursField,
+  type ChannelToggleValue,
   type ParcelFlowValue,
   type ParcelNotifyValue,
 } from '@/components/company-config-fields'
 import { Field } from '@/components/detail-field'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
+import { CHANNEL_TOGGLE, NOTIFY_CHANNELS } from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 
 // Operia → Notifikationer: platformens standarder — generelt (stilletid,
@@ -41,8 +43,7 @@ type Values = {
   quietEnd: string
   parcelEnabled: boolean
   assetEnabled: boolean
-  emailEnabled: boolean
-  smsEnabled: boolean
+  channels: ChannelToggleValue
   parcel: ParcelNotifyValue
   asset: ParcelFlowValue
 }
@@ -60,8 +61,10 @@ function NotificationsPage() {
     quietEnd: row.quiet_hours_end?.slice(0, 5) ?? '',
     parcelEnabled: row.parcel_notifications_enabled,
     assetEnabled: row.asset_notifications_enabled,
-    emailEnabled: row.notify_email_enabled,
-    smsEnabled: row.notify_sms_enabled,
+    // Platformens standard er kilden — der er intet at arve fra.
+    channels: Object.fromEntries(
+      NOTIFY_CHANNELS.map((c) => [c, (row as Record<string, unknown>)[CHANNEL_TOGGLE[c]] === true]),
+    ) as ChannelToggleValue,
     parcel: {
       arrivalEnabled: row.parcel_arrival_enabled,
       statusEnabled: row.parcel_status_enabled,
@@ -106,8 +109,9 @@ function NotificationsPage() {
         quiet_hours_end: values.quietEnd || null,
         parcel_notifications_enabled: values.parcelEnabled,
         asset_notifications_enabled: values.assetEnabled,
-        notify_email_enabled: values.emailEnabled,
-        notify_sms_enabled: values.smsEnabled,
+        ...Object.fromEntries(
+          NOTIFY_CHANNELS.map((c) => [CHANNEL_TOGGLE[c], values.channels[c]]),
+        ),
         parcel_reminder_1_days: pr1,
         parcel_reminder_2_days: pr2,
         parcel_reminder_max: Math.max(0, Math.round(p.maxReminders)),
@@ -180,10 +184,10 @@ function NotificationsPage() {
             </Field>
 
             <ChannelToggles
-              email={values.emailEnabled}
-              sms={values.smsEnabled}
-              onEmailChange={(v) => setValues({ ...values, emailEnabled: v })}
-              onSmsChange={(v) => setValues({ ...values, smsEnabled: v })}
+              value={values.channels}
+              onChange={(patch) =>
+                setValues({ ...values, channels: { ...values.channels, ...patch } })
+              }
             />
 
             <QuietHoursField

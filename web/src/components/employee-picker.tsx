@@ -13,6 +13,14 @@ export type PickedEmployee = {
   initials: string | null
   email: string | null
   phone: string | null
+  // Entra-objekt-id — Teams-kanalens adresse (se lib/notify-contact.ts). Kun
+  // sat for kunder på AD-synkronisering; null ved CSV-import og manuelt
+  // oprettede medarbejdere. VALGFRIT, fordi AI-fortolkningens match-RPC endnu
+  // ikke returnerer feltet — undefined betyder "ukendt", ikke "findes ikke".
+  external_id?: string | null
+  // Valgfri Slack-tilsidesættelse — som external_id kun til advarslen om at
+  // modtageren ikke kan nås.
+  slack_user_id?: string | null
   department_id: string | null
   department_name: string | null
 }
@@ -65,7 +73,7 @@ export function EmployeePicker({
       const term = text.trim().replace(/\\/g, '\\\\').replace(/"/g, '\\"')
       const { data, error } = await supabase
         .from('employees')
-        .select('id, full_name, initials, email, phone, department_id, department:departments (name)')
+        .select('id, full_name, initials, email, phone, external_id, slack_user_id, department_id, department:departments (name)')
         .eq('company_id', companyId)
         .eq('is_active', true)
         .or(`full_name.ilike."%${term}%",initials.ilike."%${term}%"`)
@@ -82,6 +90,8 @@ export function EmployeePicker({
           initials: e.initials,
           email: e.email,
           phone: e.phone,
+          external_id: e.external_id,
+          slack_user_id: e.slack_user_id,
           department_id: e.department_id,
           department_name: e.department?.name ?? null,
         })),

@@ -34,6 +34,7 @@ export const Route = createFileRoute('/_app/operia/integrations')({
 const INTEGRATIONS = [
   { key: 'entra', labelKey: 'integrationsPage.entra' },
   { key: 'ai', labelKey: 'integrationsPage.ai' },
+  { key: 'slack', labelKey: 'integrationsPage.slack' },
 ]
 
 type Form = {
@@ -43,6 +44,9 @@ type Form = {
   aiEnabled: boolean
   aiProviders: string[]
   aiModels: string[]
+  // Slack har ingen platform-indstillinger ud over "udbydes den?" — resten af
+  // opsætningen er kundens egen OAuth-installation.
+  slackEnabled: boolean
 }
 
 // Holder arrays i katalog-orden, så dirty-sammenligningen (JSON.stringify)
@@ -66,6 +70,7 @@ function IntegrationsPage() {
     aiEnabled: false,
     aiProviders: [],
     aiModels: [],
+    slackEnabled: false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -77,6 +82,7 @@ function IntegrationsPage() {
         aiEnabled: data.ai_enabled,
         aiProviders: data.ai_providers ?? [],
         aiModels: data.ai_models ?? [],
+        slackEnabled: data.slack_enabled,
       }
     : null
 
@@ -99,6 +105,7 @@ function IntegrationsPage() {
         ai_enabled: form.aiEnabled,
         ai_providers: form.aiProviders,
         ai_models: form.aiModels,
+        slack_enabled: form.slackEnabled,
       })
       .eq('id', true)
       .select('id')
@@ -200,6 +207,28 @@ function IntegrationsPage() {
                 <p className="mt-2 text-xs text-muted-foreground">
                   {t('integrationsPage.syncIntervalHint')}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {selected === 'slack' && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={form.slackEnabled}
+                    onCheckedChange={(v) => set({ slackEnabled: v === true })}
+                  />
+                  <span>
+                    <span className="text-[13px] font-[450]">
+                      {t('integrationsPage.slackEnable')}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {t('integrationsPage.slackEnableDesc')}
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
           )}

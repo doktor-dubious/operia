@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -933,7 +928,9 @@ export type Database = {
           logo_url: string | null
           name: string
           notify_email_enabled: boolean | null
+          notify_slack_enabled: boolean | null
           notify_sms_enabled: boolean | null
+          notify_teams_enabled: boolean | null
           parcel_arrival_enabled: boolean | null
           parcel_reminder_1_days: number | null
           parcel_reminder_1_enabled: boolean | null
@@ -949,6 +946,7 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           registration_no: string | null
+          slack_lookup_by_email: boolean
           security_contact_email: string | null
           security_contact_name: string | null
           security_contact_phone: string | null
@@ -987,7 +985,9 @@ export type Database = {
           logo_url?: string | null
           name: string
           notify_email_enabled?: boolean | null
+          notify_slack_enabled?: boolean | null
           notify_sms_enabled?: boolean | null
+          notify_teams_enabled?: boolean | null
           parcel_arrival_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
@@ -1003,6 +1003,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          slack_lookup_by_email?: boolean
           security_contact_email?: string | null
           security_contact_name?: string | null
           security_contact_phone?: string | null
@@ -1041,7 +1042,9 @@ export type Database = {
           logo_url?: string | null
           name?: string
           notify_email_enabled?: boolean | null
+          notify_slack_enabled?: boolean | null
           notify_sms_enabled?: boolean | null
+          notify_teams_enabled?: boolean | null
           parcel_arrival_enabled?: boolean | null
           parcel_reminder_1_days?: number | null
           parcel_reminder_1_enabled?: boolean | null
@@ -1057,6 +1060,7 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
+          slack_lookup_by_email?: boolean
           security_contact_email?: string | null
           security_contact_name?: string | null
           security_contact_phone?: string | null
@@ -1484,6 +1488,79 @@ export type Database = {
           },
         ]
       }
+      company_slack_config: {
+        Row: {
+          bot_user_id: string | null
+          company_id: string
+          connected_at: string | null
+          connected_by: string | null
+          created_at: string
+          team_id: string | null
+          team_name: string | null
+          token_set: boolean
+          updated_at: string
+        }
+        Insert: {
+          bot_user_id?: string | null
+          company_id: string
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string
+          team_id?: string | null
+          team_name?: string | null
+          token_set?: boolean
+          updated_at?: string
+        }
+        Update: {
+          bot_user_id?: string | null
+          company_id?: string
+          connected_at?: string | null
+          connected_by?: string | null
+          created_at?: string
+          team_id?: string | null
+          team_name?: string | null
+          token_set?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_slack_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_slack_secret: {
+        Row: {
+          bot_token: string | null
+          company_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          bot_token?: string | null
+          company_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          bot_token?: string | null
+          company_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_slack_secret_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_templates: {
         Row: {
           body: string
@@ -1577,6 +1654,7 @@ export type Database = {
           phone: string | null
           retired_at: string | null
           role: string | null
+          slack_user_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1602,6 +1680,7 @@ export type Database = {
           phone?: string | null
           retired_at?: string | null
           role?: string | null
+          slack_user_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1627,6 +1706,7 @@ export type Database = {
           phone?: string | null
           retired_at?: string | null
           role?: string | null
+          slack_user_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -2678,7 +2758,9 @@ export type Database = {
           maps_provider: string
           notifications_retention_days: number | null
           notify_email_enabled: boolean
+          notify_slack_enabled: boolean
           notify_sms_enabled: boolean
+          notify_teams_enabled: boolean
           parcel_arrival_enabled: boolean
           parcel_files_retention_days: number | null
           parcel_notifications_enabled: boolean
@@ -2701,6 +2783,7 @@ export type Database = {
           shipping_margin_fixed: number
           shipping_margin_percent: number
           shipping_model: string
+          slack_enabled: boolean
           supported_currencies: string[]
           supported_languages: string[]
           updated_at: string
@@ -2753,7 +2836,9 @@ export type Database = {
           maps_provider?: string
           notifications_retention_days?: number | null
           notify_email_enabled?: boolean
+          notify_slack_enabled?: boolean
           notify_sms_enabled?: boolean
+          notify_teams_enabled?: boolean
           parcel_arrival_enabled?: boolean
           parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
@@ -2776,6 +2861,7 @@ export type Database = {
           shipping_margin_fixed?: number
           shipping_margin_percent?: number
           shipping_model?: string
+          slack_enabled?: boolean
           supported_currencies?: string[]
           supported_languages?: string[]
           updated_at?: string
@@ -2828,7 +2914,9 @@ export type Database = {
           maps_provider?: string
           notifications_retention_days?: number | null
           notify_email_enabled?: boolean
+          notify_slack_enabled?: boolean
           notify_sms_enabled?: boolean
+          notify_teams_enabled?: boolean
           parcel_arrival_enabled?: boolean
           parcel_files_retention_days?: number | null
           parcel_notifications_enabled?: boolean
@@ -2851,6 +2939,7 @@ export type Database = {
           shipping_margin_fixed?: number
           shipping_margin_percent?: number
           shipping_model?: string
+          slack_enabled?: boolean
           supported_currencies?: string[]
           supported_languages?: string[]
           updated_at?: string
@@ -3107,6 +3196,35 @@ export type Database = {
           want_demo?: boolean
         }
         Relationships: []
+      }
+      slack_oauth_state: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          state: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          state: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slack_oauth_state_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storage_locations: {
         Row: {
@@ -3594,7 +3712,7 @@ export type Database = {
         | "written_off"
       batch_status: "open" | "finished"
       booking_status: "booked" | "cancelled"
-      notification_channel: "email" | "sms"
+      notification_channel: "email" | "sms" | "teams" | "slack"
       notification_kind:
         | "arrival"
         | "reminder_1"
@@ -3628,12 +3746,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3657,11 +3775,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3682,11 +3800,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3707,11 +3825,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3724,11 +3842,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3772,7 +3890,7 @@ export const Constants = {
       ],
       batch_status: ["open", "finished"],
       booking_status: ["booked", "cancelled"],
-      notification_channel: ["email", "sms"],
+      notification_channel: ["email", "sms", "teams", "slack"],
       notification_kind: [
         "arrival",
         "reminder_1",
@@ -3796,3 +3914,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/chart'
 import { InfoTip } from '@/components/info-tip'
 import { supabase } from '@/lib/supabase'
+import { AVAILABLE_CHANNELS, NOTIFY_CHANNELS, type NotifyChannel } from '@/lib/notify-contact'
 import { cn } from '@/lib/utils'
 import {
   ParcelStatusBadge,
@@ -288,7 +289,7 @@ function useStatsData(rangeDays: number, allTime: boolean) {
   })
 }
 
-type NotifyRow = { channel: 'email' | 'sms'; created_at: string }
+type NotifyRow = { channel: NotifyChannel; created_at: string }
 
 // Sendte notifikationer (e-mail/SMS) i perioden. parcel_notifications er
 // RLS-scopet til egen virksomhed; kun gennemførte afsendelser (status='sent')
@@ -815,16 +816,21 @@ function StatsPage() {
 
   // Sendte notifikationer pr. dag — samme dagsbuckets som pakkeflowet, så de
   // to diagrammer kan sammenlignes lodret.
+  // Tællere for ALLE kanaler i enum'en (ikke kun de viste): en række med en
+  // kanal uden tæller ville ellers give undefined + 1 = NaN i serien.
   const notifySeries = useMemo(() => {
     const now = Date.now()
-    const daily = new Map<string, { ts: number; email: number; sms: number }>()
+    const daily = new Map<string, Record<NotifyChannel, number> & { ts: number }>()
     for (let i = rangeDays - 1; i >= 0; i--) {
       const d = startOfDay(now - i * DAY_MS)
-      daily.set(dayKey(d), { ts: d.getTime(), email: 0, sms: 0 })
+      daily.set(dayKey(d), {
+        ts: d.getTime(),
+        ...(Object.fromEntries(NOTIFY_CHANNELS.map((c) => [c, 0])) as Record<NotifyChannel, number>),
+      })
     }
     for (const n of notifyRows ?? []) {
       const bucket = daily.get(dayKey(new Date(n.created_at)))
-      if (bucket) bucket[n.channel] += 1
+      if (bucket && n.channel in bucket) bucket[n.channel] += 1
     }
     return [...daily.values()]
   }, [notifyRows, rangeDays])
@@ -897,8 +903,12 @@ function StatsPage() {
   const notifyConfig = {
     email: { label: t('stats.notifyEmail'), color: 'var(--chart-4)' },
     sms: { label: t('stats.notifySms'), color: 'var(--chart-5)' },
+    teams: { label: t('stats.notifyTeams'), color: 'var(--chart-3)' },
+    slack: { label: t('stats.notifySlack'), color: 'var(--chart-1)' },
   } satisfies ChartConfig
-  const NOTIFY_KEYS = ['email', 'sms'] as const
+  // Kun kanaler der kan levere vises som serie; de øvrige tælles (se
+  // notifySeries) men får ingen linje.
+  const NOTIFY_KEYS = AVAILABLE_CHANNELS
 
   const outcomeConfig = {
     count: { label: t('stats.parcels') },

@@ -58,9 +58,9 @@ gaps in `../compliance-map.md`.
 |---|---|
 | **Purpose** | Tell the receiver a parcel has arrived; remind about uncollected parcels and overdue asset loans |
 | **Data subjects** | Receiver, asset borrower |
-| **Personal data** | E-mail address / mobile number, receiver name, parcel reference, message body, delivery status |
-| **Recipients** | **Resend** (email, US), **GatewayAPI** (SMS, DK) |
-| **Transfers** | US — Resend, DPF + SCCs |
+| **Personal data** | E-mail address / mobile number, receiver name, parcel reference, message body, delivery status. For Slack: the receiver's Slack member id (manually entered, or resolved from the work e-mail via `users.lookupByEmail` when the customer has enabled e-mail lookup) |
+| **Recipients** | **Resend** (email, US), **GatewayAPI** (SMS, DK), **Slack / Salesforce** (Slack direct messages, US — only for customers who have installed the Operia Slack app in their own workspace and enabled the channel; see `subprocessors.md` row 10) |
+| **Transfers** | US — Resend, DPF + SCCs; US — Slack (Salesforce), DPF + SCCs |
 | **Retention** | The recipient address is **cleared when the parcel closes** (as the asset-loan twin already did on return); the remaining metadata falls under the `notifications` retention category |
 | **Security** | Recipients are **masked** in the audit log; provider keys are edge-function secrets only |
 | **Legal basis (controller's)** | Legitimate interest in the employment context — see `legal-basis-note.md` (planned) |
@@ -71,7 +71,7 @@ gaps in `../compliance-map.md`.
 |---|---|
 | **Purpose** | Keep the receiver directory current so parcels can be addressed to a real person |
 | **Data subjects** | All employees of the customer |
-| **Personal data** | Name, initials, employee number, e-mail, phone, department, NFC card id, external id, active/retired state |
+| **Personal data** | Name, initials, employee number, e-mail, phone, department, NFC card id, external id, optional Slack member id, active/retired state |
 | **Recipients** | Internal only |
 | **Transfers** | None |
 | **Retention** | Contract term. Employees are **deactivated, never deleted** (parcel history references them) and **anonymized** on request, automatically when a retired employee's last parcel closes, and — where the controller sets the `employees` window — automatically after that period for inactive employees with no open parcels |

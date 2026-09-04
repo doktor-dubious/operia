@@ -40,7 +40,14 @@ import type { ParcelStatus } from '@/components/parcel-status-badge'
 import { normalizeScan, useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { useParcelLabelDesign } from '@/hooks/use-label-design'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
-import { hasValidEmail, hasValidMsisdn } from '@/lib/notify-contact'
+import {
+  CHANNEL_FEATURE,
+  CHANNEL_TOGGLE,
+  CHANNEL_TOGGLE_SELECT,
+  AVAILABLE_CHANNELS,
+  NOTIFY_CHANNELS,
+  hasChannelContact,
+} from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 
 // Modtag pakke (spec Flow 1): stregkode → modtager-autocomplete (afdeling
@@ -176,24 +183,29 @@ function useArrivalNotifyConfig(companyId: string | null) {
       const [company, features] = await Promise.all([
         supabase
           .from('companies')
-          .select('notify_email_enabled, notify_sms_enabled, parcel_arrival_enabled')
+          .select(`${CHANNEL_TOGGLE_SELECT}, slack_lookup_by_email, parcel_arrival_enabled`)
           .eq('id', companyId!)
           .single(),
         supabase
           .from('company_features')
           .select('feature_key, valid_until')
           .eq('company_id', companyId!)
-          .eq('feature_key', 'sms_notifications'),
+          .in(
+            'feature_key',
+            NOTIFY_CHANNELS.map((c) => CHANNEL_FEATURE[c]).filter((f): f is string => !!f),
+          ),
       ])
       if (company.error) throw company.error
       // Kast også ved feature-fejl: et slugt svar ville ellers blive tolket
       // som "intet SMS-tilvalg" og give en falsk (eller manglende) advarsel.
       if (features.error) throw features.error
       const today = new Date().toISOString().slice(0, 10)
-      const hasSms = (features.data ?? []).some(
-        (f) => f.valid_until == null || f.valid_until >= today,
+      const feats = new Set(
+        (features.data ?? [])
+          .filter((f) => f.valid_until == null || f.valid_until >= today)
+          .map((f) => f.feature_key),
       )
-      return { company: company.data, hasSms }
+      return { company: company.data, feats }
     },
   })
 }
@@ -291,21 +303,24 @@ export function ParcelReceiveForm({
 
   // Punkt 3 i notifikationskravet: kan den valgte modtager slet ikke nås på
   // nogen af de aktiverede kanaler, meldes det ved modtagelsen — samme
-  // effektive regler (override ?? platform, SMS kræver tilvalget) som
+  // effektive regler (override ?? platform, tilvalg pr. kanal) som
   // dispatch-parcel-notifications. Mangler konfigurationen (endnu ikke hentet),
   // vises ingen advarsel frem for en falsk.
   const receiverUnreachable = (() => {
     if (!receiver || !platform || !notifyCfg) return false
     if (!platform.parcel_notifications_enabled) return false
-    const co = notifyCfg.company
-    if (!(co.parcel_arrival_enabled ?? platform.parcel_arrival_enabled)) return false
-    const emailOn = co.notify_email_enabled ?? platform.notify_email_enabled
-    const smsOn = (co.notify_sms_enabled ?? platform.notify_sms_enabled) && notifyCfg.hasSms
-    if (!emailOn && !smsOn) return false
-    return !(
-      (emailOn && hasValidEmail(receiver.email)) ||
-      (smsOn && hasValidMsisdn(receiver.phone))
-    )
+    const co = notifyCfg.company as Record<string, unknown>
+    if (!(notifyCfg.company.parcel_arrival_enabled ?? platform.parcel_arrival_enabled)) return false
+    const active = AVAILABLE_CHANNELS.filter((c) => {
+      const on = (co[CHANNEL_TOGGLE[c]] ?? (platform as Record<string, unknown>)[CHANNEL_TOGGLE[c]]) === true
+      if (!on) return false
+      const feature = CHANNEL_FEATURE[c]
+      return feature ? notifyCfg.feats.has(feature) : true
+    })
+    // Ingen kanaler slået til er ikke en advarsel om DENNE modtager — så får
+    // ingen besked, hvilket er en indstilling og ikke en manglende adresse.
+    if (active.length === 0) return false
+    return !active.some((c) => hasChannelContact(c, receiver, notifyCfg.company))
   })()
 
   // Modtagervalg auto-udfylder afdeling (spec Flow 1)

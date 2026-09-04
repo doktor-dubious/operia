@@ -25,6 +25,11 @@ data class Employee(
     val initials: String? = null,
     val email: String? = null,
     val phone: String? = null,
+    /** Entra-objekt-id — Teams-kanalens adresse. Kun sat for kunder på
+     *  AD-synkronisering; null ved CSV-import og manuelt oprettede. */
+    val external_id: String? = null,
+    /** Valgfri Slack-tilsidesættelse. Tom = personen slås op på e-mailen. */
+    val slack_user_id: String? = null,
     val department_id: String? = null,
 )
 
@@ -33,6 +38,8 @@ data class Employee(
 data class CompanyNotifyRow(
     val notify_email_enabled: Boolean? = null,
     val notify_sms_enabled: Boolean? = null,
+    val notify_teams_enabled: Boolean? = null,
+    val notify_slack_enabled: Boolean? = null,
     val parcel_arrival_enabled: Boolean? = null,
 )
 
@@ -60,18 +67,56 @@ data class PlatformLoanTtlRow(
 data class PlatformNotifyRow(
     val notify_email_enabled: Boolean = true,
     val notify_sms_enabled: Boolean = false,
+    val notify_teams_enabled: Boolean = false,
+    val notify_slack_enabled: Boolean = false,
     val parcel_notifications_enabled: Boolean = false,
     val parcel_arrival_enabled: Boolean = true,
 )
 
-/** Effektive ankomstbesked-indstillinger (override ?? platform, SMS kræver
- *  sms_notifications-tilvalget) — bruges kun til intake-advarslen "modtageren
- *  kan ikke få besked". Selve afsendelsen afgøres server-side af dispatcheren. */
+// Spejler webbens notify-contact-regler (web/src/lib/notify-contact.ts), som
+// igen spejler toMsisdn i dispatcheren: 8 cifre antages dansk, ellers kræves
+// landekode (9–15 cifre i alt). Lå før i ReceiveScreen; flyttet hertil da
+// NotifyPrefs.canReach skal bruge dem — reglen hører sammen med kanalerne.
+fun hasValidEmail(email: String?): Boolean {
+    val e = email?.trim() ?: return false
+    return e.contains('@') && !e.startsWith("@") && !e.endsWith("@")
+}
+
+fun hasValidMsisdn(phone: String?): Boolean {
+    if (phone.isNullOrBlank()) return false
+    var digits = phone.filter { it.isDigit() }
+    if (digits.startsWith("00")) digits = digits.substring(2)
+    return digits.length == 8 || digits.length in 9..15
+}
+
+/** Effektive ankomstbesked-indstillinger (override ?? platform; alt andet end
+ *  e-mail kræver kanalens tilvalg pr. kunde) — bruges kun til intake-advarslen
+ *  "modtageren kan ikke få besked". Selve afsendelsen afgøres server-side af
+ *  dispatcheren; hold kanallisten i sync med
+ *  supabase/functions/_shared/channels.ts. */
 data class NotifyPrefs(
     val arrivalActive: Boolean,
     val emailOn: Boolean,
     val smsOn: Boolean,
-)
+    val teamsOn: Boolean = false,
+    val slackOn: Boolean = false,
+) {
+    /** Er der overhovedet en kanal at sende på? */
+    val anyOn: Boolean get() = emailOn || smsOn || teamsOn || slackOn
+
+    /**
+     * Kan medarbejderen nås på mindst én aktiv kanal?
+     *
+     * Teams adresserer på external_id. Slack bruger slack_user_id når det er
+     * udfyldt, ellers e-mailen — om personen så findes i kundens workspace kan
+     * kun serveren afgøre.
+     */
+    fun canReach(emp: Employee): Boolean =
+        (emailOn && hasValidEmail(emp.email)) ||
+            (smsOn && hasValidMsisdn(emp.phone)) ||
+            (teamsOn && !emp.external_id.isNullOrBlank()) ||
+            (slackOn && (!emp.slack_user_id.isNullOrBlank() || hasValidEmail(emp.email)))
+}
 
 @Serializable
 data class StorageLocation(val id: String, val name: String, val barcode: String? = null)

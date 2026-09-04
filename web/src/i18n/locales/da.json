@@ -267,7 +267,19 @@
       "reasonEmailError": "E-mailen kunne ikke sendes",
       "reasonSmsError": "SMS'en kunne ikke sendes",
       "loginUnknownEmail": "Ukendt konto",
-      "aiFields": "{{count}} felt(er) læst"
+      "aiFields": "{{count}} felt(er) læst",
+      "reasonInvalidTeamsUser": "Modtageren har intet Teams-id (kræver AD-synkronisering)",
+      "reasonTeamsNotConfigured": "Teams er ikke konfigureret",
+      "reasonTeamsError": "Teams-beskeden kunne ikke sendes",
+      "reasonInvalidSlackUser": "Modtageren blev ikke fundet i Slack",
+      "reasonSlackNotConfigured": "Slack er ikke konfigureret",
+      "reasonSlackError": "Slack-beskeden kunne ikke sendes",
+      "reasonChannelNotConfigured": "Kanalen er ikke konfigureret",
+      "reasonChannelError": "Beskeden kunne ikke sendes",
+      "reasonSlackAuthRevoked": "Slack-forbindelsen er tilbagekaldt — forbind igen",
+      "reasonNoRecipient": "Modtageren har ingen adresse på kanalen",
+      "reasonNoTemplate": "Der findes ingen skabelon til kanalen",
+      "reasonSlackRatelimited": "Slack bad os vente (rate limit) — sendes ved næste kørsel"
     },
     "rawJson": "Rå JSON",
     "copyJson": "Kopiér JSON",
@@ -924,7 +936,9 @@
     "notifyTitle": "Notifikationer pr. dag",
     "notifyDesc": "Sendte e-mails og SMS’er om pakker (gennemførte afsendelser, testsendinger fraregnet)",
     "notifyEmail": "E-mails",
-    "notifySms": "SMS"
+    "notifySms": "SMS",
+    "notifyTeams": "Teams",
+    "notifySlack": "Slack"
   },
   "parcels": {
     "title": "Pakker",
@@ -1259,7 +1273,10 @@
     "duplicateIdentifier": "Medarbejder-nr. eller NFC-kort bruges allerede af en anden medarbejder.",
     "noDepartment": "Ingen afdeling",
     "importManagedHint": "Denne medarbejder kommer fra HR-importen — ændringer kan blive overskrevet ved næste import. Opret en manuel medarbejder med \"+ Ny\", hvis du vil have en række, importen aldrig rører.",
-    "employeeNoLockedHint": "Importens nøgle — låst for importerede medarbejdere. Ændres nummeret, ville næste import deaktivere medarbejderen og oprette en dublet."
+    "employeeNoLockedHint": "Importens nøgle — låst for importerede medarbejdere. Ændres nummeret, ville næste import deaktivere medarbejderen og oprette en dublet.",
+    "slackUserId": "Slack-medlems-id",
+    "slackUserIdHint": "Valgfrit. Lad feltet stå tomt — så findes personen automatisk i Slack ud fra e-mailen. Udfyld det kun hvis medarbejderens Slack-konto bruger en anden adresse end den her i Operia. Id'et findes i Slack under profilen → ⋮ → Kopiér medlems-id.",
+    "slackUserIdPlaceholder": "fx U01ABC2DEF"
   },
   "usersPage": {
     "name": "Navn",
@@ -1717,7 +1734,8 @@
     "statusTestErr": {
       "notifications_disabled": "Pakke-notifikationer er slået fra på platformen (Operia → Notifikationer → Aktivering).",
       "no_pending_parcels": "Modtageren har ikke længere pakker på vej.",
-      "no_channels": "Ingen kanaler er slået til — vælg e-mail og/eller SMS under Generelt."
+      "no_channels": "Ingen kanaler er slået til — vælg mindst én under Generelt.",
+      "missing_addon": "Kanalen {{channels}} er slået til, men virksomheden har ikke tilvalget. Tilføj det under Operia → Kunder → tilvalg."
     },
     "reminder1": "Påmindelse 1",
     "reminder2": "Påmindelse 2",
@@ -1730,7 +1748,7 @@
     "enableParcel": "Send pakke-notifikationer",
     "enableAsset": "Send aktiv-påmindelser",
     "channels": "Kanaler",
-    "channelsHint": "Hvilke kanaler notifikationer sendes på. SMS kræver desuden SMS-notifikationer-tilvalget pr. kunde.",
+    "channelsHint": "Hvilke kanaler notifikationer sendes på. Alt andet end e-mail kræver desuden det tilsvarende tilvalg pr. kunde.",
     "channelEmail": "E-mail",
     "channelSms": "SMS",
     "typeAssetReminder": "Aktiv-påmindelse",
@@ -1745,7 +1763,9 @@
     "testSmsOk": "Test-SMS sendt",
     "testSmsFail": "Kunne ikke sende test-SMS: {{error}}",
     "statusTestCountDelivered": "{{count}} udleveret",
-    "statusTestLoading": "Henter modtagere …"
+    "statusTestLoading": "Henter modtagere …",
+    "channelTeams": "Microsoft Teams",
+    "channelSlack": "Slack"
   },
   "productsPage": {
     "title": "Produkter & funktioner",
@@ -2660,7 +2680,10 @@
     "interval_240": "Hver 4. time",
     "interval_720": "Hver 12. time",
     "interval_1440": "Dagligt",
-    "interval_10080": "Ugentligt"
+    "interval_10080": "Ugentligt",
+    "slack": "Slack",
+    "slackEnable": "Udbyd Slack-integrationen",
+    "slackEnableDesc": "Lader kunder forbinde deres eget Slack-workspace, så pakkenotifikationer kan sendes som direkte beskeder. Kræver desuden tilvalget Slack-notifikationer pr. kunde."
   },
   "companyPrivacy": {
     "subtitle": "Kontakter og databehandleraftale",
@@ -2825,7 +2848,8 @@
     "total": "I alt",
     "breakdown": "Heraf {{parcelCount}} pakkebeskeder og {{assetCount}} aktivpåmindelser.",
     "notes": "Kun gennemførte afsendelser og AI-aflæsninger tælles (accepteret af udbyderen); testsendinger og afviste aflæsninger er fraregnet.",
-    "aiRead": "AI-aflæsning · {{model}}"
+    "aiRead": "AI-aflæsning · {{model}}",
+    "chat": "Chatbeskeder (Teams/Slack)"
   },
   "personalData": {
     "subtitle": "Opbevaringsperioder og indsigtsanmodninger",
@@ -2971,5 +2995,37 @@
     "category_reports": "Rapporter",
     "category_config": "Konfiguration",
     "category_platform": "Operia"
+  },
+  "companySlack": {
+    "status": "Forbindelse",
+    "statusHint": "Operia sender beskeder som app i jeres eget Slack-workspace. Tokenet gemmes på serveren og kan ikke læses herfra.",
+    "notConnected": "Ikke forbundet",
+    "connectedTo": "Forbundet til {{team}}",
+    "connectedAt": "Forbundet {{date}}",
+    "connect": "Forbind til Slack",
+    "reconnect": "Forbind igen",
+    "test": "Test forbindelsen",
+    "testOk": "Forbindelsen virker ({{team}})",
+    "disconnect": "Afbryd",
+    "disconnectTitle": "Afbryd Slack-forbindelsen?",
+    "disconnectDescription": "Operia glemmer adgangen til jeres workspace, og pakkenotifikationer sendes ikke længere på Slack. I kan forbinde igen når som helst — intet data går tabt.",
+    "disconnectOk": "Slack-forbindelsen er afbrudt",
+    "connectOk": "Slack er forbundet",
+    "connectFail": "Slack kunne ikke forbindes: {{error}}",
+    "channelHint": "Beskederne sendes som direkte besked til modtageren. Er der udfyldt et Slack-medlems-id på medarbejderen, bruges det; ellers kan medarbejderen findes ud fra sin e-mailadresse (se nedenfor).",
+    "lookupByEmail": "Find modtagere ud fra e-mailadresse",
+    "lookupByEmailHint": "Medarbejdere uden Slack-medlems-id slås op i jeres workspace på deres e-mail. Slå det kun til hvis de fleste medarbejdere har en Slack-konto med samme e-mail som i Operia — ellers giver hver pakke til en medarbejder uden Slack en fejl i loggen.",
+    "lookupSaved": "Indstillingen er gemt",
+    "outcome_cancelled": "Godkendelsen blev afbrudt i Slack",
+    "outcome_invalid": "Ugyldigt svar fra Slack",
+    "outcome_expired": "Godkendelsen tog for lang tid — prøv igen",
+    "outcome_not_configured": "Slack-integrationen mangler opsætning hos DCA",
+    "outcome_exchange_failed": "Slack afviste godkendelsen",
+    "outcome_save_failed": "Forbindelsen kunne ikke gemmes",
+    "outcome_network": "Slack kunne ikke kontaktes",
+    "outcome_not_connected": "Der er ingen Slack-forbindelse endnu",
+    "outcome_auth_failed": "Slack afviste tokenet — forbind igen",
+    "outcome_token_revoked": "Adgangen er tilbagekaldt i Slack — forbind igen",
+    "outcome_account_inactive": "Slack-kontoen er inaktiv"
   }
 }

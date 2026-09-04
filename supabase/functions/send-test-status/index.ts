@@ -23,15 +23,24 @@
 // vinduet for den rigtige udsendelse (se parseDigestHistory).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSms } from '../_shared/send-sms.ts'
-import { sendEmail } from '../_shared/send-email.ts'
+import {
+  CHANNEL_FEATURES,
+  CHANNEL_OPTION_COLUMNS,
+  CHANNEL_TOGGLE_COLUMNS,
+  allTemplateKeys,
+  enabledChannels,
+  recipientFor,
+  selectedChannels,
+  renderFor,
+  sendVia,
+  templateKeyFor,
+  type Channel,
+} from '../_shared/channels.ts'
 import {
   DAY,
   classifySendError,
   copenhagenDate,
   maskRecipient,
-  render,
-  renderHtml,
   resolveTemplate,
   sanitizeProviderError,
 } from '../_shared/notify.ts'
@@ -39,20 +48,20 @@ import {
   DELIVERED_STATUS,
   OPEN_STATUSES,
   PARCEL_SELECT,
-  STATUS_EMAIL_KEY,
-  STATUS_SMS_KEY,
+  STATUS_BASE_KEY,
   TEST_DIGEST_PREFIX,
   buildUnits,
   deliveredItems,
   digestCount,
   digestItems,
   digestTokens,
-  digestWindowStart,
   groupUnitsByEmployee,
   parseDigestHistory,
+  widestDigestWindowStart,
   type ParcelRow,
 } from '../_shared/parcel-digest.ts'
 import { callerCanManageCompany } from '../_shared/user-admin.ts'
+import { companySecretLookup } from '../_shared/company-secret.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +80,10 @@ function json(body: unknown, status = 200) {
 const LOOKBACK_DAYS = 60
 const MAX_PARCELS = 200
 const DIGEST_LOOKBACK_DAYS = 30
+
+// Statusbeskedens skabelonnøgler på tværs af kanaler ('package_status',
+// 'package_status_sms', …) — hentes i ét opslag som i dispatcheren.
+const STATUS_TEMPLATE_KEYS = allTemplateKeys([STATUS_BASE_KEY])
 
 type Body = { companyId?: string; mode?: 'preview' | 'send'; employeeId?: string }
 
@@ -110,7 +123,7 @@ Deno.serve(async (req) => {
   //    slået fra globalt, sendes der intet (forhåndsvisning er stadig tilladt).
   const { data: platform } = await admin
     .from('platform_settings')
-    .select('parcel_notifications_enabled, notify_email_enabled, notify_sms_enabled')
+    .select(`parcel_notifications_enabled, ${CHANNEL_TOGGLE_COLUMNS}`)
     .limit(1)
     .maybeSingle()
   if (!platform) return json({ error: 'no_platform_settings' }, 500)
@@ -168,11 +181,11 @@ Deno.serve(async (req) => {
     admin
       .from('platform_templates')
       .select('key, lang, title, body')
-      .in('key', [STATUS_EMAIL_KEY, STATUS_SMS_KEY]),
+      .in('key', STATUS_TEMPLATE_KEYS),
     admin
       .from('company_templates')
       .select('company_id, key, lang, title, body')
-      .in('key', [STATUS_EMAIL_KEY, STATUS_SMS_KEY])
+      .in('key', STATUS_TEMPLATE_KEYS)
       .eq('company_id', companyId),
   ])
 
@@ -182,42 +195,62 @@ Deno.serve(async (req) => {
   }
   const { lastDigestAt } = parseDigestHistory(digestRes.data ?? [], today)
 
-  // 5) Byg sammendragene pr. modtager — kun dem der faktisk har noget at melde
-  //    (ventende pakker, udleverede pakker, eller begge dele).
-  const pending = groupUnitsByEmployee(buildUnits(parcels, batchCounts), delivered)
-    .map((g) => {
-      const since = digestWindowStart(lastDigestAt, g.emp.id, nowMs)
-      return { g, items: digestItems(g.units, since), handed: deliveredItems(g.delivered, since) }
-    })
-    .filter((x) => x.items.length > 0 || x.handed.length > 0)
-
-  // SMS kræver tilvalget sms_notifications pr. kunde (som i dispatcheren).
+  // Kanaler med et tilvalg (SMS/Slack) kræver at kunden har det — samme regel
+  // som i dispatcheren, hentet gennem det samme register.
   const { data: featRows } = await admin
     .from('company_features')
     .select('feature_key, valid_until')
     .eq('company_id', companyId)
-    .eq('feature_key', 'sms_notifications')
-  const hasSms = (featRows ?? []).some((f) => f.valid_until == null || f.valid_until >= today)
+    .in('feature_key', CHANNEL_FEATURES)
+  const feats = new Set(
+    (featRows ?? [])
+      .filter((f) => f.valid_until == null || f.valid_until >= today)
+      .map((f) => f.feature_key),
+  )
 
   const { data: company } = await admin
     .from('companies')
-    .select('notify_email_enabled, notify_sms_enabled')
+    .select(`${CHANNEL_TOGGLE_COLUMNS}, ${CHANNEL_OPTION_COLUMNS}`)
     .eq('id', companyId)
     .maybeSingle()
-  const emailOn = company?.notify_email_enabled ?? platform.notify_email_enabled
-  const smsOn = (company?.notify_sms_enabled ?? platform.notify_sms_enabled) && hasSms
+  // Navngivet cfg*/ ikke co*: 'co' er allerede virksomhedsrækken fra
+  // sammendragsgruppen længere nede i funktionen.
+  const cfgCompany = company as unknown as Record<string, unknown> | null
+  const cfgPlatform = platform as unknown as Record<string, unknown>
+  const channels = enabledChannels(cfgCompany, cfgPlatform, feats)
+  // Kanaler manageren har krydset af, men som kunden ikke har tilvalget til.
+  // Uden denne skelnen ville svaret sige "ingen kanaler valgt" om en kanal der
+  // netop ER valgt.
+  const missingAddon = selectedChannels(cfgCompany, cfgPlatform).filter(
+    (c) => !channels.includes(c),
+  )
+
+  // 5) Byg sammendragene pr. modtager — kun dem der faktisk har noget at melde
+  //    (ventende pakker, udleverede pakker, eller begge dele). Vinduet er pr.
+  //    kanal i dispatcheren; her vises det VIDESTE over de aktive kanaler, så
+  //    forhåndsvisningen ikke skjuler pakker en udskudt kanal stadig skylder.
+  const pending = groupUnitsByEmployee(buildUnits(parcels, batchCounts), delivered)
+    .map((g) => {
+      const since = widestDigestWindowStart(lastDigestAt, g.emp.id, channels, nowMs)
+      return { g, items: digestItems(g.units, since), handed: deliveredItems(g.delivered, since) }
+    })
+    .filter((x) => x.items.length > 0 || x.handed.length > 0)
 
   if (mode === 'preview') {
     return json({
       ok: true,
-      emailEnabled: emailOn,
-      smsEnabled: smsOn,
+      channels,
       notificationsEnabled: platform.parcel_notifications_enabled,
       candidates: pending.map(({ g, items, handed }) => ({
         employeeId: g.emp.id,
         name: g.emp.full_name,
+        // E-mail/telefon vises i dialogen. Teams' adresse (Entra-objekt-id) og
+        // Slacks opslagsnøgle sendes bevidst IKKE med: et objekt-id siger en
+        // manager intet, og en identifikator hører ikke hjemme i et svar der
+        // kun skal vise "kan personen nås".
         email: g.emp.email,
         phone: g.emp.phone,
+        reachable: channels.filter((c) => recipientFor(c, g.emp, cfgCompany) !== null),
         count: digestCount(items),
         deliveredCount: digestCount(handed),
       })),
@@ -242,32 +275,36 @@ Deno.serve(async (req) => {
   const repParcelId = (items[0] ?? handed[0]).parcel.id
   const totalCount = digestCount(items) + digestCount(handed)
 
-  const channels: ('email' | 'sms')[] = []
-  if (emailOn) channels.push('email')
-  if (smsOn) channels.push('sms')
-
-  const results: { channel: string; ok: boolean; error?: string }[] = []
+  // `reason` er den korte maskinkode fra classifySendError — den samme som
+  // Logs viser. Uden den havde svaret kun en fri fejltekst, og dialogen faldt
+  // tilbage på "unknown" når ALLE kanaler fejlede (der er intet felt på
+  // topniveau i det tilfælde).
+  const results: { channel: Channel; ok: boolean; error?: string; reason?: string }[] = []
   for (const channel of channels) {
-    const to = channel === 'email' ? emp.email : emp.phone
+    const to = recipientFor(channel, emp, cfgCompany)
     if (!to) {
-      results.push({ channel, ok: false, error: 'no_recipient' })
+      results.push({ channel, ok: false, error: 'no_recipient', reason: 'no_recipient' })
       continue
     }
     const { title, body: tplBody } = resolveTemplate(
       ptplRes.data ?? [],
       ctplRes.data ?? [],
       companyId,
-      channel === 'email' ? STATUS_EMAIL_KEY : STATUS_SMS_KEY,
+      templateKeyFor(channel, STATUS_BASE_KEY),
       lang,
     )
     if (!tplBody) {
-      results.push({ channel, ok: false, error: 'no_template' })
+      results.push({ channel, ok: false, error: 'no_template', reason: 'no_template' })
       continue
     }
 
-    const result = channel === 'email'
-      ? await sendEmail(to, render(title, tokens), renderHtml(tplBody, tokens))
-      : await sendSms(to, render(tplBody, tokens))
+    // Testsendinger logges med 'test-'-præfiks i digest_key og tæller derfor
+    // ikke mod MAX_ATTEMPTS (se parseDigestHistory) — en forbigående fejl må
+    // gerne skrives her, modsat i dispatcheren, og manageren skal SE den.
+    const result = await sendVia(channel, to, renderFor(channel, title, tplBody, tokens), {
+      companyId,
+      companySecret: companySecretLookup(admin, companyId),
+    })
 
     await admin.from('parcel_notifications').insert({
       company_id: companyId,
@@ -295,15 +332,24 @@ Deno.serve(async (req) => {
           channel,
           kind: 'status',
           test: true,
-          recipient: maskRecipient(to),
+          recipient: maskRecipient(to, channel),
           reason: classifySendError(result.error ?? '', channel),
           error: sanitizeProviderError(result.error, 300),
         },
       })
     }
-    results.push({ channel, ok: result.ok, error: result.error })
+    results.push({
+      channel,
+      ok: result.ok,
+      error: result.error,
+      reason: result.ok ? undefined : classifySendError(result.error ?? '', channel),
+    })
   }
 
-  if (results.length === 0) return json({ ok: false, error: 'no_channels' })
+  if (results.length === 0) {
+    return missingAddon.length
+      ? json({ ok: false, error: 'missing_addon', channels: missingAddon })
+      : json({ ok: false, error: 'no_channels' })
+  }
   return json({ ok: results.some((r) => r.ok), count: totalCount, results })
 })

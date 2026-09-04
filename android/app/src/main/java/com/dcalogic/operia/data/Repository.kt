@@ -63,7 +63,13 @@ object Repository {
 
     suspend fun employees(companyId: String): List<Employee> =
         supabase.from("employees")
-            .select(Columns.list("id", "full_name", "initials", "email", "phone", "department_id")) {
+            .select(
+                Columns.list(
+                    "id", "full_name", "initials", "email", "phone",
+                    // Teams- og Slack-adresserne — bruges til intake-advarslen.
+                    "external_id", "slack_user_id", "department_id",
+                ),
+            ) {
                 filter {
                     eq("company_id", companyId)
                     eq("is_active", true)
@@ -114,7 +120,11 @@ object Repository {
     suspend fun companyNotifySettings(companyId: String): CompanyNotifyRow? =
         supabase.from("companies")
             .select(
-                Columns.list("notify_email_enabled", "notify_sms_enabled", "parcel_arrival_enabled"),
+                Columns.list(
+                    "notify_email_enabled", "notify_sms_enabled",
+                    "notify_teams_enabled", "notify_slack_enabled",
+                    "parcel_arrival_enabled",
+                ),
             ) {
                 filter { eq("id", companyId) }
                 limit(1)
@@ -126,6 +136,7 @@ object Repository {
             .select(
                 Columns.list(
                     "notify_email_enabled", "notify_sms_enabled",
+                    "notify_teams_enabled", "notify_slack_enabled",
                     "parcel_notifications_enabled", "parcel_arrival_enabled",
                 ),
             ) { limit(1) }

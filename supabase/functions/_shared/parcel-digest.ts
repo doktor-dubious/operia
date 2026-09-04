@@ -6,10 +6,14 @@
 // Ligger logikken ét sted, viser forhåndsvisningen præcis det der sendes.
 
 import { DAY, fmtDate } from './notify.ts'
+import { CHANNEL_OPTION_COLUMNS, CHANNEL_TOGGLE_COLUMNS } from './channels.ts'
 
 export const OPEN_STATUSES = ['registered', 'in_storage', 'in_transit', 'in_locker']
-export const STATUS_EMAIL_KEY = 'package_status'
-export const STATUS_SMS_KEY = 'package_status_sms'
+// Basisnøgle for statusbeskeden. Kanalens egen nøgle udledes med
+// templateKeyFor() ('package_status', 'package_status_sms', …) — der findes
+// bevidst ikke længere én konstant pr. kanal, for så skulle hver ny kanal
+// tilføjes både her og i hver kalder.
+export const STATUS_BASE_KEY = 'package_status'
 
 // Testsendinger logges med dette præfiks i digest_key i stedet for datoen. De
 // tæller derfor hverken som "dagens sammendrag" (dedup) eller som "sidste
@@ -22,14 +26,16 @@ export const TEST_DIGEST_PREFIX = 'test-'
 export const DELIVERED_STATUS = 'delivered'
 
 // Kandidat-pakker med modtager, virksomhed og batch. Samme form begge steder.
+// external_id er Entra-objekt-id'et (Teams' adresse) og slack_user_id den
+// valgfrie Slack-tilsidesættelse — se channels.ts.
 export const PARCEL_SELECT = `id, barcode, registered_at, delivered_at, delivered_to,
    company_id, batch_id,
-   receiver:employees!parcels_receiver_employee_id_fkey!inner (id, full_name, email, phone, language, is_active),
+   receiver:employees!parcels_receiver_employee_id_fkey!inner (id, full_name, email, phone, external_id, slack_user_id, language, is_active),
    company:companies!inner (id, name, default_language, quiet_hours_start, quiet_hours_end,
      parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max,
      parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled,
      parcel_status_enabled, parcel_status_time,
-     notify_email_enabled, notify_sms_enabled),
+     ${CHANNEL_TOGGLE_COLUMNS}, ${CHANNEL_OPTION_COLUMNS}),
    batch:parcel_batches (id, status, batch_code)`
 
 export type EmployeeRow = {
@@ -37,6 +43,8 @@ export type EmployeeRow = {
   full_name: string | null
   email: string | null
   phone: string | null
+  external_id: string | null
+  slack_user_id: string | null
   language: string | null
   is_active: boolean
 }
@@ -56,6 +64,9 @@ export type CompanyRow = {
   parcel_status_time: string | null
   notify_email_enabled: boolean | null
   notify_sms_enabled: boolean | null
+  notify_teams_enabled: boolean | null
+  notify_slack_enabled: boolean | null
+  slack_lookup_by_email: boolean
 }
 export type BatchRow = { id: string; status: string; batch_code: string | null }
 export type ParcelRow = {
@@ -163,9 +174,14 @@ export type DigestHistoryRow = {
 }
 
 /**
- * Statusbeskedens historik pr. modtager: hvornår gik det seneste sammendrag ud
- * (vinduets start) og er dagens allerede sendt/fejlet pr. kanal.
+ * Statusbeskedens historik pr. modtager OG kanal: hvornår gik det seneste
+ * sammendrag ud på kanalen (vinduets start) og er dagens allerede sendt/fejlet.
  * Testsendinger (TEST_DIGEST_PREFIX) tælles ikke med nogen af stederne.
+ *
+ * Vinduet er pr. KANAL, ikke kun pr. modtager: sendes e-mailen, men Slack
+ * udskydes (rate limit), ville et fælles vindue ellers starte ved e-mailens
+ * tidspunkt — næste kørsel finder intet nyt, og dagens Slack-sammendrag går
+ * tabt. Med hver sin start får Slack sit sammendrag så snart kanalen svarer.
  */
 export function parseDigestHistory(rows: DigestHistoryRow[], today: string) {
   const lastDigestAt = new Map<string, number>()
@@ -177,7 +193,7 @@ export function parseDigestHistory(rows: DigestHistoryRow[], today: string) {
     const key = `${r.employee_id}:${r.channel}`
     if (r.status === 'sent') {
       const ts = Date.parse(r.created_at)
-      if (ts > (lastDigestAt.get(r.employee_id) ?? 0)) lastDigestAt.set(r.employee_id, ts)
+      if (ts > (lastDigestAt.get(key) ?? 0)) lastDigestAt.set(key, ts)
       if (r.digest_key === today) digestSent.add(key)
     } else if (r.status === 'failed' && r.digest_key === today) {
       digestFailed.set(key, (digestFailed.get(key) ?? 0) + 1)
@@ -187,16 +203,32 @@ export function parseDigestHistory(rows: DigestHistoryRow[], today: string) {
 }
 
 /**
- * Vinduets start: alt siden modtagerens sidste sammendrag. Har modtageren
- * aldrig fået ét, bruges de sidste 24 timer — ellers ville første udsendelse
- * dumpe hele bagkataloget (samme hensyn som ARRIVAL_MAX_AGE_DAYS).
+ * Vinduets start på én kanal: alt siden modtagerens sidste sammendrag dér. Har
+ * modtageren aldrig fået ét, bruges de sidste 24 timer — ellers ville første
+ * udsendelse dumpe hele bagkataloget (samme hensyn som ARRIVAL_MAX_AGE_DAYS).
  */
 export function digestWindowStart(
   lastDigestAt: Map<string, number>,
   employeeId: string,
+  channel: string,
   nowMs: number,
 ): number {
-  return lastDigestAt.get(employeeId) ?? nowMs - DAY
+  return lastDigestAt.get(`${employeeId}:${channel}`) ?? nowMs - DAY
+}
+
+/**
+ * Det VIDESTE vindue over et sæt kanaler — alt som mindst én af dem ville
+ * sende. Bruges hvor sammendraget vises uden kanal (forhåndsvisning/test), så
+ * listen ikke skjuler pakker en udskudt kanal stadig skylder.
+ */
+export function widestDigestWindowStart(
+  lastDigestAt: Map<string, number>,
+  employeeId: string,
+  channels: string[],
+  nowMs: number,
+): number {
+  if (channels.length === 0) return nowMs - DAY
+  return Math.min(...channels.map((c) => digestWindowStart(lastDigestAt, employeeId, c, nowMs)))
 }
 
 /** Enhederne der hører til sammendraget: ankommet efter vinduets start. */

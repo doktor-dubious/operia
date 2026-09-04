@@ -11,6 +11,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { AI_MODELS } from '@/lib/ai'
+import type { NotifyChannel } from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 
 // Forbrug (Platform → Kunder → Forbrug): antal sendte e-mails/SMS for kunden
@@ -47,7 +48,7 @@ function timeframeBounds(tf: Timeframe): { from: string | null; to: string | nul
 async function countSent(
   table: 'parcel_notifications' | 'asset_loan_notifications',
   companyId: string,
-  channel: 'email' | 'sms',
+  channel: NotifyChannel,
   bounds: { from: string | null; to: string | null },
 ): Promise<number> {
   let q = supabase
@@ -94,14 +95,20 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
     queryKey: ['company-usage', companyId, timeframe],
     queryFn: async () => {
       const bounds = timeframeBounds(timeframe)
-      const [parcelEmail, parcelSms, assetEmail, assetSms, ai] = await Promise.all([
-        countSent('parcel_notifications', companyId, 'email', bounds),
-        countSent('parcel_notifications', companyId, 'sms', bounds),
-        countSent('asset_loan_notifications', companyId, 'email', bounds),
-        countSent('asset_loan_notifications', companyId, 'sms', bounds),
-        countAiReads(companyId, bounds),
-      ])
-      return { parcelEmail, parcelSms, assetEmail, assetSms, ai }
+      const [parcelEmail, parcelSms, parcelTeams, parcelSlack, assetEmail, assetSms, ai] =
+        await Promise.all([
+          countSent('parcel_notifications', companyId, 'email', bounds),
+          countSent('parcel_notifications', companyId, 'sms', bounds),
+          // Chat-kanalerne tælles kun på pakkerne: aktiv-påmindelserne sender
+          // stadig kun e-mail/SMS. Med i totalen, så antallet af sendte
+          // beskeder er sandt — men uden stykpris, for de koster os intet.
+          countSent('parcel_notifications', companyId, 'teams', bounds),
+          countSent('parcel_notifications', companyId, 'slack', bounds),
+          countSent('asset_loan_notifications', companyId, 'email', bounds),
+          countSent('asset_loan_notifications', companyId, 'sms', bounds),
+          countAiReads(companyId, bounds),
+        ])
+      return { parcelEmail, parcelSms, parcelTeams, parcelSlack, assetEmail, assetSms, ai }
     },
   })
 
@@ -116,6 +123,7 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
 
   const emails = (counts?.parcelEmail ?? 0) + (counts?.assetEmail ?? 0)
   const sms = (counts?.parcelSms ?? 0) + (counts?.assetSms ?? 0)
+  const chat = (counts?.parcelTeams ?? 0) + (counts?.parcelSlack ?? 0)
   const emailUnit = platform?.cost_per_email ?? 0
   const smsUnit = platform?.cost_per_sms ?? 0
   const emailCost = emails * emailUnit
@@ -188,6 +196,19 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{money.format(smsCost)}</td>
               </tr>
+              {/* Chat-beskeder koster os intet, så rækken vises kun når der
+                  faktisk er sendt nogen — ellers ville hver kunde have en
+                  permanent 0-linje uden indhold. */}
+              {chat > 0 && (
+                <tr className="border-b">
+                  <td className="px-4 py-2.5">{t('usage.chat')}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{nf.format(chat)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+                    {unitMoney.format(0)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{money.format(0)}</td>
+                </tr>
+              )}
               {aiRows.map((r) => (
                 <tr key={r.key} className="border-b">
                   <td className="px-4 py-2.5">{t('usage.aiRead', { model: r.label })}</td>
@@ -201,7 +222,7 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
               <tr className="font-medium">
                 <td className="px-4 py-2.5">{t('usage.total')}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
-                  {nf.format(emails + sms + aiReads)}
+                  {nf.format(emails + sms + chat + aiReads)}
                 </td>
                 <td className="px-4 py-2.5" />
                 <td className="px-4 py-2.5 text-right tabular-nums">

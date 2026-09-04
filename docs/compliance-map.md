@@ -138,8 +138,11 @@ personal data is removed instead.
 - `20260720120100_entra_retire_anonymize.sql` + `20260720130000_gdpr_anonymize_hardening.sql`
   + `20260720150000_review_fixes_entra_gdpr.sql` — `anonymize_employee_internal(uuid, text)`
   is the **single** server-side erasure implementation: blanks full_name/first_name/
-  last_name/initials/email/phone/nfc_card_id/employee_no/role/external_id/user_id,
-  stamps `anonymized_at`. Returns whether the employee had a login, because
+  last_name/initials/email/phone/nfc_card_id/employee_no/role/external_id/slack_user_id/
+  user_id, stamps `anonymized_at`. **Every new identifier column on `employees` must be
+  added to that list** — `20260904120000_employee_slack_user_id.sql` re-declared the
+  function for exactly this reason when the optional Slack member id arrived; an
+  identifier left behind would keep the row matchable to a real account after erasure. Returns whether the employee had a login, because
   `app_users`/`auth.users` still hold name+email and must be removed separately under
   Users. It is not callable from clients; `anonymize_employee` is the RPC shell that
   adds the authorization check (platform admin, or `manager`/`data_manager` in the

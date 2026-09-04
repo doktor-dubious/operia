@@ -29,6 +29,7 @@ import {
   DEFAULT_STATUS_TIME,
   ParcelFlowFields,
   QuietHoursField,
+  type ChannelToggleValue,
   type ParcelFlowValue,
   type ParcelNotifyValue,
 } from '@/components/company-config-fields'
@@ -37,6 +38,7 @@ import { StatusTestDialog } from '@/components/status-test-dialog'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
+import { CHANNEL_TOGGLE, NOTIFY_CHANNELS } from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 
 // Konfigurér → Notifikationer: virksomhedens indstillinger. Stilletiden og
@@ -55,7 +57,7 @@ function useCompanyNotifications(companyId: string | null) {
       const { data, error } = await supabase
         .from('companies')
         .select(
-          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
+          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, notify_teams_enabled, notify_slack_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
         )
         .eq('id', companyId!)
         .single()
@@ -68,10 +70,25 @@ function useCompanyNotifications(companyId: string | null) {
 type Values = {
   quietStart: string
   quietEnd: string
-  emailEnabled: boolean
-  smsEnabled: boolean
+  channels: ChannelToggleValue
   parcel: ParcelNotifyValue
   asset: ParcelFlowValue
+}
+
+// Effektivt kanalvalg: virksomhedens override (null = arv) over platformens
+// standard. Kolonnenavnene kommer fra CHANNEL_TOGGLE, så en ny kanal ikke skal
+// skrives ind her igen.
+type ToggleRow = Record<string, unknown>
+function toChannelValues(row: ToggleRow, platform: ToggleRow): ChannelToggleValue {
+  return Object.fromEntries(
+    NOTIFY_CHANNELS.map((c) => [c, (row[CHANNEL_TOGGLE[c]] ?? platform[CHANNEL_TOGGLE[c]]) === true]),
+  ) as ChannelToggleValue
+}
+
+// Patch til companies: alle kanalkolonner skrives sammen, så virksomheden enten
+// arver hele kanalvalget eller ejer det helt.
+function channelPatch(channels: ChannelToggleValue): Record<string, boolean> {
+  return Object.fromEntries(NOTIFY_CHANNELS.map((c) => [CHANNEL_TOGGLE[c], channels[c]]))
 }
 
 function NotificationsPage() {
@@ -92,8 +109,7 @@ function NotificationsPage() {
   const toValues = (row: NonNullable<typeof data>, p: NonNullable<typeof platform>): Values => ({
     quietStart: row.quiet_hours_start?.slice(0, 5) ?? '',
     quietEnd: row.quiet_hours_end?.slice(0, 5) ?? '',
-    emailEnabled: row.notify_email_enabled ?? p.notify_email_enabled,
-    smsEnabled: row.notify_sms_enabled ?? p.notify_sms_enabled,
+    channels: toChannelValues(row as ToggleRow, p as ToggleRow),
     parcel: {
       arrivalEnabled: row.parcel_arrival_enabled ?? p.parcel_arrival_enabled,
       statusEnabled: row.parcel_status_enabled ?? p.parcel_status_enabled,
@@ -138,16 +154,13 @@ function NotificationsPage() {
       data.asset_reminder_1_enabled != null ||
       data.asset_reminder_2_enabled != null)
   const channelsOverridden =
-    !!data && (data.notify_email_enabled != null || data.notify_sms_enabled != null)
+    !!data && NOTIFY_CHANNELS.some((c) => (data as ToggleRow)[CHANNEL_TOGGLE[c]] != null)
 
   const initial = data && platform ? toValues(data, platform) : null
   const j = (o: unknown) => JSON.stringify(o)
   const parcelDirty = !!values && !!initial && j(values.parcel) !== j(initial.parcel)
   const assetDirty = !!values && !!initial && j(values.asset) !== j(initial.asset)
-  const channelsDirty =
-    !!values &&
-    !!initial &&
-    (values.emailEnabled !== initial.emailEnabled || values.smsEnabled !== initial.smsEnabled)
+  const channelsDirty = !!values && !!initial && j(values.channels) !== j(initial.channels)
   const quietDirty =
     !!values &&
     !!initial &&
@@ -168,9 +181,7 @@ function NotificationsPage() {
       .update({
         quiet_hours_start: values.quietStart || null,
         quiet_hours_end: values.quietEnd || null,
-        ...(channelsDirty || channelsOverridden
-          ? { notify_email_enabled: values.emailEnabled, notify_sms_enabled: values.smsEnabled }
-          : {}),
+        ...(channelsDirty || channelsOverridden ? channelPatch(values.channels) : {}),
         // Påmindelserne bliver kun virksomhedens egne hvis de er ændret (eller
         // allerede var det) — ellers fortsætter arven fra platformen.
         ...(parcelDirty || parcelOverridden
@@ -288,10 +299,10 @@ function NotificationsPage() {
             <h2 className="text-[13px] font-semibold">{t('notificationsPage.general')}</h2>
 
             <ChannelToggles
-              email={values.emailEnabled}
-              sms={values.smsEnabled}
-              onEmailChange={(v) => setValues({ ...values, emailEnabled: v })}
-              onSmsChange={(v) => setValues({ ...values, smsEnabled: v })}
+              value={values.channels}
+              onChange={(patch) =>
+                setValues({ ...values, channels: { ...values.channels, ...patch } })
+              }
             />
 
             <QuietHoursField

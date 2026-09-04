@@ -267,7 +267,19 @@
       "reasonEmailError": "The email could not be sent",
       "reasonSmsError": "The SMS could not be sent",
       "loginUnknownEmail": "Unknown account",
-      "aiFields": "{{count}} field(s) read"
+      "aiFields": "{{count}} field(s) read",
+      "reasonInvalidTeamsUser": "The recipient has no Teams id (requires AD sync)",
+      "reasonTeamsNotConfigured": "Teams is not configured",
+      "reasonTeamsError": "The Teams message could not be sent",
+      "reasonInvalidSlackUser": "The recipient was not found in Slack",
+      "reasonSlackNotConfigured": "Slack is not configured",
+      "reasonSlackError": "The Slack message could not be sent",
+      "reasonChannelNotConfigured": "The channel is not configured",
+      "reasonChannelError": "The message could not be sent",
+      "reasonSlackAuthRevoked": "The Slack connection was revoked — reconnect",
+      "reasonNoRecipient": "The recipient has no address on this channel",
+      "reasonNoTemplate": "There is no template for this channel",
+      "reasonSlackRatelimited": "Slack asked us to wait (rate limit) — sent on the next run"
     },
     "rawJson": "Raw JSON",
     "copyJson": "Copy JSON",
@@ -924,7 +936,9 @@
     "notifyTitle": "Notifications per day",
     "notifyDesc": "Emails and SMS sent about parcels (completed sends, test sends excluded)",
     "notifyEmail": "Emails",
-    "notifySms": "SMS"
+    "notifySms": "SMS",
+    "notifyTeams": "Teams",
+    "notifySlack": "Slack"
   },
   "parcels": {
     "title": "Parcels",
@@ -1259,7 +1273,10 @@
     "duplicateIdentifier": "Employee no. or NFC card is already used by another employee.",
     "noDepartment": "No department",
     "importManagedHint": "This employee comes from the HR import — changes may be overwritten on the next import. Create a manual employee with \"+ New\" if you want a row the import never touches.",
-    "employeeNoLockedHint": "The import's key — locked for imported employees. Changing it would make the next import deactivate this employee and create a duplicate."
+    "employeeNoLockedHint": "The import's key — locked for imported employees. Changing it would make the next import deactivate this employee and create a duplicate.",
+    "slackUserId": "Slack member ID",
+    "slackUserIdHint": "Optional. Leave it empty — the person is then found in Slack automatically from their email. Only fill it in if the employee's Slack account uses a different address than the one in Operia. Find the ID in Slack under the profile → ⋮ → Copy member ID.",
+    "slackUserIdPlaceholder": "e.g. U01ABC2DEF"
   },
   "usersPage": {
     "name": "Name",
@@ -1717,7 +1734,8 @@
     "statusTestErr": {
       "notifications_disabled": "Parcel notifications are switched off platform-wide (Operia → Notifications → Activation).",
       "no_pending_parcels": "The receiver no longer has parcels pending.",
-      "no_channels": "No channels are enabled — select email and/or SMS under General."
+      "no_channels": "No channels are enabled — select at least one under General.",
+      "missing_addon": "The {{channels}} channel is enabled, but the company does not have the add-on. Add it under Operia → Customers → add-ons."
     },
     "reminder1": "Reminder 1",
     "reminder2": "Reminder 2",
@@ -1730,7 +1748,7 @@
     "enableParcel": "Send parcel notifications",
     "enableAsset": "Send asset reminders",
     "channels": "Channels",
-    "channelsHint": "Which channels notifications are sent on. SMS also requires the SMS notifications add-on per customer.",
+    "channelsHint": "Which channels notifications are sent on. Everything other than email also requires the matching per-customer add-on.",
     "channelEmail": "Email",
     "channelSms": "SMS",
     "typeAssetReminder": "Asset reminder",
@@ -1745,7 +1763,9 @@
     "testSmsOk": "Test SMS sent",
     "testSmsFail": "Could not send test SMS: {{error}}",
     "statusTestCountDelivered": "{{count}} handed over",
-    "statusTestLoading": "Loading receivers …"
+    "statusTestLoading": "Loading receivers …",
+    "channelTeams": "Microsoft Teams",
+    "channelSlack": "Slack"
   },
   "productsPage": {
     "title": "Products & features",
@@ -2660,7 +2680,10 @@
     "interval_240": "Every 4 hours",
     "interval_720": "Every 12 hours",
     "interval_1440": "Daily",
-    "interval_10080": "Weekly"
+    "interval_10080": "Weekly",
+    "slack": "Slack",
+    "slackEnable": "Offer the Slack integration",
+    "slackEnableDesc": "Lets customers connect their own Slack workspace so parcel notifications can be sent as direct messages. Also requires the Slack notifications add-on per customer."
   },
   "companyPrivacy": {
     "subtitle": "Contacts and data processing agreement",
@@ -2825,7 +2848,8 @@
     "total": "Total",
     "breakdown": "Of which {{parcelCount}} parcel notifications and {{assetCount}} asset reminders.",
     "notes": "Only completed sends and AI readings are counted (accepted by the provider); test sends and rejected readings are excluded.",
-    "aiRead": "AI reading · {{model}}"
+    "aiRead": "AI reading · {{model}}",
+    "chat": "Chat messages (Teams/Slack)"
   },
   "personalData": {
     "subtitle": "Retention periods and access requests",
@@ -2971,5 +2995,37 @@
     "category_reports": "Reports",
     "category_config": "Configuration",
     "category_platform": "Operia"
+  },
+  "companySlack": {
+    "status": "Connection",
+    "statusHint": "Operia sends messages as an app in your own Slack workspace. The token is stored on the server and cannot be read from here.",
+    "notConnected": "Not connected",
+    "connectedTo": "Connected to {{team}}",
+    "connectedAt": "Connected {{date}}",
+    "connect": "Connect to Slack",
+    "reconnect": "Reconnect",
+    "test": "Test the connection",
+    "testOk": "The connection works ({{team}})",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect Slack?",
+    "disconnectDescription": "Operia forgets its access to your workspace, and parcel notifications will no longer be sent on Slack. You can reconnect at any time — no data is lost.",
+    "disconnectOk": "Slack has been disconnected",
+    "connectOk": "Slack is connected",
+    "connectFail": "Slack could not be connected: {{error}}",
+    "channelHint": "Messages are sent as a direct message to the recipient. If a Slack member id is set on the employee it is used; otherwise the employee can be found by their email address (see below).",
+    "lookupByEmail": "Find recipients by email address",
+    "lookupByEmailHint": "Employees without a Slack member id are looked up in your workspace by email. Only enable this if most employees have a Slack account with the same email as in Operia — otherwise every parcel for an employee without Slack produces an error in the log.",
+    "lookupSaved": "Setting saved",
+    "outcome_cancelled": "The approval was cancelled in Slack",
+    "outcome_invalid": "Invalid response from Slack",
+    "outcome_expired": "The approval took too long — try again",
+    "outcome_not_configured": "The Slack integration is not set up at DCA",
+    "outcome_exchange_failed": "Slack rejected the approval",
+    "outcome_save_failed": "The connection could not be saved",
+    "outcome_network": "Slack could not be reached",
+    "outcome_not_connected": "There is no Slack connection yet",
+    "outcome_auth_failed": "Slack rejected the token — reconnect",
+    "outcome_token_revoked": "Access was revoked in Slack — reconnect",
+    "outcome_account_inactive": "The Slack account is inactive"
   }
 }

@@ -45,3 +45,6 @@ android/keystore.properties
 
 # LibreOffice-låsefiler (transient editor-tilstand)
 .~lock.*#
+
+# Teams-apppakken bygges af teams-app/README.md — artefakt, ikke kilde
+teams-app/*.zip

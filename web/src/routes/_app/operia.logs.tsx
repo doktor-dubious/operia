@@ -29,6 +29,7 @@ import { Download } from '@/components/animate-ui/icons/download'
 import { Columns3 } from '@/components/animate-ui/icons/columns-3'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { notifyReasonLabel } from '@/lib/notify-contact'
 
 // Operia → Logs (platform-admins): Supabase-Studio-lignende fremviser af den
 // centrale NIS2-revisionslog (audit_log), skrevet server-side af triggere på
@@ -328,6 +329,9 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
     // også som sletning — samme escaped tvilling som i SQL (20260814200000).
     /[._]deleted$/.test(a) ||
     /\.(deactivated|anonymized|removed|revoked|disabled|written_off)$/.test(a) ||
+    // '_deferred' (parcel.notifications_deferred): udbyderen bad os vente —
+    // en advarsel, ikke en fejl. Spejler public.audit_level (20260904150000).
+    /[._]deferred$/.test(a) ||
     (a === 'parcel.status_changed' &&
       (to === 'rejected' || to === 'returned' || to === 'removed'))
   )
@@ -385,17 +389,18 @@ function message(r: LogRow, t: TFn) {
   // Notifikations-udfald (afsendelse/bounce): vis en LÆSBAR årsag i stedet for et
   // råt Resend/GatewayAPI-svar. Afsenderfunktionerne lægger en kort maskinkode i
   // detail.reason (classifySendError); et bounce lægger providerens tekst der.
-  if (/[._](reminder_failed|reminder_bounced|reminder_complained|notification_bounced|notification_complained)$/.test(r.action)) {
-    const reasonCodes: Record<string, string> = {
-      invalid_email: t('logsPage.msg.reasonInvalidEmail'),
-      invalid_phone: t('logsPage.msg.reasonInvalidPhone'),
-      email_not_configured: t('logsPage.msg.reasonEmailNotConfigured'),
-      sms_not_configured: t('logsPage.msg.reasonSmsNotConfigured'),
-      email_error: t('logsPage.msg.reasonEmailError'),
-      sms_error: t('logsPage.msg.reasonSmsError'),
-    }
+  // 'notifications_deferred' er dispatcherens spor efter et forbigående udfald
+  // hos udbyderen (rate limit, 5xx): samme form, summary = antal udskudte.
+  if (/[._](reminder_failed|reminder_bounced|reminder_complained|notification_bounced|notification_complained|notifications_deferred)$/.test(r.action)) {
+    // Koderne oversættes af notifyReasonLabel (delt med status-testdialogen),
+    // så en fejl hedder det samme begge steder. Et bounce lægger providerens
+    // fritekst i detail.error i stedet for en kode.
     const raw = typeof d.reason === 'string' ? d.reason : ''
-    const reasonText = reasonCodes[raw] ?? raw ?? (typeof d.error === 'string' ? d.error : '')
+    const reasonText = raw
+      ? notifyReasonLabel(raw, t)
+      : typeof d.error === 'string'
+        ? d.error
+        : ''
     return [r.summary, reasonText].filter(Boolean).join('   ·   ')
   }
   const parts: string[] = []

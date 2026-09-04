@@ -23,6 +23,7 @@ import { TimezonePicker } from '@/components/timezone-picker'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { CURRENCY_OPTIONS, currencyLabel } from '@/lib/currencies'
 import { LANG_OPTIONS } from '@/lib/languages'
+import { AVAILABLE_CHANNELS, CHANNEL_LABEL_KEY, type NotifyChannel } from '@/lib/notify-contact'
 import { cn } from '@/lib/utils'
 
 // Virksomhedens lokaliseringsfelter — delt mellem Operia → Kunder
@@ -307,35 +308,33 @@ export function AssetFlowFields(props: {
   )
 }
 
-// Kanalvalg (Generelt-sektionen): e-mail og/eller SMS. Gælder alle
-// notifikationstyper. SMS kræver desuden sms_notifications-feature pr. kunde.
+// Kanalvalg (Generelt-sektionen). Gælder alle notifikationstyper. Listen kommer
+// fra NOTIFY_CHANNELS, så en ny kanal dukker op her uden en ændring i denne fil
+// — alle andre end e-mail kræver desuden et tilvalg pr. kunde (CHANNEL_FEATURE),
+// som serveren håndhæver.
+export type ChannelToggleValue = Record<NotifyChannel, boolean>
+
 export function ChannelToggles({
-  email,
-  sms,
-  onEmailChange,
-  onSmsChange,
+  value,
+  onChange,
 }: {
-  email: boolean
-  sms: boolean
-  onEmailChange: (v: boolean) => void
-  onSmsChange: (v: boolean) => void
+  value: ChannelToggleValue
+  onChange: (patch: Partial<ChannelToggleValue>) => void
 }) {
   const { t } = useTranslation()
   return (
     <Field label={t('notificationsPage.channels')} info={t('notificationsPage.channelsHint')}>
       <div className="flex flex-col gap-2">
-        <FieldLabel htmlFor="ch-email" className="px-2.5 py-1.5 font-normal">
-          <Checkbox
-            id="ch-email"
-            checked={email}
-            onCheckedChange={(v) => onEmailChange(v === true)}
-          />
-          {t('notificationsPage.channelEmail')}
-        </FieldLabel>
-        <FieldLabel htmlFor="ch-sms" className="px-2.5 py-1.5 font-normal">
-          <Checkbox id="ch-sms" checked={sms} onCheckedChange={(v) => onSmsChange(v === true)} />
-          {t('notificationsPage.channelSms')}
-        </FieldLabel>
+        {AVAILABLE_CHANNELS.map((c) => (
+          <FieldLabel key={c} htmlFor={`ch-${c}`} className="px-2.5 py-1.5 font-normal">
+            <Checkbox
+              id={`ch-${c}`}
+              checked={value[c]}
+              onCheckedChange={(v) => onChange({ [c]: v === true } as Partial<ChannelToggleValue>)}
+            />
+            {t(CHANNEL_LABEL_KEY[c])}
+          </FieldLabel>
+        ))}
       </div>
     </Field>
   )

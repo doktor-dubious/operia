@@ -1,8 +1,13 @@
 // dispatch-parcel-notifications — kaldt af pg_cron. Finder åbne pakker der mangler
 // en ankomst-/påmindelses-notifikation, respekterer stilletid, påmindelsesdage/
 // toggles/max, entitlements og kanalvalg, renderer skabelonen i modtagerens sprog
-// og sender via e-mail (Resend) og/eller SMS (GatewayAPI). Hver afsendelse logges
-// i parcel_notifications (NIS2-revisionsspor + dedup + tælling mod max).
+// og sender via de kanaler kunden har slået til. Hver afsendelse logges i
+// parcel_notifications (NIS2-revisionsspor + dedup + tælling mod max).
+//
+// Kanalerne er IKKE kendt her: adressefelt, skabelonnøgle, rendering og afsender
+// slås op i _shared/channels.ts. Skal der en kanal mere til, beskrives den dér
+// (plus enum, skabeloner og til/fra-kolonne i en migration) — denne fil skal
+// ikke røres.
 //
 // Batch: pakker i en 'finished' batch behandles som ÉN enhed — én besked med et
 // {{count}}-token i stedet for én pr. pakke. Dedup sker på batch-niveau
@@ -29,9 +34,18 @@
 //     pakke/batch (reminder_1 + reminder_2). Interval-baserede gentagelser er en
 //     senere udvidelse.
 
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { sendSms } from '../_shared/send-sms.ts'
-import { sendEmail } from '../_shared/send-email.ts'
+import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import {
+  CHANNEL_FEATURES,
+  allTemplateKeys,
+  enabledChannels,
+  recipientFor,
+  renderFor,
+  sendVia,
+  templateKeyFor,
+  type Channel,
+} from '../_shared/channels.ts'
+import { companySecretLookup } from '../_shared/company-secret.ts'
 import {
   DAY,
   classifySendError,
@@ -41,8 +55,6 @@ import {
   inQuietHours,
   isServiceRole,
   maskRecipient,
-  render,
-  renderHtml,
   resolveTemplate,
   timeToMinutes,
   sanitizeProviderError,
@@ -51,8 +63,7 @@ import {
   DELIVERED_STATUS,
   OPEN_STATUSES,
   PARCEL_SELECT,
-  STATUS_EMAIL_KEY,
-  STATUS_SMS_KEY,
+  STATUS_BASE_KEY,
   buildUnits,
   deliveredItems,
   digestCount,
@@ -82,6 +93,10 @@ const ARRIVAL_MAX_AGE_DAYS = 2
 const LOOKBACK_DAYS = 60
 const MAX_PARCELS = 200
 const MAX_ATTEMPTS = 3 // giv op efter så mange fejlede forsøg pr. type/kanal
+// Udskydelser (forbigående fejl) noteres i Logs højst så ofte pr. kunde/kanal,
+// så et længere udfald hos udbyderen giver ét spor i timen — ikke ét pr. kørsel
+// hvert 5. minut, og heller ikke ingenting.
+const DEFERRAL_NOTE_INTERVAL_MS = 60 * 60_000
 // Hvor langt tilbage statusbeskedens historik læses (til "siden sidste
 // statusbesked" og dagens dedup). Rigeligt til at finde den seneste udsendelse.
 const DIGEST_LOOKBACK_DAYS = 30
@@ -92,7 +107,7 @@ const DIGEST_LOOKBACK_DAYS = 30
 // overlapper. Fejler opslaget, afbrydes kørslen — en tom historik må aldrig
 // antages.
 async function fetchDigestHistory(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient,
   companyIds: string[],
   sinceIso: string,
 ): Promise<DigestHistoryRow[]> {
@@ -116,38 +131,27 @@ async function fetchDigestHistory(
 }
 
 type Kind = 'arrival' | 'reminder_1' | 'reminder_2'
-type Channel = 'email' | 'sms'
 
-const EMAIL_KEY: Record<Kind, string> = {
+// Basisnøgler pr. type. Kanalens faktiske skabelonnøgle udledes af basen +
+// kanalens suffiks (templateKeyFor), så en ny kanal ikke kræver endnu et
+// Record her — den arver hele nøglesættet automatisk.
+const BASE_KEY: Record<Kind, string> = {
   arrival: 'package_arrival',
   reminder_1: 'package_reminder_1',
   reminder_2: 'package_reminder_2',
 }
-const SMS_KEY: Record<Kind, string> = {
-  arrival: 'package_arrival_sms',
-  reminder_1: 'package_reminder_1_sms',
-  reminder_2: 'package_reminder_2_sms',
-}
 // Batch-varianter (med {{count}}/{{batch_code}}) bruges når enheden er en batch.
-const EMAIL_KEY_BATCH: Record<Kind, string> = {
+const BASE_KEY_BATCH: Record<Kind, string> = {
   arrival: 'package_arrival_batch',
   reminder_1: 'package_reminder_1_batch',
   reminder_2: 'package_reminder_2_batch',
 }
-const SMS_KEY_BATCH: Record<Kind, string> = {
-  arrival: 'package_arrival_batch_sms',
-  reminder_1: 'package_reminder_1_batch_sms',
-  reminder_2: 'package_reminder_2_batch_sms',
-}
 
-const ALL_TEMPLATE_KEYS = [
-  ...Object.values(EMAIL_KEY),
-  ...Object.values(SMS_KEY),
-  ...Object.values(EMAIL_KEY_BATCH),
-  ...Object.values(SMS_KEY_BATCH),
-  STATUS_EMAIL_KEY,
-  STATUS_SMS_KEY,
-]
+const ALL_TEMPLATE_KEYS = allTemplateKeys([
+  ...Object.values(BASE_KEY),
+  ...Object.values(BASE_KEY_BATCH),
+  STATUS_BASE_KEY,
+])
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -165,7 +169,7 @@ Deno.serve(async (req) => {
   const { data: platform } = await admin
     .from('platform_settings')
     .select(
-      'quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, notify_email_enabled, notify_sms_enabled, parcel_notifications_enabled',
+      'quiet_hours_start, quiet_hours_end, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, notify_email_enabled, notify_sms_enabled, notify_teams_enabled, notify_slack_enabled, parcel_notifications_enabled',
     )
     .limit(1)
     .maybeSingle()
@@ -222,7 +226,7 @@ Deno.serve(async (req) => {
   const validUntilOk = (v: string | null) => v == null || v >= today
   const [prodRes, featRes, notifRes, batchNotifRes, batchMemberRes, digestRes, ptplRes, ctplRes] = await Promise.all([
     admin.from('company_products').select('company_id, valid_until').eq('product_key', 'parcels').in('company_id', companyIds),
-    admin.from('company_features').select('company_id, feature_key, valid_until').in('feature_key', ['reminders', 'sms_notifications']).in('company_id', companyIds),
+    admin.from('company_features').select('company_id, feature_key, valid_until').in('feature_key', ['reminders', ...CHANNEL_FEATURES]).in('company_id', companyIds),
     admin.from('parcel_notifications').select('parcel_id, batch_id, kind, channel, status').in('parcel_id', parcelIds),
     // Batch-dedup slås op på batch_id direkte (robust mod at repræsentanten skifter,
     // hvis en enkelt pakke i batchen udleveres og forlader OPEN_STATUSES).
@@ -304,6 +308,30 @@ Deno.serve(async (req) => {
   let sent = 0
   let failed = 0
   let skippedQuiet = 0
+  // Forbigående fejl (rate limit, 5xx): hverken sendt eller logget som failed —
+  // beskeden står uændret og forsøges igen ved næste kørsel. Men IKKE sporløst:
+  //
+  //   • Første forbigående fejl på en (kunde, kanal) STOPPER resten af kundens
+  //     sendinger på den kanal i denne kørsel. Et 429 fra Slack betyder at
+  //     hvert efterfølgende kald blot forlænger pausen og stjæler kvote fra de
+  //     modtagere der kunne nås.
+  //   • Hver kørsel skriver en advarsel pr. berørt (kunde, kanal) til Logs
+  //     ('parcel.notifications_deferred'), dog højst én i timen — så et udfald
+  //     ses af manageren, uden at aktivitetsloggen drukner.
+  //   • Alt logges også til funktionens konsol (edge-loggen).
+  let deferred = 0
+  const halted = new Map<string, { count: number; error: string; companyId: string; channel: Channel }>()
+  const haltKey = (companyId: string, channel: Channel) => `${companyId}:${channel}`
+  const defer = (companyId: string, channel: Channel, error: string | undefined) => {
+    deferred++
+    const key = haltKey(companyId, channel)
+    const h = halted.get(key)
+    if (h) h.count++
+    else {
+      halted.set(key, { count: 1, error: error ?? '', companyId, channel })
+      console.warn(`deferred ${channel} for company ${companyId}: ${sanitizeProviderError(error, 300)}`)
+    }
+  }
 
   for (const u of units) {
     const p = u.parcel
@@ -313,11 +341,8 @@ Deno.serve(async (req) => {
 
     const feats = featureMap.get(p.company_id) ?? new Set<string>()
     const hasReminders = feats.has('reminders')
-    const hasSms = feats.has('sms_notifications')
 
     // Effektive indstillinger: virksomhedens override, ellers platformens.
-    const emailOn = co.notify_email_enabled ?? platform.notify_email_enabled
-    const smsOn = (co.notify_sms_enabled ?? platform.notify_sms_enabled) && hasSms
     const arrivalOn = co.parcel_arrival_enabled ?? platform.parcel_arrival_enabled
     const r1on = co.parcel_reminder_1_enabled ?? platform.parcel_reminder_1_enabled
     const r2on = (co.parcel_reminder_2_enabled ?? platform.parcel_reminder_2_enabled) && r1on
@@ -327,9 +352,7 @@ Deno.serve(async (req) => {
     const qStart = co.quiet_hours_start ?? platform.quiet_hours_start
     const qEnd = co.quiet_hours_end ?? platform.quiet_hours_end
 
-    const channels: Channel[] = []
-    if (emailOn) channels.push('email')
-    if (smsOn) channels.push('sms')
+    const channels = enabledChannels(co, platform, feats)
     if (channels.length === 0) continue
 
     // Stilletid: udskyd hele enheden til efter det stille vindue (næste kørsel).
@@ -370,20 +393,30 @@ Deno.serve(async (req) => {
         if (sentSet.has(key)) continue
         if ((failedCount.get(key) ?? 0) >= MAX_ATTEMPTS) continue
 
-        const to = channel === 'email' ? emp.email : emp.phone
+        const to = recipientFor(channel, emp, co)
         if (!to) continue
 
-        const templateKey = channel === 'email'
-          ? (isBatch ? EMAIL_KEY_BATCH[kind] : EMAIL_KEY[kind])
-          : (isBatch ? SMS_KEY_BATCH[kind] : SMS_KEY[kind])
-        const { title, body } = tpl(p.company_id, templateKey, lang)
+        const base = isBatch ? BASE_KEY_BATCH[kind] : BASE_KEY[kind]
+        const { title, body } = tpl(p.company_id, templateKeyFor(channel, base), lang)
         if (!body) continue // ingen skabelon → send ikke tomt
 
-        let result: { ok: boolean; error?: string; id?: string }
-        if (channel === 'email') {
-          result = await sendEmail(to, render(title, tokens), renderHtml(body, tokens))
-        } else {
-          result = await sendSms(to, render(body, tokens))
+        // Kanalen er allerede i pause for kunden i denne kørsel — kald ikke.
+        if (halted.has(haltKey(p.company_id, channel))) {
+          defer(p.company_id, channel, undefined)
+          continue
+        }
+
+        const result = await sendVia(channel, to, renderFor(channel, title, body, tokens), {
+          companyId: p.company_id,
+          companySecret: companySecretLookup(admin, p.company_id),
+        })
+
+        // Forbigående fejl: ingen 'failed'-række — den ville tælle mod
+        // MAX_ATTEMPTS, og tre rate limits i træk ville opgive beskeden for
+        // evigt. Sporet skrives samlet efter løkkerne (se `halted`).
+        if (!result.ok && result.retryable) {
+          defer(p.company_id, channel, result.error)
+          continue
         }
 
         touched = true
@@ -421,7 +454,7 @@ Deno.serve(async (req) => {
               channel,
               kind,
               batch: isBatch,
-              recipient: maskRecipient(to),
+              recipient: maskRecipient(to, channel),
               reason: classifySendError(result.error ?? '', channel),
               error: sanitizeProviderError(result.error, 300),
             },
@@ -460,39 +493,48 @@ Deno.serve(async (req) => {
     }
 
     const feats = featureMap.get(co.id) ?? new Set<string>()
-    const channels: Channel[] = []
-    if (co.notify_email_enabled ?? platform.notify_email_enabled) channels.push('email')
-    if ((co.notify_sms_enabled ?? platform.notify_sms_enabled) && feats.has('sms_notifications')) {
-      channels.push('sms')
-    }
+    const channels = enabledChannels(co, platform, feats)
     if (channels.length === 0) continue
 
-    const since = digestWindowStart(lastDigestAt, emp.id, nowMs)
-    const items = digestItems(g.units, since)
-    const handed = deliveredItems(g.delivered, since)
-    if (items.length === 0 && handed.length === 0) continue
-
     const lang = emp.language || co.default_language || 'da'
-    const count = digestCount(items) + digestCount(handed)
-    const tokens = digestTokens(items, handed, emp, co, lang, nowMs)
-    // Repræsentativ pakke (parcel_id er not null i loggen) — den ældste i
-    // sammendraget. Vinduet gør at samme pakke aldrig indgår i to sammendrag.
-    const repParcelId = (items[0] ?? handed[0]).parcel.id
 
     for (const channel of channels) {
       const key = `${emp.id}:${channel}`
       if (digestSent.has(key)) continue
       if ((digestFailed.get(key) ?? 0) >= MAX_ATTEMPTS) continue
 
-      const to = channel === 'email' ? emp.email : emp.phone
+      const to = recipientFor(channel, emp, co)
       if (!to) continue
 
-      const { title, body } = tpl(co.id, channel === 'email' ? STATUS_EMAIL_KEY : STATUS_SMS_KEY, lang)
+      // Vinduet er pr. kanal (se parseDigestHistory): en udskudt kanal skylder
+      // stadig alt siden SIT seneste sammendrag, ikke siden e-mailens.
+      const since = digestWindowStart(lastDigestAt, emp.id, channel, nowMs)
+      const items = digestItems(g.units, since)
+      const handed = deliveredItems(g.delivered, since)
+      if (items.length === 0 && handed.length === 0) continue
+
+      const count = digestCount(items) + digestCount(handed)
+      const tokens = digestTokens(items, handed, emp, co, lang, nowMs)
+      // Repræsentativ pakke (parcel_id er not null i loggen) — den ældste i
+      // sammendraget. Vinduet gør at samme pakke aldrig indgår i to sammendrag.
+      const repParcelId = (items[0] ?? handed[0]).parcel.id
+
+      const { title, body } = tpl(co.id, templateKeyFor(channel, STATUS_BASE_KEY), lang)
       if (!body) continue
 
-      const result = channel === 'email'
-        ? await sendEmail(to, render(title, tokens), renderHtml(body, tokens))
-        : await sendSms(to, render(body, tokens))
+      if (halted.has(haltKey(co.id, channel))) {
+        defer(co.id, channel, undefined)
+        continue
+      }
+
+      const result = await sendVia(channel, to, renderFor(channel, title, body, tokens), {
+        companyId: co.id,
+        companySecret: companySecretLookup(admin, co.id),
+      })
+      if (!result.ok && result.retryable) {
+        defer(co.id, channel, result.error)
+        continue
+      }
 
       await admin.from('parcel_notifications').insert({
         company_id: co.id,
@@ -526,7 +568,7 @@ Deno.serve(async (req) => {
             channel,
             kind: 'status',
             batch: false,
-            recipient: maskRecipient(to),
+            recipient: maskRecipient(to, channel),
             reason: classifySendError(result.error ?? '', channel),
             error: sanitizeProviderError(result.error, 300),
           },
@@ -535,5 +577,45 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ ok: true, processed, sent, failed, statusSent, skippedQuiet, candidates: units.length })
+  // ── Spor efter udskydelser ─────────────────────────────────────────────────
+  // Én advarsel pr. berørt (kunde, kanal), højst én i timen: findes der en
+  // nyere note i audit_log, springes den over. Uden dette spor ville et
+  // udfald hos udbyderen på >2 dage tabe ankomstbeskederne (ARRIVAL_MAX_AGE_DAYS)
+  // uden at nogen kunne se det i Logs.
+  for (const h of halted.values()) {
+    const sinceIso = new Date(nowMs - DEFERRAL_NOTE_INTERVAL_MS).toISOString()
+    const { data: recent } = await admin
+      .from('audit_log')
+      .select('id')
+      .eq('company_id', h.companyId)
+      .eq('action', 'parcel.notifications_deferred')
+      .eq('detail->>channel', h.channel)
+      .gte('created_at', sinceIso)
+      .limit(1)
+    if (recent && recent.length > 0) continue
+    await admin.rpc('log_notification_event', {
+      p_company_id: h.companyId,
+      p_action: 'parcel.notifications_deferred',
+      p_entity_type: 'company',
+      p_entity_id: h.companyId,
+      p_summary: `${h.count}`,
+      p_detail: {
+        channel: h.channel,
+        deferred: h.count,
+        reason: classifySendError(h.error, h.channel),
+        error: sanitizeProviderError(h.error, 300),
+      },
+    })
+  }
+
+  return json({
+    ok: true,
+    processed,
+    sent,
+    failed,
+    deferred,
+    statusSent,
+    skippedQuiet,
+    candidates: units.length,
+  })
 })

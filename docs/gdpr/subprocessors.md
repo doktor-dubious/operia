@@ -3,7 +3,7 @@
 **Controller:** each customer company. **Processor:** DCA Logic.
 **Status:** living document — this is the register required by GDPR Art. 28(2) and (4), and
 Annex B of every data processing agreement.
-**Last reviewed:** 2026-08-14 · **Owner:** DCA Logic privacy owner (see [toms.md](toms.md) §10).
+**Last reviewed:** 2026-09-04 · **Owner:** DCA Logic privacy owner (see [toms.md](toms.md) §10).
 
 A sub-processor is any third party that processes personal data on DCA Logic's behalf in order
 to deliver Operia. This register lists every one of them, what data it receives, where it is
@@ -29,7 +29,8 @@ so a customer can prove that a feature they have not enabled means no transfer t
 | 7 | **Anthropic PBC** (US) | AI label reading (vision model) | Same as row 6 | US | **SCCs** in Anthropic's commercial DPA (Anthropic's own privacy policy names adequacy + SCCs; DPF certification **not** asserted by the vendor — treat as SCC-based) | *AI label reading*, if the customer selects Anthropic |
 | 8 | **Google LLC** (US) | (a) Gemini API for AI label reading; (b) Geocoding / Routes / Maps JavaScript API for route planning | (a) Same as row 6; (b) employee and delivery **addresses**, and the browser's IP when the Maps JS API loads | US (global endpoints) | **EU-U.S. Data Privacy Framework** (Google LLC certified) — for Cloud/business services Google additionally relies on **SCCs** in the Google Cloud DPA | (a) *AI label reading* with Google selected; (b) *route planning* with Google as maps provider |
 | 9 | **HeiGIT gGmbH** (DE) — OpenRouteService | Geocoding + route calculation (default maps provider) | Employee and delivery addresses | **EU (Germany)** | None needed — EU/EEA | *Route planning* (default provider) |
-| 10 | **Customer-configured log drain target** | Receives the customer's own audit events (HTTP/NDJSON, Datadog, Loki) | `audit_log` rows — minimized: actor id, employee numbers, masked recipients; never names or message content | Wherever the customer points it | **Not DCA's sub-processor** — the customer chooses the destination and instructs the transfer as controller | *Log drains*, per company |
+| 10 | **Salesforce, Inc.** (US) — trading as **Slack** | Slack delivery of parcel notifications as a direct message to the receiver | The receiver's work e-mail address (used to look the person up in the customer's workspace via `users.lookupByEmail`), the resulting Slack user id, and the message text (may contain receiver name, parcel barcode/count, company name) | US (Slack's global infrastructure; some plans offer regional data residency, not assumed here) | **EU-U.S. Data Privacy Framework** — Salesforce, Inc. is DPF-certified and lists Slack among the covered entities — **plus SCCs** in the Salesforce/Slack DPA. *Vendor statement, not yet verified against the official list — see §4 open item 1.* | *Slack notifications* only, and only after the customer has installed the Operia app in their own workspace |
+| 11 | **Customer-configured log drain target** | Receives the customer's own audit events (HTTP/NDJSON, Datadog, Loki) | `audit_log` rows — minimized: actor id, employee numbers, masked recipients; never names or message content | Wherever the customer points it | **Not DCA's sub-processor** — the customer chooses the destination and instructs the transfer as controller | *Log drains*, per company |
 
 ### Listed but not engaged
 
@@ -104,8 +105,8 @@ If yes, this file and [ropa.md](ropa.md) change in the same commit.
 2. **Confirm the AWS region** of `ftp.predictioninstitute.com` / `operia.predictioninstitute.com`
    and record it in row 2. If it is not an EU region, move it.
 3. **Execute or confirm the DPA with each vendor** (Supabase, Resend, Postmark, GatewayAPI,
-   Mistral, Anthropic, Google, HeiGIT) and file a copy; note the date here.
-4. **Write one short TIA** per US vendor (rows 1–4, 7, 8) — `docs/gdpr/tia/`.
+   Mistral, Anthropic, Google, HeiGIT, **Salesforce/Slack**) and file a copy; note the date here.
+4. **Write one short TIA** per US vendor (rows 1–4, 7, 8, 10) — `docs/gdpr/tia/`.
 5. **Move the AI keys to paid plans** before any customer reads real labels (§2).
 
 ---
@@ -120,6 +121,7 @@ by configuring:
 | AI label reading | **Mistral** (FR) — or the feature disabled entirely |
 | Maps provider | **OpenRouteService** (DE) — the default |
 | SMS | GatewayAPI (DK) — the only option |
+| Slack notifications | **Not compatible** — Slack (US) is the only implementation. Leave the channel off (it is off by default and additionally gated on the `slack_notifications` add-on). Microsoft Teams, when built, keeps the messages inside the customer's own tenant and is the EU-friendly alternative. |
 | Email | **Not yet possible** — Resend (US) and Postmark (US) have no EU alternative wired in. This is the remaining gap for a true "EU-only mode"; an EU sending provider is the fix. |
 | Log drain | The customer's own EU destination |
 

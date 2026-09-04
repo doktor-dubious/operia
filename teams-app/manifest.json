@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "0e9c9c12-5791-410f-a34b-c276e24ac044",
+  "packageName": "com.dcalogic.operia",
+  "developer": {
+    "name": "DCA Logic",
+    "websiteUrl": "https://operia.predictioninstitute.com",
+    "privacyUrl": "https://operia.predictioninstitute.com/privacy",
+    "termsOfUseUrl": "https://operia.predictioninstitute.com/terms"
+  },
+  "name": {
+    "short": "Operia",
+    "full": "Operia — pakkebeskeder"
+  },
+  "description": {
+    "short": "Besked når der er en pakke til dig i receptionen.",
+    "full": "Operia holder styr på virksomhedens indgående pakker. Denne app sender dig en direkte besked, når der er ankommet en pakke til dig, og minder dig om den, hvis den ikke bliver hentet. Appen skriver kun til dig — den læser ikke dine samtaler, deltager ikke i kanaler og svarer ikke på beskeder."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#131413",
+  "bots": [
+    {
+      "botId": "b1a19a81-a335-418b-8169-7975f0020282",
+      "scopes": [
+        "personal"
+      ],
+      "isNotificationOnly": true,
+      "supportsFiles": false,
+      "supportsCalling": false,
+      "supportsVideo": false
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "operia.predictioninstitute.com"
+  ]
+}

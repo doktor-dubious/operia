@@ -81,21 +81,6 @@ private data class ScannedItem(
     val fromAi: Boolean = false,
 )
 
-// Spejler webbens notify-contact-regler (web/src/lib/notify-contact.ts), som
-// igen spejler toMsisdn i dispatcheren: 8 cifre antages dansk, ellers kræves
-// landekode (9–15 cifre i alt).
-private fun hasValidEmail(email: String?): Boolean {
-    val e = email?.trim() ?: return false
-    return e.contains('@') && !e.startsWith("@") && !e.endsWith("@")
-}
-
-private fun hasValidMsisdn(phone: String?): Boolean {
-    if (phone.isNullOrBlank()) return false
-    var digits = phone.filter { it.isDigit() }
-    if (digits.startsWith("00")) digits = digits.substring(2)
-    return digits.length == 8 || digits.length in 9..15
-}
-
 // "Ligner en webadresse" — samme bevidst løse regel som webbens barcode-rules:
 // fanger typisk QR-indhold (https://…, www.…), ikke alt der kunne være en URI.
 private val URL_LIKE = Regex("""^(https?://|www\.)""", RegexOption.IGNORE_CASE)
@@ -783,11 +768,7 @@ fun ReceiveScreen(vm: AppViewModel, onBack: () -> Unit) {
             val notify = vm.notifyPrefs
             val selEmp = vm.employees.firstOrNull { it.id == empId }
             val unreachable = notify != null && notify.arrivalActive &&
-                (notify.emailOn || notify.smsOn) && selEmp != null &&
-                !(
-                    (notify.emailOn && hasValidEmail(selEmp.email)) ||
-                        (notify.smsOn && hasValidMsisdn(selEmp.phone))
-                    )
+                notify.anyOn && selEmp != null && !notify.canReach(selEmp)
             if (unreachable) {
                 Text(
                     stringResource(R.string.receive_no_contact_warning),

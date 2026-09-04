@@ -14,6 +14,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FieldLabel } from '@/components/ui/field'
 import { describeError } from '@/lib/errors'
+import { CHANNEL_LABEL_KEY, notifyReasonLabel, type NotifyChannel } from '@/lib/notify-contact'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
@@ -32,14 +33,17 @@ type Candidate = {
   name: string | null
   email: string | null
   phone: string | null
+  // Hvilke af virksomhedens aktive kanaler denne modtager faktisk har en
+  // adresse på. Serveren afgør det — den kender også Teams-adressen, som
+  // bevidst ikke sendes med hertil.
+  reachable: NotifyChannel[]
   count: number
   deliveredCount: number
 }
 
 type Preview = {
   ok: boolean
-  emailEnabled: boolean
-  smsEnabled: boolean
+  channels: NotifyChannel[]
   notificationsEnabled: boolean
   candidates: Candidate[]
 }
@@ -51,6 +55,11 @@ export function StatusTestDialog({ companyId }: { companyId: string }) {
   const [preview, setPreview] = useState<Preview | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+
+  // Maskinkoden fra classifySendError → læsbar tekst. Deler nøgler med Logs,
+  // så en fejl hedder det samme begge steder; ukendte koder vises råt frem for
+  // at blive slugt.
+  const reasonText = (code?: string): string => notifyReasonLabel(code, t)
 
   // Hentes ved åbning (ikke via useQuery): listen skal være frisk hver gang,
   // og den koster et edge-kald vi ikke vil lave uopfordret.
@@ -85,27 +94,63 @@ export function StatusTestDialog({ companyId }: { companyId: string }) {
       toast.error(describeError(error, t))
       return
     }
-    const res = data as { ok: boolean; count?: number; error?: string }
+    const res = data as {
+      ok: boolean
+      count?: number
+      error?: string
+      channels?: NotifyChannel[]
+      results?: { channel: NotifyChannel; ok: boolean; reason?: string }[]
+    }
     if (res.ok) {
       toast.success(t('notificationsPage.statusTestOk', { count: res.count ?? 0 }))
       setOpen(false)
       return
     }
+    // Fejlede ALLE kanaler, står årsagen pr. kanal i results — der er intet
+    // fejlfelt på topniveau i det tilfælde, og uden dette faldt dialogen
+    // tilbage på det intetsigende "unknown".
+    const failed = (res.results ?? []).filter((r) => !r.ok)
+    if (!res.error && failed.length) {
+      toast.error(
+        t('notificationsPage.statusTestFail', {
+          error: failed
+            .map((r) => `${t(CHANNEL_LABEL_KEY[r.channel])}: ${reasonText(r.reason)}`)
+            .join(' · '),
+        }),
+      )
+      return
+    }
     // Kendte årsager oversættes; alt andet vises råt, så fejlen ikke forsvinder.
-    const known = ['notifications_disabled', 'no_pending_parcels', 'no_channels']
+    const known = ['notifications_disabled', 'no_pending_parcels', 'no_channels', 'missing_addon']
+    // 'missing_addon' navngiver de valgte kanaler kunden mangler tilvalget til
+    // — ellers ville beskeden bede manageren vælge en kanal der ALLEREDE er valgt.
+    const names = (res.channels ?? []).map((c) => t(CHANNEL_LABEL_KEY[c])).join(', ')
     toast.error(
       t('notificationsPage.statusTestFail', {
         error: known.includes(res.error ?? '')
-          ? t(`notificationsPage.statusTestErr.${res.error}`)
+          ? t(`notificationsPage.statusTestErr.${res.error}`, { channels: names })
           : (res.error ?? 'unknown'),
       }),
     )
   }
 
   const candidates = preview?.candidates ?? []
-  // Uden e-mail (og uden SMS-kanal/nummer) er der ingen vej frem for personen.
-  const reachable = (c: Candidate) =>
-    (preview?.emailEnabled && c.email) || (preview?.smsEnabled && c.phone)
+  // Har modtageren ingen adresse på nogen af de aktive kanaler, er der ingen
+  // vej frem for personen.
+  const isReachable = (c: Candidate) => (c.reachable?.length ?? 0) > 0
+
+  // Undertekst pr. modtager: e-mail/telefon vises som de er, mens chat-kanaler
+  // kun nævnes ved navn — deres adresse er et internt id uden værdi for en
+  // manager (og hører ikke hjemme på skærmen).
+  const contactLine = (c: Candidate) =>
+    (c.reachable ?? [])
+      .map((ch) => {
+        if (ch === 'email') return c.email
+        if (ch === 'sms') return c.phone
+        return t(CHANNEL_LABEL_KEY[ch])
+      })
+      .filter(Boolean)
+      .join(' · ')
 
   return (
     <>
@@ -155,7 +200,7 @@ export function StatusTestDialog({ companyId }: { companyId: string }) {
                 className="max-h-72 gap-1 overflow-y-auto"
               >
                 {candidates.map((c) => {
-                  const ok = reachable(c)
+                  const ok = isReachable(c)
                   return (
                     <FieldLabel
                       key={c.employeeId}
@@ -170,9 +215,7 @@ export function StatusTestDialog({ companyId }: { companyId: string }) {
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="truncate">{c.name ?? '—'}</span>
                         <span className="truncate text-xs text-muted-foreground">
-                          {[preview?.emailEnabled && c.email, preview?.smsEnabled && c.phone]
-                            .filter(Boolean)
-                            .join(' · ') || t('notificationsPage.statusTestNoContact')}
+                          {contactLine(c) || t('notificationsPage.statusTestNoContact')}
                         </span>
                       </span>
                       <span className="shrink-0 text-right text-xs text-muted-foreground">

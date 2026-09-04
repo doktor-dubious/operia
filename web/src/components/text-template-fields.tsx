@@ -25,21 +25,30 @@ const STATUS_TOKENS = [
   'delivered_list',
   'date',
 ]
+// Nøglet på BASISnøglen (uden kanal-suffiks): 'package_status_slack' og
+// 'package_arrival_batch_teams' slås op som 'package_status' hhv.
+// 'package_arrival_batch', så en ny kanal ikke skal tilføjes her. Kanal-
+// specifikke undtagelser (SMS uden lister) ligger for sig nedenfor.
 const TEMPLATE_TOKENS: Record<string, string[]> = {
   customer_invite: ['link'],
   package_arrival_batch: BATCH_TOKENS,
-  package_arrival_batch_sms: BATCH_TOKENS,
   package_reminder_1_batch: BATCH_TOKENS,
-  package_reminder_1_batch_sms: BATCH_TOKENS,
   package_reminder_2_batch: BATCH_TOKENS,
-  package_reminder_2_batch_sms: BATCH_TOKENS,
   package_status: STATUS_TOKENS,
+}
+const CHANNEL_TEMPLATE_TOKENS: Record<string, string[]> = {
   // SMS-varianten har ingen lister — de ville sprænge beskeden.
   package_status_sms: ['company_name', 'recipient_name', 'count', 'delivered_count', 'date'],
 }
+// Samme suffikser som templateSuffix i supabase/functions/_shared/channels.ts.
+const CHANNEL_SUFFIX = /_(sms|teams|slack)$/
 
 export function tokensForTemplate(key: string): string[] {
-  return TEMPLATE_TOKENS[key] ?? DEFAULT_TOKENS
+  return (
+    CHANNEL_TEMPLATE_TOKENS[key] ??
+    TEMPLATE_TOKENS[key.replace(CHANNEL_SUFFIX, '')] ??
+    DEFAULT_TOKENS
+  )
 }
 
 export function TextTemplateFields({

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { OperiaPage } from '@/components/operia-config-page'
 import { CompanyAiFields } from '@/components/company-ai-fields'
 import { CompanyEntraFields } from '@/components/company-entra-fields'
+import { CompanySlackFields } from '@/components/company-slack-fields'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { Label } from '@/components/ui/label'
@@ -27,11 +28,17 @@ function Page() {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
   const { data: platform, isPending } = usePlatformSettings()
-  const [selected, setSelected] = useState<string | null>(null)
+  // slack-oauth sender browseren tilbage med ?slack=<udfald>. Den eneste der
+  // læser flaget er CompanySlackFields, så Slack-fanen skal være den valgte
+  // fra første render — ellers lander manageren på Entra-fanen uden toast, og
+  // flaget affyres først (og uvedkommende) når fanen senere åbnes.
+  const search = useSearch({ strict: false }) as { slack?: string }
+  const [selected, setSelected] = useState<string | null>(search?.slack ? 'slack' : null)
 
   const available = [
     ...(platform?.entra_enabled ? [{ key: 'entra', labelKey: 'integrationsPage.entra' }] : []),
     ...(platform?.ai_enabled ? [{ key: 'ai', labelKey: 'integrationsPage.ai' }] : []),
+    ...(platform?.slack_enabled ? [{ key: 'slack', labelKey: 'integrationsPage.slack' }] : []),
   ]
   // Første udbudte integration som standard — 'entra' må ikke være hardcodet,
   // for platformen kan udbyde AI uden Entra.
@@ -62,6 +69,7 @@ function Page() {
           </div>
           {effective === 'entra' && <CompanyEntraFields companyId={companyId} />}
           {effective === 'ai' && <CompanyAiFields companyId={companyId} />}
+          {effective === 'slack' && <CompanySlackFields companyId={companyId} />}
         </div>
       )}
     </OperiaPage>
