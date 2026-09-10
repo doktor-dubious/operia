@@ -16,6 +16,11 @@
 // API-nøgle-rotation, hvor en gammel deploy ikke havde fået den friske nøgle) et
 // uncaught throw → HTTP 500, før logning og mail — dvs. hverken e-mail eller
 // revisionslog, og 500'en brød samtidig anti-enumereringen.
+//
+// Observerbarhed: netop fordi svaret altid er {ok:true}, skrives udfaldet af
+// afsendelsen til revisionsloggen (detail.email_sent / detail.email_error, se
+// 20260905120000) og til edge-konsollen. Ellers kan "mailen fejlede" ikke
+// skelnes fra "mailen kom frem" nogen steder.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendResetEmail } from '../_shared/reset-email.ts'
@@ -55,26 +60,56 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-    // Log forsøget uanset udfald: kendt konto ⇒ attribueret, ukendt email ⇒
-    // unknown_email=true. RPC'en slår selv kontoen op og flood-dæmper. Svaret er
-    // stadig ens (anti-enumerering) — kun den platform-admin-synlige log skelner.
-    // NB: rpc() returnerer en PostgREST-builder (thenable), IKKE et rigtigt
-    // Promise — den har intet .catch, så vi await'er i en try i stedet.
-    try {
-      await admin.rpc('log_password_reset_requested', { p_email: email })
-    } catch (_e) {
-      // best-effort: logning må aldrig få kaldet til at fejle
-    }
+    // Udfaldet af selve afsendelsen skal med i loggen. Svaret er altid {ok:true}
+    // (anti-enumerering), så en fejlet mail er ellers usynlig BÅDE i UI'et og i
+    // revisionsloggen — man kunne kun konstatere at intet dukkede op i
+    // indbakken. null = ingen mail forsøgt (ukendt email).
+    let emailSent: boolean | null = null
+    let emailError: string | null = null
 
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo: `${appUrl}/welcome?mode=reset` },
-    })
-    // Ukendt email ⇒ generateLink fejler; slug fejlen og send ingen mail.
-    if (!error) {
-      const link = data.properties?.action_link
-      if (link) await sendResetEmail(admin, email, link)
+    try {
+      const { data, error } = await admin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo: `${appUrl}/welcome?mode=reset` },
+      })
+      // Ukendt email ⇒ generateLink fejler; slug fejlen og send ingen mail.
+      // Det er ikke en afsendelsesfejl, så emailSent forbliver null.
+      if (!error) {
+        const link = data.properties?.action_link
+        if (!link) {
+          emailSent = false
+          emailError = 'no_action_link'
+        } else {
+          const r = await sendResetEmail(admin, email, link)
+          emailSent = r.ok
+          emailError = r.ok ? null : (r.error ?? 'unknown_error')
+        }
+      }
+    } catch (e) {
+      // Et kast her (netværk, uventet SDK-fejl) er også en fejlet afsendelse.
+      emailSent = false
+      emailError = `exception: ${e instanceof Error ? e.message : String(e)}`
+    } finally {
+      // Loggen skrives i finally, så anmodningen ALTID logges — også når
+      // afsendelsen kastede. Kendt konto ⇒ attribueret, ukendt email ⇒
+      // unknown_email=true. RPC'en slår selv kontoen op, maskerer fejlteksten
+      // og flood-dæmper. Kun den platform-admin-synlige log skelner.
+      if (emailSent === false) {
+        // Driften skal kunne se det i edge-loggen uden at grave i revisionsloggen.
+        console.error(`request-password-reset: email send failed (${emailError})`)
+      }
+      // NB: rpc() returnerer en PostgREST-builder (thenable), IKKE et rigtigt
+      // Promise — den har intet .catch, så vi await'er i en try i stedet.
+      try {
+        await admin.rpc('log_password_reset_requested', {
+          p_email: email,
+          p_email_sent: emailSent,
+          p_email_error: emailError,
+        })
+      } catch (_e) {
+        // best-effort: logning må aldrig få kaldet til at fejle
+      }
     }
   } catch (_e) {
     // Svar altid ok — afslør aldrig om kontoen findes, og lad aldrig en

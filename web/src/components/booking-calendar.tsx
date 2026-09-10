@@ -1,8 +1,16 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react'
+import {
+  AlignLeft,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Plus,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,18 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
-import { BookingDialog, useBookingResources } from '@/components/booking-dialog'
-import { DateRangePicker, MiniCalendar } from '@/components/booking-mini-calendar'
+import { BookingDialog } from '@/components/booking-dialog'
+import { useBookingResources } from '@/components/booking-form'
+import { BookingDateFilter, BookingFilterBar } from '@/components/booking-filter-bar'
+import { BookingTimeline, StatusLegend, type BookingColorFn } from '@/components/booking-timeline'
+import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import {
   addDays,
@@ -31,54 +33,75 @@ import {
   diffDays,
   endOfDay,
   isoWeek,
-  jaggedClip,
   longDayFormat,
   monthFormat,
-  monthShortFormat,
   parseISODate,
   startOfDay,
-  startOfWeek,
-  stepAnchor,
-  timeFormat,
   toISODate,
-  viewRange,
-  weekdayFormat,
-  type CalendarView,
 } from '@/lib/calendar'
-import { holidayOn } from '@/lib/holidays'
 import {
+  BOOKING_LIFECYCLE_KEYS,
   bookingCategoryColorMap,
+  bookingParticipantsLabel,
   bookingCategoryColors,
+  bookingLifecycle,
+  bookingLifecycleClass,
   bookingRpcErrorKey,
   bookingTimeLabel,
   fetchBookingsInRange,
   invalidateBookingQueries,
   type BookingHit,
+  type BookingLifecycle,
 } from '@/lib/booking'
+import {
+  bookingHorizon,
+  bookingMatches,
+  dayHourWindow,
+  horizonBounds,
+  stepBooking,
+  DAY_WINDOW,
+  RESOURCE_ALL,
+  RESOURCE_WITH_BOOKINGS,
+  type BookingCalendarSearch,
+  type BookingPeriod,
+  type BookingStatusFilter,
+  type BookingView,
+} from '@/lib/booking-view'
 import { describeError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { useQueryClient } from '@tanstack/react-query'
 
-// Bookingkalenderen: hvornår er ressourcerne optaget, og hvor er der plads?
-//  - Dag: dagens bookinger som liste.
-//  - Uge/Måned/Periode: tidslinje med én række pr. ressource; overlappende
-//    bookinger pakkes i baner under hinanden. Klik på en tom celle opretter
-//    en booking på ressourcen/datoen; klik på en bjælke åbner bookingen.
-//  - År: 12 månedskort med antal bookinger.
-// Fremadrettede, hårde intervaller — ingen forfaldslogik (modsat aktivernes
-// kalender, der kigger bagud på åbne perioder).
+// Bookingsiden: hvornår er ressourcerne optaget, og hvor er der plads?
+//
+//  - Tidslinjen (booking-timeline.tsx) er hovedvisningen: én række pr.
+//    ressource, bookingerne som bjælker. Dag viser timekolonner, uge og måned
+//    døgnkolonner.
+//  - Kalenderen er indtil videre dagsopdelte lister for perioden; selve
+//    kalendergitteret designes senere.
+//
+// Perioden, filtrene og fritekstsøgningen bor i URL'en, så en indsnævret
+// tidslinje kan deles og overleve en genindlæsning.
 
 const MAX_TIMELINE_ROWS = 100
+/** Fritekst skrives i URL'en, men først når fingrene falder til ro. */
+const QUERY_DEBOUNCE_MS = 300
 
-/** Bjælke-/prikfarve efter ressourcens kategori. */
-export type BookingColorFn = (booking: BookingHit) => { background: string; color: string }
-
-function useBookingsInRange(companyId: string | null, rangeStart: Date, rangeEnd: Date) {
+function useBookingsInRange(
+  companyId: string | null,
+  rangeStart: Date,
+  rangeEnd: Date,
+  includeCancelled: boolean,
+) {
   return useQuery({
-    queryKey: ['booking-calendar', companyId, toISODate(rangeStart), toISODate(rangeEnd)],
+    queryKey: [
+      'booking-calendar',
+      companyId,
+      toISODate(rangeStart),
+      toISODate(rangeEnd),
+      includeCancelled,
+    ],
     enabled: !!companyId,
-    queryFn: () => fetchBookingsInRange(companyId!, rangeStart, rangeEnd),
+    queryFn: () => fetchBookingsInRange(companyId!, rangeStart, rangeEnd, { includeCancelled }),
   })
 }
 
@@ -114,64 +137,7 @@ function useBookingCategoryColors(companyId: string | null) {
   }, [data])
 }
 
-/** Sidste døgn bookingen rører (ends_at er eksklusiv). */
-function lastTouchedDay(b: BookingHit): Date {
-  return startOfDay(new Date(new Date(b.ends_at).getTime() - 1))
-}
-
-function bookingBarText(b: BookingHit): string {
-  const who = b.employee?.initials || b.employee?.full_name || ''
-  const what = b.title || who
-  const prefix = b.all_day ? '' : `${timeFormat.format(new Date(b.starts_at))} `
-  return `${prefix}${what}${what !== who && who ? ` · ${who}` : ''}`
-}
-
-/** Sammenhængende kolonneintervaller med samme nøgle (måneds- og ugebånd). */
-function segments(days: Date[], keyOf: (d: Date) => string) {
-  const out: { start: number; end: number; date: Date }[] = []
-  days.forEach((d, i) => {
-    const key = keyOf(d)
-    const last = out[out.length - 1]
-    if (last && keyOf(last.date) === key) last.end = i
-    else out.push({ start: i, end: i, date: d })
-  })
-  return out
-}
-
-/**
- * Baggrunden for en døgnkolonne: helligdag vejer tungest, så weekend, og
- * ellers ugens skiftevise bånd — så øjet kan følge en uge ned gennem
- * ressourcerne. I dag lægges ovenpå af kalderen.
- */
-function dayTint(d: Date): string | undefined {
-  const holiday = holidayOn(d)
-  if (holiday?.official) return 'bg-status-bad/10'
-  if (holiday || d.getDay() === 0 || d.getDay() === 6) return 'bg-muted/40'
-  return isoWeek(d) % 2 === 0 ? 'bg-muted/15' : undefined
-}
-
-// Banepakning: overlappende bookinger på samme ressource lægges i hver sin
-// bane (første ledige, sorteret efter start).
-function packLanes(bookings: BookingHit[]): { booking: BookingHit; lane: number }[] {
-  const sorted = [...bookings].sort(
-    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
-  )
-  const laneEnds: number[] = []
-  return sorted.map((booking) => {
-    const start = new Date(booking.starts_at).getTime()
-    const end = new Date(booking.ends_at).getTime()
-    let lane = laneEnds.findIndex((e) => e <= start)
-    if (lane === -1) {
-      lane = laneEnds.length
-      laneEnds.push(end)
-    } else {
-      laneEnds[lane] = end
-    }
-    return { booking, lane }
-  })
-}
-
-// Listen bag dagsvisningen og dato-popup'en.
+// Listen bag kalendervisningen og dato-popup'en.
 function DayBookingList({
   bookings,
   colorFor,
@@ -186,306 +152,120 @@ function DayBookingList({
     return <p className="py-8 text-center text-[13px] text-muted-foreground">{t('bookingCalendar.empty')}</p>
   return (
     <div className="flex flex-col divide-y divide-border rounded-md border border-border bg-panel">
-      {bookings.map((b) => (
-        <button
-          key={b.id}
-          type="button"
-          onClick={() => onSelect(b)}
-          className="flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent/40"
-        >
-          <span
-            className="size-2.5 shrink-0 rounded-[2px]"
-            style={{ backgroundColor: colorFor(b).background }}
-          />
-          <span className="min-w-0 flex-1">
-            <span className="flex items-baseline gap-2">
-              <span className="truncate text-[13px] font-medium">{b.resource?.name ?? '—'}</span>
-              {b.title && <span className="truncate text-xs text-muted-foreground">{b.title}</span>}
+      {bookings.map((b) => {
+        const stage = bookingLifecycle(b)
+        return (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => onSelect(b)}
+            className="flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+          >
+            <span
+              className="size-2.5 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: colorFor(b).background }}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline gap-2">
+                <span className="truncate text-[13px] font-medium">{b.resource?.name ?? '—'}</span>
+                {b.title && <span className="truncate text-xs text-muted-foreground">{b.title}</span>}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {bookingTimeLabel(b)}
+                {b.employee?.full_name ? ` · ${b.employee.full_name}` : ''}
+              </span>
             </span>
-            <span className="block truncate text-xs text-muted-foreground">
-              {bookingTimeLabel(b)}
-              {b.employee?.full_name ? ` · ${b.employee.full_name}` : ''}
+            <span className={cn('shrink-0 text-[11px]', bookingLifecycleClass(stage))}>
+              {t(BOOKING_LIFECYCLE_KEYS[stage])}
             </span>
-          </span>
-          {b.all_day && (
-            <span className="shrink-0 rounded-[4px] border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
-              {t('bookingCalendar.allDay')}
-            </span>
-          )}
-        </button>
-      ))}
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-type ResourceRow = {
-  id: string
-  name: string
-  location: string | null
-  is_active: boolean
-}
-
-// Tidslinjen: én række pr. ressource, bookinger i baner. Tomme celler kan
-// klikkes for at oprette en booking netop dér.
-function Timeline({
-  rangeStart,
-  rangeEnd,
-  resources,
+/**
+ * Kalendervisningen indtil videre: perioden dag for dag. Kun døgn med
+ * bookinger tegnes — et tomt månedsgitter ville fylde en skærm med ingenting.
+ * Det rigtige kalendergitter kommer i næste omgang.
+ */
+function BookingAgenda({
+  horizon,
   bookings,
   colorFor,
   today,
-  onSelectBooking,
-  onSelectDay,
-  onCreate,
+  onSelect,
 }: {
-  rangeStart: Date
-  rangeEnd: Date
-  resources: ResourceRow[]
+  horizon: { start: Date; end: Date }
   bookings: BookingHit[]
   colorFor: BookingColorFn
   today: Date
-  onSelectBooking: (b: BookingHit) => void
-  onSelectDay: (day: Date) => void
-  onCreate: (resourceId: string, day: Date) => void
+  onSelect: (b: BookingHit) => void
 }) {
   const { t } = useTranslation()
-  const dayCount = diffDays(rangeStart, rangeEnd) + 1
-  const days = useMemo(
-    () => Array.from({ length: dayCount }, (_, i) => addDays(rangeStart, i)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [toISODate(rangeStart), dayCount],
-  )
+  const days = useMemo(() => {
+    const count = diffDays(horizon.start, horizon.end) + 1
+    return Array.from({ length: count }, (_, i) => addDays(horizon.start, i))
+      .map((day) => ({
+        day,
+        items: bookings
+          .filter(
+            (b) => new Date(b.starts_at) <= endOfDay(day) && new Date(b.ends_at) > startOfDay(day),
+          )
+          .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
+      }))
+      .filter((d) => d.items.length > 0)
+  }, [horizon.start, horizon.end, bookings])
 
-  const rows = useMemo(() => {
-    const byResource = new Map<string, BookingHit[]>()
-    for (const b of bookings) {
-      const list = byResource.get(b.resource_id) ?? []
-      list.push(b)
-      byResource.set(b.resource_id, list)
-    }
-    return resources.map((resource) => {
-      const packed = packLanes(byResource.get(resource.id) ?? [])
-      const lanes = Math.max(1, ...packed.map((p) => p.lane + 1))
-      return { resource, packed, lanes }
-    })
-  }, [resources, bookings])
-
-  const visibleRows = rows.slice(0, MAX_TIMELINE_ROWS)
-  const gridCols = `minmax(160px, 200px) repeat(${dayCount}, minmax(24px, 1fr))`
-  const todayISO = toISODate(today)
-  const showWeekday = dayCount <= 14
-
-  // Båndene over døgnene: måned øverst, uge i midten, dagen nærmest gitteret.
-  const monthSegs = useMemo(
-    () => segments(days, (d) => `${d.getFullYear()}-${d.getMonth()}`),
-    [days],
-  )
-  const weekSegs = useMemo(() => segments(days, (d) => String(startOfWeek(d).getTime())), [days])
-
-  if (rows.length === 0)
-    return <p className="py-12 text-center text-[13px] text-muted-foreground">{t('bookingCalendar.noResources')}</p>
+  if (days.length === 0)
+    return (
+      <p className="py-12 text-center text-[13px] text-muted-foreground">
+        {t('bookingCalendar.empty')}
+      </p>
+    )
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="overflow-x-auto rounded-md border border-border bg-panel">
-        <div style={{ minWidth: 160 + dayCount * 26 }}>
-          {/* Månedsbånd — skiftevis tone, så månedsskiftet ses uden at læse */}
-          <div className="grid border-b border-border/60" style={{ gridTemplateColumns: gridCols }}>
-            <div className="sticky left-0 z-20 border-r border-border bg-panel" />
-            {monthSegs.map((seg) => {
-              const width = seg.end - seg.start + 1
-              return (
-                <div
-                  key={seg.date.getTime()}
-                  title={capFirst(monthFormat.format(seg.date))}
-                  className={cn(
-                    'truncate border-l border-border/60 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground',
-                    seg.date.getMonth() % 2 === 0 ? 'bg-muted/50' : 'bg-muted/15',
-                  )}
-                  style={{ gridColumn: `${seg.start + 2} / ${seg.end + 3}` }}
-                >
-                  {width >= 5
-                    ? capFirst(monthFormat.format(seg.date))
-                    : width >= 2
-                      ? capFirst(monthShortFormat.format(seg.date).replace('.', ''))
-                      : ''}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Ugebånd — skiftevis tone pr. ugenummer */}
-          <div className="grid border-b border-border/60" style={{ gridTemplateColumns: gridCols }}>
-            <div className="sticky left-0 z-20 border-r border-border bg-panel" />
-            {weekSegs.map((seg) => {
-              const week = isoWeek(seg.date)
-              const width = seg.end - seg.start + 1
-              return (
-                <div
-                  key={seg.date.getTime()}
-                  title={t('bookingCalendar.week', { week })}
-                  className={cn(
-                    'truncate border-l border-border/60 px-1.5 py-0.5 text-[11px] text-muted-foreground',
-                    week % 2 === 0 ? 'bg-muted/50' : 'bg-muted/15',
-                  )}
-                  style={{ gridColumn: `${seg.start + 2} / ${seg.end + 3}` }}
-                >
-                  {width >= 4 ? t('bookingCalendar.week', { week }) : width >= 2 ? week : ''}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Datohoved — klik på en dag åbner dagens liste */}
-          <div className="grid border-b border-border" style={{ gridTemplateColumns: gridCols }}>
-            <div className="sticky left-0 z-20 border-r border-border bg-panel" />
-            {days.map((d) => {
-              const isToday = toISODate(d) === todayISO
-              const holiday = holidayOn(d)
-              return (
-                <button
-                  key={d.getTime()}
-                  type="button"
-                  onClick={() => onSelectDay(d)}
-                  title={
-                    holiday
-                      ? `${longDayFormat.format(d)} — ${t(`bookingCalendar.holiday.${holiday.key}`)}`
-                      : longDayFormat.format(d)
-                  }
-                  className={cn(
-                    'flex flex-col items-center border-l border-border/60 px-0.5 py-1 text-[11px] tabular-nums transition-colors hover:bg-accent/50',
-                    dayTint(d),
-                    holiday?.official ? 'text-status-bad' : 'text-muted-foreground',
-                    isToday && 'font-semibold text-foreground',
-                  )}
-                >
-                  {showWeekday && <span>{weekdayFormat.format(d).replace('.', '')}</span>}
-                  <span className={cn(isToday && 'rounded-[4px] bg-accent px-1')}>{d.getDate()}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {visibleRows.map(({ resource, packed, lanes }) => (
-            <div
-              key={resource.id}
-              className="grid border-b border-border/60 last:border-b-0"
-              style={{ gridTemplateColumns: gridCols }}
-            >
-              <div
-                className="sticky left-0 z-20 flex min-w-0 flex-col justify-center border-r border-border bg-panel px-2 py-1"
-                style={{ gridRow: `1 / ${lanes + 1}` }}
-              >
-                <span className="truncate text-[12px] font-medium">{resource.name}</span>
-                {resource.location && (
-                  <span className="truncate text-[11px] text-muted-foreground">{resource.location}</span>
-                )}
-              </div>
-              {/* Klikbare døgnceller (opret booking her) bag bjælkerne */}
-              {days.map((d, i) => (
-                <button
-                  key={d.getTime()}
-                  type="button"
-                  aria-label={t('bookingCalendar.createHere', {
-                    resource: resource.name,
-                    date: dayFormat.format(d),
-                  })}
-                  onClick={() => onCreate(resource.id, d)}
-                  className={cn(
-                    'border-l border-border/40 transition-colors hover:bg-accent/50',
-                    dayTint(d),
-                    toISODate(d) === todayISO && 'bg-accent/40',
-                  )}
-                  style={{ gridColumn: i + 2, gridRow: `1 / ${lanes + 1}`, minHeight: lanes * 36 }}
-                />
-              ))}
-              {packed.map(({ booking, lane }) => {
-                const startDay = startOfDay(new Date(booking.starts_at))
-                const endDay = lastTouchedDay(booking)
-                const clampedStart = Math.max(0, diffDays(rangeStart, startDay))
-                const clampedEnd = Math.min(dayCount - 1, diffDays(rangeStart, endDay))
-                if (clampedEnd < clampedStart) return null
-                const truncLeft = startDay < rangeStart
-                const truncRight = endDay > endOfDay(rangeEnd)
-                return (
-                  <button
-                    key={booking.id}
-                    type="button"
-                    onClick={() => onSelectBooking(booking)}
-                    title={`${booking.resource?.name ?? ''} — ${bookingTimeLabel(booking)}`}
-                    className={cn(
-                      'z-10 my-1.5 flex h-6 min-w-0 items-center self-center overflow-hidden px-1.5 text-left text-[11px] font-medium',
-                      !truncLeft && !truncRight && 'rounded-[4px]',
-                    )}
-                    style={{
-                      gridColumn: `${clampedStart + 2} / ${clampedEnd + 3}`,
-                      gridRow: lane + 1,
-                      ...colorFor(booking),
-                      clipPath: jaggedClip(truncLeft, truncRight),
-                    }}
-                  >
-                    <span className="truncate">{bookingBarText(booking)}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
+    <div className="flex flex-col gap-4">
+      {days.map(({ day, items }) => (
+        <div key={day.getTime()} className="flex flex-col gap-1.5">
+          <p
+            className={cn(
+              'text-[13px] font-medium',
+              toISODate(day) === toISODate(today) && 'text-status-good',
+            )}
+          >
+            {capFirst(longDayFormat.format(day))}
+          </p>
+          <DayBookingList bookings={items} colorFor={colorFor} onSelect={onSelect} />
         </div>
-      </div>
-      {rows.length > MAX_TIMELINE_ROWS && (
-        <p className="text-xs text-status-neutral-to-bad">
-          {t('bookingCalendar.rowsCapped', { count: MAX_TIMELINE_ROWS })}
-        </p>
-      )}
-    </div>
-  )
-}
-
-// Årsvisning: 12 månedskort med antal bookinger — klik åbner måneden.
-function YearOverview({
-  year,
-  bookings,
-  onPickMonth,
-}: {
-  year: number
-  bookings: BookingHit[]
-  onPickMonth: (monthStart: Date) => void
-}) {
-  const { t } = useTranslation()
-  const months = Array.from({ length: 12 }, (_, m) => {
-    const start = new Date(year, m, 1)
-    const end = endOfDay(new Date(year, m + 1, 0))
-    const count = bookings.filter(
-      (b) => new Date(b.starts_at) <= end && new Date(b.ends_at) > start,
-    ).length
-    return { start, count }
-  })
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {months.map((m) => (
-        <button
-          key={m.start.getMonth()}
-          type="button"
-          onClick={() => onPickMonth(m.start)}
-          className="flex flex-col gap-1.5 rounded-md border border-border bg-panel p-3 text-left transition-colors hover:border-foreground/25 hover:bg-accent/40"
-        >
-          <span className="text-[13px] font-medium">{capFirst(monthFormat.format(m.start))}</span>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {/* Tallet dækker alle kategorier, så prikken må ikke låne en
-                kategorifarve — den er kun en markør. */}
-            <span
-              className="size-2 rounded-[2px]"
-              style={{ backgroundColor: 'var(--booking-category-none)' }}
-            />
-            {t('bookingCalendar.bookingCount', { count: m.count })}
-          </span>
-        </button>
       ))}
     </div>
   )
 }
 
 // Bookingens detaljer + redigér/annullér.
+/**
+ * Faktureringsmarkeringen er en økonomihandling — manager/booking_manager,
+ * spejler can_manage_bookings i databasen. En booking_handler, der lægger
+ * bookinger ind, skal ikke kunne låse dem for redigering.
+ */
+export function useCanManageBookings(): boolean {
+  const { data: access } = useAccess()
+  if (!access) return false
+  return access.isPlatformAdmin || access.isManager || access.roles.has('booking_manager')
+}
+
+/**
+ * Bookingens detaljer og handlinger.
+ *
+ * Handlingerne følger statusmodellen (A-02): frem til fakturering kan
+ * bookingen rettes og annulleres (A-03); efter fakturering er den låst, og
+ * eneste vej tilbage er at fjerne markeringen igen — en rettelse af en
+ * faktureret booking skal ellers gå gennem en kreditnota (C-09), som ikke
+ * findes endnu. Alle tre RPC'er gentjekker det server-side; knapperne her er
+ * kun UX.
+ */
 export function BookingDetailDialog({
   booking,
   onOpenChange,
@@ -498,29 +278,64 @@ export function BookingDetailDialog({
   onChanged: () => void
 }) {
   const { t } = useTranslation()
-  const [confirmCancel, setConfirmCancel] = useState(false)
+  const canManage = useCanManageBookings()
+  const [confirm, setConfirm] = useState<'invoice' | 'clearInvoice' | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const cancelBooking = async () => {
-    if (!booking) return
+  const stage = booking ? bookingLifecycle(booking) : null
+
+  // Popup'en lukkes efter enhver handling: `booking` er et øjebliksbillede fra
+  // listen/kalenderen, så en åben popup ville vise den gamle status videre,
+  // selv om listen bagved er opdateret.
+  const run = async (
+    // PostgrestFilterBuilder er "thenable", ikke en rigtig Promise.
+    call: () => PromiseLike<{ error: { message?: string } | null }>,
+    successKey: string,
+  ) => {
     setBusy(true)
-    const { error } = await supabase.rpc('cancel_booking', { p_booking_id: booking.id })
+    const { error } = await call()
     setBusy(false)
     if (error) {
       const key = bookingRpcErrorKey(error)
       toast.error(key ? t(key) : describeError(error, t))
       return
     }
-    toast.success(t('bookingFlow.cancelledToast'))
-    setConfirmCancel(false)
+    toast.success(t(successKey))
+    setConfirm(null)
     onChanged()
     onOpenChange(false)
   }
 
+  const confirmText =
+    confirm === 'invoice'
+      ? t('bookingFlow.markInvoicedConfirm')
+      : t('bookingFlow.clearInvoicedConfirm')
+
+  const runConfirmed = () => {
+    if (!booking) return
+    if (confirm === 'invoice')
+      return run(
+        () => supabase.rpc('set_booking_invoiced', { p_booking_id: booking.id, p_invoiced: true }),
+        'bookingFlow.invoicedToast',
+      )
+    return run(
+      () => supabase.rpc('set_booking_invoiced', { p_booking_id: booking.id, p_invoiced: false }),
+      'bookingFlow.invoiceClearedToast',
+    )
+  }
+
   return (
-    <Dialog open={!!booking} onOpenChange={(open) => !open && onOpenChange(false)}>
+    <Dialog
+      open={!!booking}
+      onOpenChange={(open) => {
+        if (!open) {
+          setConfirm(null)
+          onOpenChange(false)
+        }
+      }}
+    >
       <DialogContent className="max-w-md">
-        {booking && (
+        {booking && stage && (
           <>
             <DialogHeader>
               <DialogTitle className="text-base">
@@ -533,28 +348,59 @@ export function BookingDetailDialog({
               <p className="text-muted-foreground">
                 {t('bookingFlow.employee')}: {booking.employee?.full_name ?? t('bookingFlow.unknownEmployee')}
               </p>
-              {booking.status === 'cancelled' && (
-                <p className="font-medium text-status-bad">{t('bookingPage.statusCancelled')}</p>
+              {bookingParticipantsLabel(booking) && (
+                <p className="text-muted-foreground">
+                  {t('bookingFlow.participants')}: {bookingParticipantsLabel(booking)}
+                </p>
+              )}
+              {booking.cancellation_reason && (
+                <p className="text-muted-foreground">
+                  {t('bookingFlow.cancelReason')}: {booking.cancellation_reason}
+                </p>
+              )}
+              <p className={cn('font-medium', bookingLifecycleClass(stage))}>
+                {t('bookingPage.status')}: {t(BOOKING_LIFECYCLE_KEYS[stage])}
+              </p>
+              {booking.invoiced_at && (
+                <p className="text-muted-foreground">
+                  {t('bookingFlow.invoicedAt')}: {dayFormat.format(new Date(booking.invoiced_at))}
+                </p>
               )}
             </div>
-            {booking.status === 'booked' && !confirmCancel && (
+            {!confirm && stage !== 'cancelled' && (
               <DialogFooter>
-                <Button variant="outline" size="sm" onClick={() => setConfirmCancel(true)}>
-                  {t('bookingFlow.cancelBooking')}
-                </Button>
-                <Button size="sm" onClick={() => onEdit(booking)}>
-                  {t('common.edit')}
-                </Button>
+                {stage === 'invoiced'
+                  ? canManage && (
+                      <Button variant="outline" size="sm" onClick={() => setConfirm('clearInvoice')}>
+                        {t('bookingFlow.clearInvoiced')}
+                      </Button>
+                    )
+                  : (
+                      <>
+                        {stage === 'completed' && canManage && (
+                          <Button variant="outline" size="sm" onClick={() => setConfirm('invoice')}>
+                            {t('bookingFlow.markInvoiced')}
+                          </Button>
+                        )}
+                        {/* Annullering bor i redigeringsdialogen (A-07): den
+                            kræver en årsag, og et felt hører hjemme dér hvor
+                            bookingen i forvejen redigeres — ikke bag en knap i
+                            en popup der ellers kun viser. */}
+                        <Button size="sm" onClick={() => onEdit(booking)}>
+                          {t('common.edit')}
+                        </Button>
+                      </>
+                    )}
               </DialogFooter>
             )}
-            {booking.status === 'booked' && confirmCancel && (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 p-3">
-                <p className="text-[13px]">{t('bookingFlow.cancelConfirm')}</p>
+            {confirm && (
+              <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+                <p className="text-[13px]">{confirmText}</p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setConfirmCancel(false)}>
+                  <Button variant="outline" size="sm" onClick={() => setConfirm(null)}>
                     {t('common.no')}
                   </Button>
-                  <Button variant="destructive" size="sm" disabled={busy} onClick={cancelBooking}>
+                  <Button size="sm" disabled={busy} onClick={() => void runConfirmed()}>
                     {busy ? t('common.loading') : t('common.yes')}
                   </Button>
                 </div>
@@ -610,37 +456,100 @@ function CategoryLegend({
   )
 }
 
-export function BookingCalendar({
+/** Fanerne over kalenderen/tidslinjen. */
+function ViewTabs({
   view,
-  dateISO,
-  fromISO,
-  toISO,
-  onNavigate,
+  onChange,
 }: {
-  view: CalendarView
-  dateISO?: string
-  fromISO?: string
-  toISO?: string
-  onNavigate: (next: { view?: CalendarView; date?: string; from?: string; to?: string }) => void
+  view: BookingView
+  onChange: (v: BookingView) => void
+}) {
+  const { t } = useTranslation()
+  const tabs: { key: BookingView; icon: typeof CalendarDays; label: string }[] = [
+    { key: 'calendar', icon: CalendarDays, label: t('bookingCalendar.tabCalendar') },
+    { key: 'timeline', icon: AlignLeft, label: t('bookingCalendar.tabTimeline') },
+  ]
+  return (
+    <div className="flex items-center gap-1 border-b border-border">
+      {tabs.map((tab) => (
+        <button
+          key={tab.key}
+          type="button"
+          onClick={() => onChange(tab.key)}
+          className={cn(
+            '-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px] font-medium transition-colors',
+            view === tab.key
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <tab.icon className="size-4" />
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function BookingCalendar({
+  search,
+  onChange,
+}: {
+  search: BookingCalendarSearch
+  onChange: (next: BookingCalendarSearch) => void
 }) {
   const { t } = useTranslation()
   const { companyId } = useCompanyContext()
   const queryClient = useQueryClient()
 
   const today = startOfDay(new Date())
-  const anchor = dateISO ? parseISODate(dateISO) : today
-  const { start: rangeStart, end: rangeEnd } = viewRange(view, anchor, {
-    from: fromISO ? parseISODate(fromISO) : undefined,
-    to: toISO ? parseISODate(toISO) : undefined,
-  })
+  const view: BookingView = search.view ?? 'timeline'
+  const period: BookingPeriod = search.period ?? 'week'
+  const resource = search.resource ?? RESOURCE_ALL
+  const status: BookingStatusFilter = search.status ?? 'any'
+  const anchor = search.date ? parseISODate(search.date) : today
 
-  const { data, isPending } = useBookingsInRange(companyId, rangeStart, rangeEnd)
+  const horizon = useMemo(
+    () =>
+      bookingHorizon(period, anchor, {
+        from: search.from ? parseISODate(search.from) : undefined,
+        to: search.to ? parseISODate(search.to) : undefined,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [period, search.date, search.from, search.to, toISODate(today)],
+  )
+
+  // Fritekst tastes lokalt og lægges i URL'en, når fingrene falder til ro;
+  // en URL, der skifter udefra (tilbageknappen), vinder over feltet.
+  const [term, setTerm] = useState(search.q ?? '')
+  const pushed = useRef(search.q ?? '')
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const next = term.trim()
+      if (next === (search.q ?? '')) return
+      pushed.current = next
+      onChange({ q: next || undefined })
+    }, QUERY_DEBOUNCE_MS)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term, search.q])
+  useEffect(() => {
+    const urlQuery = search.q ?? ''
+    if (urlQuery === pushed.current) return
+    pushed.current = urlQuery
+    setTerm(urlQuery)
+  }, [search.q])
+
+  // Annullerede bookinger hentes kun, når de er valgt: de optager ingen plads
+  // i virkeligheden, og en bjælke for dem ville læses som "optaget".
+  const { data, isPending } = useBookingsInRange(
+    companyId,
+    horizon.start,
+    horizon.end,
+    status === 'cancelled',
+  )
   const { data: resources } = useBookingResources(companyId)
   const { categories, byId: categoryColorById, colorFor } = useBookingCategoryColors(companyId)
-
-  // Filtre er lokale (visning + dato er URL'en; filtrene er arbejdstilstand).
-  const [term, setTerm] = useState('')
-  const [onlyBooked, setOnlyBooked] = useState(false)
 
   const [selected, setSelected] = useState<BookingHit | null>(null)
   const [dayDialog, setDayDialog] = useState<Date | null>(null)
@@ -648,59 +557,85 @@ export function BookingCalendar({
   const [createResourceId, setCreateResourceId] = useState<string | undefined>()
   const [createDateISO, setCreateDateISO] = useState<string | undefined>()
   const [editBooking, setEditBooking] = useState<BookingHit | null>(null)
-  const [rangeOpen, setRangeOpen] = useState(false)
 
-  const bookings = data?.bookings ?? []
+  const query = term.trim().toLowerCase()
+  const allBookings = useMemo(() => data?.bookings ?? [], [data])
 
-  const filteredResources = useMemo(() => {
-    const q = term.trim().toLowerCase()
-    const withBookings = new Set(bookings.map((b) => b.resource_id))
-    return (resources ?? [])
-      .filter((r) => r.is_active || withBookings.has(r.id))
-      .filter((r) => !onlyBooked || withBookings.has(r.id))
-      .filter(
-        (r) =>
-          !q ||
-          r.name.toLowerCase().includes(q) ||
-          (r.location ?? '').toLowerCase().includes(q),
+  const statusBookings = useMemo(
+    () =>
+      allBookings.filter((b) => {
+        const stage = bookingLifecycle(b)
+        return status === 'any' ? stage !== 'cancelled' : stage === status
+      }),
+    [allBookings, status],
+  )
+
+  /**
+   * Rækkerne. Søgningen fjerner en ressource, der hverken selv matcher eller
+   * har et træf — men lader rækkens øvrige bookinger stå (nedtonet i
+   * tidslinjen), så belægningen stadig kan læses.
+   */
+  const visibleResources = useMemo(() => {
+    const withBookings = new Set(statusBookings.map((b) => b.resource_id))
+    let list = (resources ?? []).filter((r) => r.is_active || withBookings.has(r.id))
+    if (resource === RESOURCE_WITH_BOOKINGS) list = list.filter((r) => withBookings.has(r.id))
+    else if (resource !== RESOURCE_ALL) list = list.filter((r) => r.id === resource)
+    if (query) {
+      const hits = new Set(
+        statusBookings.filter((b) => bookingMatches(b, query)).map((b) => b.resource_id),
       )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resources, bookings, term, onlyBooked])
+      list = list.filter(
+        (r) =>
+          hits.has(r.id) ||
+          r.name.toLowerCase().includes(query) ||
+          (r.location ?? '').toLowerCase().includes(query),
+      )
+    }
+    return list
+  }, [resources, statusBookings, resource, query])
 
   const visibleBookings = useMemo(() => {
-    const ids = new Set(filteredResources.map((r) => r.id))
-    return bookings.filter((b) => ids.has(b.resource_id))
-  }, [bookings, filteredResources])
+    const ids = new Set(visibleResources.map((r) => r.id))
+    return statusBookings.filter((b) => ids.has(b.resource_id))
+  }, [statusBookings, visibleResources])
+
+  /** Kalendervisningen viser kun træf — dér er der ingen række at tone ned. */
+  const agendaBookings = useMemo(
+    () => (query ? visibleBookings.filter((b) => bookingMatches(b, query)) : visibleBookings),
+    [visibleBookings, query],
+  )
+
+  const hours = useMemo(
+    () => (period === 'day' ? dayHourWindow(horizon.start, visibleBookings) : DAY_WINDOW),
+    [period, horizon.start, visibleBookings],
+  )
+  const bounds = useMemo(
+    () => horizonBounds(period, horizon, hours),
+    [period, horizon, hours],
+  )
+
+  const presentStages = useMemo(() => {
+    const seen = new Set(visibleBookings.map((b) => bookingLifecycle(b)))
+    return (['booked', 'in_use', 'completed', 'invoiced', 'cancelled'] as BookingLifecycle[]).filter(
+      (s) => seen.has(s),
+    )
+  }, [visibleBookings])
+
+  const rangeLabel =
+    period === 'day'
+      ? capFirst(longDayFormat.format(horizon.start))
+      : period === 'month'
+        ? capFirst(monthFormat.format(horizon.start))
+        : period === 'week'
+          ? `${t('bookingCalendar.week', { week: isoWeek(horizon.start) })} · ${dayFormat.format(horizon.start)} – ${dayFormat.format(horizon.end)}`
+          : `${dayFormat.format(horizon.start)} – ${dayFormat.format(horizon.end)}`
 
   const dayBookingsFor = (day: Date) =>
-    visibleBookings
+    agendaBookings
       .filter(
         (b) => new Date(b.starts_at) <= endOfDay(day) && new Date(b.ends_at) > startOfDay(day),
       )
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
-
-  const go = onNavigate
-
-  const step = (dir: 1 | -1) => {
-    const span = diffDays(rangeStart, rangeEnd) + 1
-    if (view === 'custom') {
-      go({
-        from: toISODate(addDays(rangeStart, span * dir)),
-        to: toISODate(addDays(rangeEnd, span * dir)),
-      })
-    } else {
-      go({ date: toISODate(stepAnchor(view, anchor, dir, span)) })
-    }
-  }
-
-  const rangeLabel =
-    view === 'day'
-      ? capFirst(longDayFormat.format(anchor))
-      : view === 'month'
-        ? capFirst(monthFormat.format(anchor))
-        : view === 'year'
-          ? String(anchor.getFullYear())
-          : `${dayFormat.format(rangeStart)} – ${dayFormat.format(rangeEnd)}`
 
   const openCreate = (resourceId?: string, day?: Date) => {
     setCreateResourceId(resourceId)
@@ -710,166 +645,155 @@ export function BookingCalendar({
 
   const refresh = () => invalidateBookingQueries(queryClient)
 
+  const navButtons: {
+    key: string
+    icon: typeof ChevronLeft
+    label: string
+    run: () => void
+  }[] = [
+    {
+      key: 'prevPeriod',
+      icon: ChevronsLeft,
+      label: t('bookingCalendar.prevPeriod'),
+      run: () => onChange(stepBooking(period, horizon, 'period', -1)),
+    },
+    {
+      key: 'prevDay',
+      icon: ChevronLeft,
+      label: t('bookingCalendar.prevDay'),
+      run: () => onChange(stepBooking(period, horizon, 'day', -1)),
+    },
+  ]
+  const navButtonsAfter: typeof navButtons = [
+    {
+      key: 'nextDay',
+      icon: ChevronRight,
+      label: t('bookingCalendar.nextDay'),
+      run: () => onChange(stepBooking(period, horizon, 'day', 1)),
+    },
+    {
+      key: 'nextPeriod',
+      icon: ChevronsRight,
+      label: t('bookingCalendar.nextPeriod'),
+      run: () => onChange(stepBooking(period, horizon, 'period', 1)),
+    },
+  ]
+
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Filtre + ny booking */}
+      <ViewTabs view={view} onChange={(v) => onChange({ view: v })} />
+
+      <BookingFilterBar
+        period={period}
+        today={today}
+        resource={resource}
+        resources={resources ?? []}
+        categories={categories}
+        status={status}
+        query={term}
+        onChange={onChange}
+        onQueryChange={setTerm}
+        actions={
+          <Button size="sm" onClick={() => openCreate()}>
+            <Plus className="size-4" /> {t('bookingFlow.newTitle')}
+          </Button>
+        }
+      />
+
+      {/* Periodevalg til venstre, frem/tilbage til højre */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-56">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={term}
-            placeholder={t('bookingCalendar.searchPlaceholder')}
-            className="h-8 pl-8"
-            onChange={(e) => setTerm(e.target.value)}
-          />
+        <BookingDateFilter
+          period={period}
+          horizon={horizon}
+          today={today}
+          onChange={onChange}
+        />
+        <span className="text-[13px] font-medium">{rangeLabel}</span>
+        <div className="ml-auto flex items-center gap-1">
+          {navButtons.map((b) => (
+            <Button
+              key={b.key}
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              title={b.label}
+              aria-label={b.label}
+              onClick={b.run}
+            >
+              <b.icon className="size-4" />
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              onChange({
+                period: period === 'range' ? 'week' : period,
+                date: toISODate(today),
+              })
+            }
+          >
+            {t('bookingCalendar.today')}
+          </Button>
+          {navButtonsAfter.map((b) => (
+            <Button
+              key={b.key}
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              title={b.label}
+              aria-label={b.label}
+              onClick={b.run}
+            >
+              <b.icon className="size-4" />
+            </Button>
+          ))}
         </div>
-        <Select value={onlyBooked ? 'booked' : 'all'} onValueChange={(v) => setOnlyBooked(v === 'booked')}>
-          <SelectTrigger size="sm" className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('bookingCalendar.allResources')}</SelectItem>
-            <SelectItem value="booked">{t('bookingCalendar.onlyWithBookings')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button size="sm" className="ml-auto" onClick={() => openCreate()}>
-          <Plus className="size-4" /> {t('bookingFlow.newTitle')}
-        </Button>
       </div>
 
       {data?.capped && (
         <p className="text-xs text-status-neutral-to-bad">{t('bookingCalendar.capped')}</p>
       )}
 
-      {/* Forklaring over kalenderen — den skal kunne læses uden at scrolle
-          forbi en lang tidslinje. Årsvisningen har ingen kategorifarver. */}
-      {!isPending && view !== 'year' && (
-        <CategoryLegend
-          bookings={view === 'day' ? dayBookingsFor(anchor) : visibleBookings}
-          categories={categories}
-          byId={categoryColorById}
-        />
+      {/* Forklaringerne: farven er kategoriens, formen er status'. */}
+      {!isPending && (
+        <div className="flex flex-col gap-1.5">
+          <CategoryLegend
+            bookings={visibleBookings}
+            categories={categories}
+            byId={categoryColorById}
+          />
+          <StatusLegend stages={presentStages} />
+        </div>
       )}
 
-      {/* Lille kalender til venstre; tidslinjen (og dens egen værktøjslinje)
-          til højre. Årsvisningen er selv et årsoverblik og får ingen. */}
-      <div className="flex flex-col items-start gap-4 xl:flex-row">
-        {view !== 'year' && (
-          <MiniCalendar
-            className="w-full shrink-0 xl:w-[15rem]"
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            today={today}
-            // Ét klik: behold visningen, flyt den til datoen (uge-visningen
-            // hopper altså til dagens uge). Træk: sæt perioden.
-            onPickDay={(d) =>
-              go(
-                view === 'custom'
-                  ? { view: 'week', date: toISODate(d) }
-                  : { view, date: toISODate(d) },
-              )
-            }
-            onPickRange={(from, to) =>
-              go({ view: 'custom', from: toISODate(from), to: toISODate(to) })
-            }
-          />
-        )}
-
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-3">
-          {/* Periode til venstre (åbner periodevælgeren), visning til højre */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                onClick={() => step(-1)}
-                aria-label={t('bookingCalendar.prev')}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => go({ view: view === 'custom' ? 'week' : view, date: toISODate(today) })}
-              >
-                {t('bookingCalendar.today')}
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                onClick={() => step(1)}
-                aria-label={t('bookingCalendar.next')}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-            <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-[13px] font-medium">
-                  {rangeLabel}
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto p-4">
-                <DateRangePicker
-                  rangeStart={rangeStart}
-                  rangeEnd={rangeEnd}
-                  today={today}
-                  onApply={(from, to) => {
-                    setRangeOpen(false)
-                    go({ view: 'custom', from: toISODate(from), to: toISODate(to) })
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-            <Select
-              value={view}
-              onValueChange={(v) => go({ view: v as CalendarView, date: toISODate(anchor) })}
-            >
-              <SelectTrigger size="sm" className="ml-auto w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(['day', 'week', 'month', 'year', 'custom'] as const).map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {t(`bookingCalendar.view_${v}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isPending ? (
-            <Skeleton className="h-64 w-full" />
-          ) : view === 'day' ? (
-            <DayBookingList
-              bookings={dayBookingsFor(anchor)}
-              colorFor={colorFor}
-              onSelect={setSelected}
-            />
-          ) : view === 'year' ? (
-            <YearOverview
-              year={anchor.getFullYear()}
-              bookings={visibleBookings}
-              onPickMonth={(m) => go({ view: 'month', date: toISODate(m) })}
-            />
-          ) : (
-            <Timeline
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              resources={filteredResources}
-              bookings={visibleBookings}
-              colorFor={colorFor}
-              today={today}
-              onSelectBooking={setSelected}
-              onSelectDay={setDayDialog}
-              onCreate={(resourceId, day) => openCreate(resourceId, day)}
-            />
-          )}
-        </div>
-      </div>
+      {isPending ? (
+        <Skeleton className="h-64 w-full" />
+      ) : view === 'calendar' ? (
+        <BookingAgenda
+          horizon={horizon}
+          bookings={agendaBookings}
+          colorFor={colorFor}
+          today={today}
+          onSelect={setSelected}
+        />
+      ) : (
+        <BookingTimeline
+          period={period}
+          horizon={horizon}
+          hours={hours}
+          bounds={bounds}
+          resources={visibleResources}
+          bookings={visibleBookings}
+          query={query}
+          colorFor={colorFor}
+          today={today}
+          maxRows={MAX_TIMELINE_ROWS}
+          onSelectBooking={setSelected}
+          onSelectDay={setDayDialog}
+          onCreate={(resourceId, day) => openCreate(resourceId, day)}
+        />
+      )}
 
       {/* Dagens liste (klik på en dato i tidslinjen) */}
       <Dialog open={!!dayDialog} onOpenChange={(open) => !open && setDayDialog(null)}>
@@ -877,7 +801,9 @@ export function BookingCalendar({
           {dayDialog && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-base">{capFirst(longDayFormat.format(dayDialog))}</DialogTitle>
+                <DialogTitle className="text-base">
+                  {capFirst(longDayFormat.format(dayDialog))}
+                </DialogTitle>
               </DialogHeader>
               <DayBookingList
                 bookings={dayBookingsFor(dayDialog)}

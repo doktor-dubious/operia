@@ -308,6 +308,144 @@ export function AssetFlowFields(props: {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Booking-flow (EVU-krav A-04)
+//
+// Fem beskeder, hver med sin afkrydsning, plus påmindelsens varsel. Formen er
+// bevidst enklere end pakke-/aktiv-påmindelserne: der er ÉN påmindelse (en
+// stige giver ingen mening før et møde), og varslet måles i TIMER, ikke dage —
+// et mødelokale bookes typisk samme uge og en puljebil samme dag, så "3 dage
+// før" ville aldrig nå at udløse for flertallet af bookinger.
+//
+// `addresses` er kun med på virksomhedssiden: en postkasse er kundens egen, og
+// platformen har ingen standard at arve fra.
+// ---------------------------------------------------------------------------
+export type BookingFlowValue = {
+  createdEnabled: boolean
+  updatedEnabled: boolean
+  cancelledEnabled: boolean
+  reminderEnabled: boolean
+  reminderHours: number
+  invoicedEnabled: boolean
+  notifyBooker: boolean
+}
+
+export const DEFAULT_BOOKING_REMINDER_HOURS = 24
+
+export function BookingFlowFields({
+  value,
+  onChange,
+  addresses,
+}: {
+  value: BookingFlowValue
+  onChange: (patch: Partial<BookingFlowValue>) => void
+  addresses?: ReactNode
+}) {
+  const { t } = useTranslation()
+
+  const box = (enabled: boolean) =>
+    cn(
+      'flex flex-col gap-3 rounded-lg border p-2.5',
+      enabled && 'border-primary/30 bg-primary/5 dark:border-primary/20 dark:bg-primary/10',
+    )
+
+  const toggle = (
+    id: string,
+    checked: boolean,
+    label: string,
+    hint: string,
+    onToggle: (v: boolean) => void,
+    extra?: ReactNode,
+  ) => (
+    <div className={box(checked)}>
+      <FieldLabel htmlFor={id} className="font-normal">
+        <Checkbox id={id} checked={checked} onCheckedChange={(v) => onToggle(v === true)} />
+        <FieldTitle>{label}</FieldTitle>
+      </FieldLabel>
+      <p className="pl-6 text-xs text-muted-foreground">{hint}</p>
+      {checked && extra}
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      {toggle(
+        'bf-created',
+        value.createdEnabled,
+        t('notificationsPage.bookingCreated'),
+        t('notificationsPage.bookingCreatedHint'),
+        (v) => onChange({ createdEnabled: v }),
+      )}
+      {toggle(
+        'bf-updated',
+        value.updatedEnabled,
+        t('notificationsPage.bookingUpdated'),
+        t('notificationsPage.bookingUpdatedHint'),
+        (v) => onChange({ updatedEnabled: v }),
+      )}
+      {toggle(
+        'bf-cancelled',
+        value.cancelledEnabled,
+        t('notificationsPage.bookingCancelled'),
+        t('notificationsPage.bookingCancelledHint'),
+        (v) => onChange({ cancelledEnabled: v }),
+      )}
+      {toggle(
+        'bf-reminder',
+        value.reminderEnabled,
+        t('notificationsPage.bookingReminder'),
+        t('notificationsPage.bookingReminderHint'),
+        (v) => onChange({ reminderEnabled: v }),
+        <div className="flex flex-col gap-2 pl-6">
+          <Label htmlFor="bf-reminder-hours" className="text-label">
+            {t('notificationsPage.bookingReminderHours')}
+          </Label>
+          <Input
+            id="bf-reminder-hours"
+            type="number"
+            min={1}
+            max={336}
+            className="w-40"
+            value={value.reminderHours}
+            onChange={(e) =>
+              onChange({
+                reminderHours: Math.min(
+                  336,
+                  Math.max(1, Number(e.target.value) || DEFAULT_BOOKING_REMINDER_HOURS),
+                ),
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('notificationsPage.bookingReminderHoursHint')}
+          </p>
+        </div>,
+      )}
+      {toggle(
+        'bf-invoiced',
+        value.invoicedEnabled,
+        t('notificationsPage.bookingInvoiced'),
+        t('notificationsPage.bookingInvoicedHint'),
+        (v) => onChange({ invoicedEnabled: v }),
+      )}
+
+      <FieldLabel htmlFor="bf-booker" className="px-2.5 py-1.5 font-normal">
+        <Checkbox
+          id="bf-booker"
+          checked={value.notifyBooker}
+          onCheckedChange={(v) => onChange({ notifyBooker: v === true })}
+        />
+        <div className="flex flex-col gap-0.5">
+          <FieldTitle>{t('notificationsPage.bookingNotifyBooker')}</FieldTitle>
+          <FieldDescription>{t('notificationsPage.bookingNotifyBookerHint')}</FieldDescription>
+        </div>
+      </FieldLabel>
+
+      {addresses}
+    </div>
+  )
+}
+
 // Kanalvalg (Generelt-sektionen). Gælder alle notifikationstyper. Listen kommer
 // fra NOTIFY_CHANNELS, så en ny kanal dukker op her uden en ændring i denne fil
 // — alle andre end e-mail kræver desuden et tilvalg pr. kunde (CHANNEL_FEATURE),

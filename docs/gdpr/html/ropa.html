@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Ropa</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Ropa</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#operia-record-of-processing-activities-processor" id="toc-operia-record-of-processing-activities-processor">Operia —
+record of processing activities (processor)</a>
+<ul>
+<li><a href="#parties" id="toc-parties">0. Parties</a></li>
+<li><a href="#parcel-intake-and-chain-of-custody" id="toc-parcel-intake-and-chain-of-custody">1. Parcel intake and chain
+of custody</a></li>
+<li><a href="#handover-handout" id="toc-handover-handout">2. Handover /
+handout</a></li>
+<li><a href="#parcel-notifications-and-reminders" id="toc-parcel-notifications-and-reminders">3. Parcel notifications and
+reminders</a></li>
+<li><a href="#employee-directory-maintenance" id="toc-employee-directory-maintenance">4. Employee directory
+maintenance</a></li>
+<li><a href="#employee-directory-import-flow-0" id="toc-employee-directory-import-flow-0">5. Employee directory import
+(Flow 0)</a></li>
+<li><a href="#directory-sync-from-microsoft-entra-id" id="toc-directory-sync-from-microsoft-entra-id">6. Directory sync from
+Microsoft Entra ID</a></li>
+<li><a href="#ai-label-reading" id="toc-ai-label-reading">7. AI label
+reading</a></li>
+<li><a href="#route-planning" id="toc-route-planning">8. Route
+planning</a></li>
+<li><a href="#asset-management-and-loans" id="toc-asset-management-and-loans">9. Asset management and
+loans</a></li>
+<li><a href="#b.-resource-booking-booking-product" id="toc-b.-resource-booking-booking-product">9b. Resource booking
+(Booking product)</a></li>
+<li><a href="#authentication-and-access-management" id="toc-authentication-and-access-management">10. Authentication and
+access management</a></li>
+<li><a href="#audit-logging-and-log-forwarding" id="toc-audit-logging-and-log-forwarding">11. Audit logging and log
+forwarding</a></li>
+<li><a href="#backup-and-disaster-recovery" id="toc-backup-and-disaster-recovery">12. Backup and disaster
+recovery</a></li>
+<li><a href="#dca-logic-as-controller-customer-user-accounts-and-support" id="toc-dca-logic-as-controller-customer-user-accounts-and-support">13.
+DCA Logic as controller — customer user accounts and support</a></li>
+<li><a href="#dca-logic-as-controller-feedback-inbox" id="toc-dca-logic-as-controller-feedback-inbox">14. DCA Logic as
+controller — feedback inbox</a></li>
+<li><a href="#dca-logic-as-controller-sales-leads-public-savings-calculator" id="toc-dca-logic-as-controller-sales-leads-public-savings-calculator">15.
+DCA Logic as controller — sales leads (public savings
+calculator)</a></li>
+<li><a href="#dca-logic-as-controller-platform-administration-and-impersonation" id="toc-dca-logic-as-controller-platform-administration-and-impersonation">16.
+DCA Logic as controller — platform administration and
+impersonation</a></li>
+<li><a href="#offboarding-and-return-of-data" id="toc-offboarding-and-return-of-data">17. Offboarding and return of
+data</a></li>
+<li><a href="#maintenance-rule" id="toc-maintenance-rule">Maintenance
+rule</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="operia-record-of-processing-activities-processor">Operia —
+record of processing activities (processor)</h1>
+<p>GDPR <strong>Art. 30(2)</strong> record, kept by DCA Logic as
+processor. One section per processing activity carried out on behalf of
+customers, plus the activities where DCA Logic is itself controller
+(§13–§15). Annex A of every data processing agreement is generated from
+§1–§12.</p>
+<p><strong>Last reviewed:</strong> 2026-08-14 · <strong>Owner:</strong>
+DCA Logic privacy owner. Companion documents: <a href="subprocessors.md">subprocessors.md</a> (recipients), <a href="toms.md">toms.md</a> (security measures),
+<code>../compliance-map.md</code> (where it is in the code).</p>
+<hr />
+<h2 id="parties">0. Parties</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Processor</strong></td>
+<td>DCA Logic — <em>legal name, CVR, address and contact to be filled
+in</em></td>
+</tr>
+<tr>
+<td><strong>Processor’s representative / privacy owner</strong></td>
+<td><em>to be named</em> — no Art. 37 DPO required at current scale (no
+large-scale systematic monitoring as a core activity); revisit as the
+customer base grows</td>
+</tr>
+<tr>
+<td><strong>Controllers</strong></td>
+<td>Each customer company using Operia. The current list is the
+<code>companies</code> table; the contract file holds the signed
+DPAs</td>
+</tr>
+<tr>
+<td><strong>Categories of data subjects (all activities)</strong></td>
+<td>Employees of the customer (parcel receivers, parcel handlers,
+managers), external senders and couriers named on parcels, third parties
+named in free text (proxy collectors), asset borrowers</td>
+</tr>
+<tr>
+<td><strong>Special categories (Art. 9)</strong></td>
+<td><strong>None processed.</strong> Biometric verification is
+device-local and produces no biometric data in Operia (see toms.md
+§3)</td>
+</tr>
+<tr>
+<td><strong>Transfers outside EU/EEA</strong></td>
+<td>Only as listed in <a href="subprocessors.md">subprocessors.md</a>;
+the platform itself is in <code>eu-north-1</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Retention convention used below.</strong> “Contract term” =
+until the customer’s contract ends, then per <a href="#16-offboarding-and-return-of-data">offboarding</a>. Where a
+configurable window exists, the current default is stated honestly —
+several default to <em>keep forever</em> today and are listed as gaps in
+<code>../compliance-map.md</code>.</p>
+<hr />
+<h2 id="parcel-intake-and-chain-of-custody">1. Parcel intake and chain
+of custody</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Register an incoming parcel, tie it to its receiver, and keep an
+auditable record of every custody change until it is delivered,
+rejected, returned or voided</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Receiver (employee), sender (person or company), the handling
+employees</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Receiver identity (name, initials, department, employee no.), sender
+free text, barcode/tracking no., storage location, timestamps, actor
+user id per event, condition photos (may show persons), condition
+notes</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Internal only. Sub-processors: Supabase (hosting)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>None beyond hosting (EU)</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Per-company window (category <code>parcels</code>), applied
+<strong>only to closed parcels</strong>; deleting a parcel takes its
+events with it. <code>parcel_events</code> has no window of its own — it
+is the chain of custody, and erasure is met by anonymizing the
+referenced person. Condition photos and signatures: category
+<code>parcel_files</code>, orphans always removed. All windows default
+to <em>keep until further notice</em> until the controller sets one —
+see <a href="retention-schedule.md">retention-schedule.md</a></td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>RLS per <code>company_id</code>; append-only event log; private
+storage bucket (toms.md §2, §4)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="handover-handout">2. Handover / handout</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Prove that a parcel was handed to the right person, or record
+refusal</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Receiver, proxy collector (third party), handling employee</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Signature image (handwriting), NFC/MIFARE card id,
+<code>delivered_to</code> free-text name, <code>delivered_note</code>,
+rejection flag and reason, <code>receiver_override_reason</code> when a
+manager records a deviation</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Internal only</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Signatures follow the parcel-file retention rule (§1).
+<strong>Free-text collector names are not scrubbed by any anonymization
+path today</strong> — open decision, see
+<code>../compliance-map.md</code></td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Private <code>signatures</code> bucket, delete restricted to
+platform admins (evidence integrity); override and removal are audited
+events</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parcel-notifications-and-reminders">3. Parcel notifications and
+reminders</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Tell the receiver a parcel has arrived; remind about uncollected
+parcels and overdue asset loans</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Receiver, asset borrower</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>E-mail address / mobile number, receiver name, parcel reference,
+message body, delivery status. For Slack: the receiver’s Slack member id
+(manually entered, or resolved from the work e-mail via
+<code>users.lookupByEmail</code> when the customer has enabled e-mail
+lookup)</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td><strong>Resend</strong> (email, US) <em>or</em>
+<strong>Brevo</strong> (email, FR) — whichever is selected as the
+platform’s outbound provider, <strong>GatewayAPI</strong> (SMS, DK),
+<strong>Slack / Salesforce</strong> (Slack direct messages, US — only
+for customers who have installed the Operia Slack app in their own
+workspace and enabled the channel; see <code>subprocessors.md</code> row
+10)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>US — Resend, DPF + SCCs (<strong>none</strong> if Brevo is selected:
+EU/EEA); US — Slack (Salesforce), DPF + SCCs</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>The recipient address is <strong>cleared when the parcel
+closes</strong> (as the asset-loan twin already did on return); the
+remaining metadata falls under the <code>notifications</code> retention
+category</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Recipients are <strong>masked</strong> in the audit log; provider
+keys are edge-function secrets only</td>
+</tr>
+<tr>
+<td><strong>Legal basis (controller’s)</strong></td>
+<td>Legitimate interest in the employment context — see
+<code>legal-basis-note.md</code> (planned)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="employee-directory-maintenance">4. Employee directory
+maintenance</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Keep the receiver directory current so parcels can be addressed to a
+real person</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>All employees of the customer</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Name, initials, employee number, e-mail, phone, department, NFC card
+id, external id, optional Slack member id, active/retired state</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Internal only</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>None</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Contract term. Employees are <strong>deactivated, never
+deleted</strong> (parcel history references them) and
+<strong>anonymized</strong> on request, automatically when a retired
+employee’s last parcel closes, and — where the controller sets the
+<code>employees</code> window — automatically after that period for
+inactive employees with no open parcels</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Erasure runs through one server-side function
+(<code>anonymize_employee_internal</code>), never a client column
+list</td>
+</tr>
+</tbody>
+</table>
+<h2 id="employee-directory-import-flow-0">5. Employee directory import
+(Flow 0)</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Ingest the customer’s HR extract (CSV) over SFTP, e-mail or manual
+upload; upsert on employee number; deactivate employees missing from the
+file</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>All employees of the customer</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>As §4, as delivered in the CSV</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td><strong>Postmark</strong> (e-mail route, US) <em>or</em>
+<strong>Brevo</strong> (e-mail route, FR) — whichever is selected as the
+inbound provider; the SFTP gateway (DCA’s own AWS box, stateless);
+Supabase Storage (<code>imports</code> bucket)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>US — Postmark, DPF (<strong>none</strong> if Brevo is selected:
+EU/EEA)</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Source CSV deleted from storage <strong>after a successful
+import</strong>; kept on failure for inspection; <code>imports</code>
+bucket purged after <strong>30 days</strong>; <code>import_runs</code>
+and <code>inbound_files</code> follow <code>import_retention_days</code>
+(default: keep forever)</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>SPF/DKIM/DMARC checks + per-company sender allowlist; bcrypt SFTP
+credentials; per-tenant chroot; every login/upload audited with IP</td>
+</tr>
+</tbody>
+</table>
+<h2 id="directory-sync-from-microsoft-entra-id">6. Directory sync from
+Microsoft Entra ID</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Alternative to §5: read the employee directory from the customer’s
+own Microsoft tenant</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>As §4</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Microsoft (the <strong>customer’s</strong> processor, not
+DCA’s)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>Governed by the customer’s own Microsoft agreement</td>
+</tr>
+<tr>
+<td><strong>Retention / security</strong></td>
+<td>As §4; client credentials stored as edge secrets, never in the
+browser</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ai-label-reading">7. AI label reading</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Read the printed parcel label so the handler does not have to type
+receiver, sender and carrier fields</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Receiver, sender, anyone named on the label</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td><strong>The full label photo</strong> — names, addresses, phone
+numbers — sent as base64; the extracted field values</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>The vendor the customer selects: <strong>Mistral</strong> (FR),
+<strong>Anthropic</strong> (US) or <strong>Google</strong> (US)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>US for Anthropic (SCCs) and Google (DPF/SCCs); none for Mistral</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td><strong>Nothing is stored server-side</strong> — not the photo, not
+the response. Approved values persist only as ordinary parcel fields.
+The handheld deletes the captured photo from the device cache as soon as
+it has been read (and sweeps leftovers at app start). Vendor-side
+retention follows the vendor’s terms</td>
+</tr>
+<tr>
+<td><strong>Evidence</strong></td>
+<td>Every read — success, rejection and error — writes an
+<code>ai.label_read</code> audit row: company, user, vendor, model,
+outcome, timing. Never the content read</td>
+</tr>
+<tr>
+<td><strong>Opt-in</strong></td>
+<td>Three levels: platform master switch (default <strong>off</strong>)
+→ customer selects provider/model → customer accepts the disclosure text
+naming vendor, country and what is sent
+(<code>accept_ai_disclosure</code>). The disclosure acceptance is the
+controller’s documented Art. 28 instruction and is dropped automatically
+if the provider changes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="route-planning">8. Route planning</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Plan an internal or external delivery route</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Employees and recipients at the addresses on the route</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Addresses, geocoded coordinates; with Google as provider, also the
+browser’s IP to Google’s Maps JS API</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td><strong>OpenRouteService / HeiGIT</strong> (DE, default) or
+<strong>Google</strong> (US)</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>US when Google is the configured provider</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Per-company <code>routes</code> window (default: keep until further
+notice)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="asset-management-and-loans">9. Asset management and loans</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Track company assets: check-out/in, loans, moves, service,
+documentation</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Employees, external borrowers</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Borrower name, address, e-mail, phone (a standalone contact copy on
+<code>asset_loans</code>), loan/return timestamps, free-text notes and
+photos in <code>asset_documents</code></td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Internal; reminder e-mail/SMS via §3’s providers</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>As §3</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Borrower contact details <strong>and notification recipients are
+cleared automatically when the asset is returned</strong>; returned
+loans are removed after the per-company <code>asset_loans</code> window.
+<code>asset_events</code> is append-only (id references only); documents
+and photos are deletable by platform admins</td>
+</tr>
+</tbody>
+</table>
+<h2 id="b.-resource-booking-booking-product">9b. Resource booking
+(Booking product)</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Reserve internal resources (meeting rooms, vehicles, equipment) for
+future time intervals; prevent double-booking</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Employees (the booking’s counterparty and the user who created
+it)</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Employee reference (FK to the directory — no contact copy), booking
+interval, free-text purpose/title, actor user ids in
+<code>booking_events</code>. Since 2026-09-08, when booking
+notifications are enabled: the recipient address a message was sent to
+(<code>booking_notifications.recipient</code> — e-mail, mobile number or
+chat id) plus channel, language and delivery status, and the message
+content itself (resource, interval, purpose, employee name)</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Internal, plus — only when booking notifications are enabled — §3’s
+message providers: the selected outbound e-mail provider
+(<strong>Resend</strong>, US, or <strong>Brevo</strong>, FR),
+<strong>GatewayAPI</strong> (SMS, DK) and <strong>Slack /
+Salesforce</strong> (US, per-customer install). Two customer-nominated
+role mailboxes also receive booking messages: a copy recipient for every
+message and an invoicing mailbox for the “sent for invoicing” message.
+The copy recipient sees the free-text purpose</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>None for the booking record itself. When notifications are enabled,
+§3’s transfers apply: US — Resend, DPF + SCCs (<strong>none</strong> if
+Brevo is selected: EU/EEA); US — Slack (Salesforce), DPF + SCCs</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Terminal bookings (held or cancelled) and their events are removed
+after the per-company <code>bookings</code> window; future/active
+bookings are never purged. Erasure of the person = anonymizing the
+employee row (the booking holds only the FK); the free-text title is
+searched by the Art. 15 export and leaves with the booking row.
+Message-log rows fall under the <code>notifications</code> category,
+except for bookings that have not yet ended — those rows are the
+dispatcher’s dedup state and are kept until the booking is over</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Recipients are <strong>masked</strong> in the audit log and provider
+errors sanitized before storage, as in §3; the message log is
+service-role write-only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="authentication-and-access-management">10. Authentication and
+access management</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Give the right people access and keep everyone else out</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Users with a login (managers, handlers, platform admins)</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>E-mail, password hash (Supabase Auth), roles, sign-in timestamps,
+WebAuthn public key, IP in login audit events</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Supabase (Auth); the selected outbound e-mail provider (Resend, US,
+or Brevo, FR) for invitation and reset e-mail</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>US — Resend (<strong>none</strong> if Brevo is selected)</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Contract term; login events follow
+<code>audit_retention_days</code></td>
+</tr>
+<tr>
+<td><strong>Note</strong></td>
+<td><strong>No biometric data.</strong> Passkeys store a public key; the
+handheld stores a boolean. The device decides what the biometric check
+is and never tells Operia which finger matched</td>
+</tr>
+</tbody>
+</table>
+<h2 id="audit-logging-and-log-forwarding">11. Audit logging and log
+forwarding</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Accountability (Art. 5(2)) and NIS2 traceability; optional
+forwarding to the customer’s SIEM</td>
+</tr>
+<tr>
+<td><strong>Data subjects</strong></td>
+<td>Every user who acts in the system; data subjects referenced by
+id/employee number</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Actor user id, employee numbers, masked recipients, IP/protocol on
+gateway events, and — deliberately — the manager’s free-text reason on
+<code>receiver_overridden</code> / <code>removed</code> events, which
+may name a person</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>The customer’s own log drain destination, if configured</td>
+</tr>
+<tr>
+<td><strong>Transfers</strong></td>
+<td>Wherever the customer points the drain — the customer instructs it
+as controller</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Per-company <code>audit</code> window, platform default for
+platform-level rows; <strong>both default to keep forever</strong>. The
+table is UPDATE/DELETE-blocked, so the age purge is the only removal
+path. <strong>Rows written before 2026-07-20 still contain names,
+invitee e-mails and unmasked recipients</strong> — setting this window
+is the only way to remove them</td>
+</tr>
+</tbody>
+</table>
+<h2 id="backup-and-disaster-recovery">12. Backup and disaster
+recovery</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Restore service and data after failure</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>A point-in-time copy of everything in §1–§11</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Supabase / AWS (EU)</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Per the Supabase plan’s backup schedule; erasure requests are
+honoured in the live system and reach backups by expiry, which is
+disclosed to controllers</td>
+</tr>
+<tr>
+<td><strong>Procedure</strong></td>
+<td><code>../disaster-recovery.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="dca-logic-as-controller-customer-user-accounts-and-support">13.
+DCA Logic as controller — customer user accounts and support</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Administer the service: create customers, invite and support their
+users; keep the contract and notification contacts required by the
+DPA</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Name, e-mail, role of customer contacts and users; support
+correspondence; the customer’s data protection and security contacts
+(<code>companies.privacy_contact_*</code> /
+<code>security_contact_*</code>) and the signatory of the DPA
+(<code>dpa_signed_by</code>)</td>
+</tr>
+<tr>
+<td><strong>Legal basis</strong></td>
+<td>Legitimate interest / performance of contract</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Contract term + the period needed for legal claims</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dca-logic-as-controller-feedback-inbox">14. DCA Logic as
+controller — feedback inbox</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Collect in-app product feedback</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Submitting user, message text, optional screenshot (may show tenant
+data)</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Platform admins only</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Until handled; screenshots deletable, and orphaned screenshots swept
+daily</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dca-logic-as-controller-sales-leads-public-savings-calculator">15.
+DCA Logic as controller — sales leads (public savings calculator)</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Send a visitor of the public savings calculator
+(operia-info.predictioninstitute.com) their calculation by e-mail, and —
+only if they asked for it (<code>want_demo</code>) — follow up about a
+demo</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>E-mail; optionally name and company; IP address and user agent
+(abuse limiting only); the submitted calculation</td>
+</tr>
+<tr>
+<td><strong>Recipients</strong></td>
+<td>Platform admins only (<code>sales_leads</code>, RLS); the selected
+outbound provider delivers the e-mail (see <a href="subprocessors.md">subprocessors.md</a> rows 3 and 13)</td>
+</tr>
+<tr>
+<td><strong>Legal basis</strong></td>
+<td>Consent implicit in the request (“send me the calculation”);
+legitimate interest for the abuse-limiting fields</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Fixed 12 months — the <code>sales-leads-purge</code> pg_cron job
+deletes the whole row, including IP/user agent</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dca-logic-as-controller-platform-administration-and-impersonation">16.
+DCA Logic as controller — platform administration and impersonation</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>Operate and support the platform; reproduce a customer-reported
+problem by signing in as a specific user</td>
+</tr>
+<tr>
+<td><strong>Personal data</strong></td>
+<td>Platform-admin identity, the impersonated user’s id and
+<strong>masked</strong> e-mail, timestamps</td>
+</tr>
+<tr>
+<td><strong>Safeguards</strong></td>
+<td>Impersonation is server-verified (caller must be platform admin,
+target must not be), the magic-link token is redeemed inside the edge
+function and never reaches the browser, the user’s
+verification/last-login state is restored afterwards, the session is
+visibly bannered, and the action is audit-logged fail-closed</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>Audit events per §11</td>
+</tr>
+</tbody>
+</table>
+<h2 id="offboarding-and-return-of-data">17. Offboarding and return of
+data</h2>
+<p>Art. 28(3)(g) requires deletion or return at the end of the contract.
+Cascades and logo cleanup exist in code, but the <strong>verified
+end-to-end runbook (database, storage buckets, auth users, log-drain
+configuration, backup expiry) and the “return the data first” export are
+not yet written</strong> — planned as <code>offboarding.md</code>. Until
+then, offboarding is a manual procedure carried out by a platform admin
+and must be recorded in writing per customer.</p>
+<hr />
+<h2 id="maintenance-rule">Maintenance rule</h2>
+<p>Any migration or feature that adds a personal-data field, a new
+recipient, or a new purpose updates this file <strong>in the same
+commit</strong>, together with <code>../compliance-map.md</code> and, if
+a vendor is involved, <a href="subprocessors.md">subprocessors.md</a>.</p>
+</body>
+</html>

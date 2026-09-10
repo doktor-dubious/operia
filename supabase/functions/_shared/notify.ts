@@ -39,7 +39,10 @@ export function classifySendError(err: string, channel: string): string {
   const notConfigured = e.includes('not_configured')
   switch (channel) {
     case 'email':
-      if (e.includes('invalid_email') || e.includes('validation_error') || e.includes('resend_422'))
+      // Resend: 422/validation_error. Brevo: 400 invalid_parameter på modtager.
+      // AhaSend: 2xx med fejl pr. modtager ('ahasend_rejected').
+      if (e.includes('invalid_email') || e.includes('validation_error') || e.includes('resend_422') ||
+          e.includes('brevo_400') || e.includes('ahasend_rejected'))
         return 'invalid_email'
       return notConfigured ? 'email_not_configured' : 'email_error'
     case 'sms':
@@ -131,6 +134,46 @@ export function fmtDate(iso: string, lang: string): string {
     year: 'numeric',
     timeZone: TZ,
   }).format(new Date(iso))
+}
+
+/**
+ * Et bookingintervals tidsrum som læsbar tekst — serverens modstykke til
+ * bookingTimeLabel() i web/src/lib/booking.ts, og af samme grund: en booking
+ * kan spænde over flere døgn ("05.09.2026 14.00 – 08.09.2026 09.00"), så ét
+ * datofelt kan ikke bære den. Heldagsbookinger er halvåbne intervaller, så den
+ * viste slutdato er ends_at minus et øjeblik.
+ *
+ * Ligger her sammen med fmtDate, fordi det er samme slags: en dato/tid gjort
+ * læsbar i kundens sprog og i Europe/Copenhagen, uafhængigt af kanal.
+ */
+export function bookingTimeLabel(
+  b: { starts_at: string; ends_at: string; all_day: boolean },
+  lang: string,
+): string {
+  const loc = lang.startsWith('en') ? 'en-GB' : 'da-DK'
+  const day = new Intl.DateTimeFormat(loc, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: TZ,
+  })
+  const time = new Intl.DateTimeFormat(loc, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: TZ,
+  })
+  const from = new Date(b.starts_at)
+  if (b.all_day) {
+    const to = new Date(Date.parse(b.ends_at) - 1)
+    const a = day.format(from)
+    const z = day.format(to)
+    return a === z ? a : `${a} – ${z}`
+  }
+  const to = new Date(b.ends_at)
+  return day.format(from) === day.format(to)
+    ? `${day.format(from)} ${time.format(from)}–${time.format(to)}`
+    : `${day.format(from)} ${time.format(from)} – ${day.format(to)} ${time.format(to)}`
 }
 
 // Kalenderdato (YYYY-MM-DD) i Europe/Copenhagen — så "i dag" følger den lokale

@@ -56,6 +56,35 @@ Der er også nogle punkter Operia allerede har, som FacilityOS mangler:
 FP TRAX
 -------
 
+FP Trax har også nogle ting Operia mangler.
+
+1. Teams and Slack as notification channels. Ud over SMS/Email som vi også har.
+
+2. Employee/recipient portal
+
+5. Live smart locker integrations — Flexity, Cleveron, RENZ. PIN/QR access
+
+8. Inventory withdrawal logging with person + department attribution. This is a bigger gap than I expected. They log who took what and when, allocate consumption cost per department, and produce period-filtered consumption reports. Our inventory_items is one row per item whose quantity gets updated in place — there is no movement table at all, so no "who withdrew it", no consumption history, no departmental cost allocation. Handheld goods-in/goods-out/count writes the number and loses the story.
+
+9. RFID on assets. "Works with barcodes, QR codes and RFID tags." We do barcode/QR, plus NFC cards for handover signatures only.
+
+10. Asset lifecycle alerts and financial fields. Notifications when equipment hits a service or upgrade threshold, plus current value, insurance details and proof of purchase. We have purchased_at, purchase_price, warranty_until and asset_documents, and loan-due reminders — but no service/upgrade thresholds, no insurance or current-value tracking.
+
+11. Scheduled reports (their add-on, automated distribution). Ours are on-demand PDF/Word/CSV only. Same gap FacilityOS showed.
+
+13. GLN scanning. Their app scans QR, barcode and GLN numbers. Relevant for Nordic/EU public-sector buyers; not handled in our scan path.
+
+--
+https://rjlxmdfmktucunxehtqz.supabase.co/functions/v1/slack-oauth
+
+
+Vi kan rimeligt hurtigt implementerer:
+1. Teams and Slack as notification
+8. Inventory withdrawal logging with person + department attribution.
+11. Scheduled reports
+13. GLN scanning
+
+
 FP Trax is a much closer competitor than FacilityOS — European, Nordic reference customers (Chalmers, University of Gothenburg, Skandia), publicly priced from €290/month with a 30-day trial. I read all eight product pages and checked each candidate gap against our repo.
 
 Where they have something we genuinely don't

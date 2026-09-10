@@ -1,13 +1,14 @@
-// Fælles: send invitations-e-mail via Resend med platformens skabelon.
+// Fælles: send invitations-e-mail med platformens skabelon.
 //
 // Skabelonen redigeres på Operia → Skabeloner (platform_templates, nøgle
 // 'customer_invite'). Titel = emne, Brødtekst = HTML. Tokenet {{link}} i
 // brødteksten erstattes med accept-linket; mangler det, tilføjes en knap.
-// Nøgle + afsender kommer fra edge-secrets (RESEND_API_KEY, RESEND_FROM).
+// Selve afsendelsen går gennem sendEmail, så mailen følger platformens
+// udbydervalg (Resend eller Brevo) — se send-email.ts.
 
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { sendEmail } from './send-email.ts'
 
-const DEFAULT_FROM = 'Operia <noreply@predictioninstitute.com>'
 const DEFAULT_SUBJECT = 'Du er blevet inviteret til Operia'
 const DEFAULT_BODY =
   'Du er blevet inviteret til at oprette en konto i Operia. Klik på linket for at acceptere invitationen og vælge din adgangskode.'
@@ -18,10 +19,6 @@ export async function sendInviteEmail(
   actionLink: string,
   lang = 'da',
 ): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = Deno.env.get('RESEND_API_KEY')
-  if (!apiKey) return { ok: false, error: 'resend_not_configured' }
-  const from = Deno.env.get('RESEND_FROM') ?? DEFAULT_FROM
-
   // Vælg skabelonen i modtagerens sprog; fald tilbage til dansk (first).
   const loadTemplate = (l: string) =>
     admin
@@ -45,14 +42,20 @@ export async function sendInviteEmail(
     html += `<p style="margin-top:20px"><a href="${actionLink}">Accepter invitation</a></p>`
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: email, subject, html }),
-  })
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    return { ok: false, error: `resend_${res.status}: ${detail.slice(0, 300)}` }
+  const sent = await sendEmail(email, subject, html)
+
+  // Gem udbyderens besked-id, så et bounce-event senere kan findes tilbage til
+  // denne mail (se _shared/mail-events.ts). Best-effort: en fejl her må aldrig
+  // gøre en afsendt mail til en fejlet.
+  if (sent.ok && sent.id) {
+    const { error: recErr } = await admin.rpc('record_account_email', {
+      p_kind: 'invite',
+      p_provider: sent.provider ?? 'resend',
+      p_provider_id: sent.id,
+      p_email: email,
+    })
+    if (recErr) console.error('record_account_email fejlede:', recErr.message)
   }
-  return { ok: true }
+
+  return sent.ok ? { ok: true } : { ok: false, error: sent.error }
 }

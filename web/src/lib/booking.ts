@@ -24,11 +24,12 @@ export function effectiveTimeMode(
 }
 
 export const BOOKING_COLUMNS =
-  'id, company_id, resource_id, employee_id, booked_by, starts_at, ends_at, all_day, title, status, cancelled_at, created_at'
+  'id, company_id, resource_id, employee_id, booked_by, starts_at, ends_at, all_day, title, status, cancelled_at, cancellation_reason, invoiced_at, participant_count, participant_level_id, created_at'
 
 export const BOOKING_EMBED = `${BOOKING_COLUMNS},
   resource:booking_resources (id, name, location, time_mode, is_active, category_id),
-  employee:employees (id, full_name, initials)`
+  employee:employees (id, full_name, initials),
+  level:booking_participant_levels (id, name)`
 
 export type BookingHit = {
   id: string
@@ -42,6 +43,10 @@ export type BookingHit = {
   title: string | null
   status: BookingStatus
   cancelled_at: string | null
+  cancellation_reason: string | null
+  invoiced_at: string | null
+  participant_count: number | null
+  participant_level_id: string | null
   created_at: string
   resource: {
     id: string
@@ -56,6 +61,70 @@ export type BookingHit = {
     full_name: string | null
     initials: string | null
   } | null
+  level: {
+    id: string
+    name: string
+  } | null
+}
+
+/**
+ * Statusmodellen fra EVU-kravet A-02: booket → i brug → afsluttet → faktureret
+ * (plus annulleret, som ligger uden for forløbet).
+ *
+ * De tre første trin er tidens funktion og udledes her — de lagres ikke, netop
+ * for at "statusskift sker uden manuel indtastning": et døgn efter at en
+ * booking er afholdt, står der "Afsluttet", uden at nogen har rørt den.
+ * Kun det sidste trin er en kendsgerning i databasen (bookings.invoiced_at),
+ * fordi fakturering ikke kan aflæses af et ur.
+ *
+ * Rækkefølgen af tjekkene er statusmodellens: annulleret og faktureret er
+ * endestationer og slår tiden.
+ */
+export type BookingLifecycle = 'booked' | 'in_use' | 'completed' | 'invoiced' | 'cancelled'
+
+export const BOOKING_LIFECYCLES: BookingLifecycle[] = [
+  'booked',
+  'in_use',
+  'completed',
+  'invoiced',
+  'cancelled',
+]
+
+export function bookingLifecycle(
+  b: Pick<BookingHit, 'status' | 'starts_at' | 'ends_at' | 'invoiced_at'>,
+  now: number = Date.now(),
+): BookingLifecycle {
+  if (b.status === 'cancelled') return 'cancelled'
+  if (b.invoiced_at) return 'invoiced'
+  if (now < new Date(b.starts_at).getTime()) return 'booked'
+  if (now >= new Date(b.ends_at).getTime()) return 'completed'
+  return 'in_use'
+}
+
+/** i18n-nøgle for et trin — samme tekst i liste, kalender og detaljepopup. */
+export const BOOKING_LIFECYCLE_KEYS: Record<BookingLifecycle, string> = {
+  booked: 'bookingPage.statusBooked',
+  in_use: 'bookingPage.statusInUse',
+  completed: 'bookingPage.statusCompleted',
+  invoiced: 'bookingPage.statusInvoiced',
+  cancelled: 'bookingPage.statusCancelled',
+}
+
+/**
+ * Farve pr. trin. Kun de trin der kræver en handling eller er ude af forløbet
+ * får farve — "Booket" og "Afsluttet" er hverdagen og skal ikke larme.
+ */
+export function bookingLifecycleClass(s: BookingLifecycle): string {
+  switch (s) {
+    case 'cancelled':
+      return 'text-status-bad'
+    case 'in_use':
+      return 'text-status-good'
+    case 'invoiced':
+      return 'text-muted-foreground'
+    default:
+      return ''
+  }
 }
 
 /**
@@ -95,6 +164,18 @@ export function bookingTimeLabel(b: {
     : `${dayFormat.format(from)} ${timeFormat.format(from)} – ${dayFormat.format(to)} ${timeFormat.format(to)}`
 }
 
+/**
+ * Kursister som læsbar tekst: "12 · Niveau 2". Begge felter er valgfrie (ikke
+ * enhver booking er et kursus), så teksten kan være tom — kalderen skjuler
+ * feltet i så fald.
+ */
+export function bookingParticipantsLabel(b: {
+  participant_count: number | null
+  level: { name: string } | null
+}): string {
+  return [b.participant_count?.toString(), b.level?.name].filter(Boolean).join(' · ')
+}
+
 // RPC-fejlkoder → i18n-nøgler (samme idiom som ASSET_RPC_ERRORS).
 export const BOOKING_RPC_ERRORS: Record<string, string> = {
   booking_overlap: 'bookingFlow.errOverlap',
@@ -105,6 +186,18 @@ export const BOOKING_RPC_ERRORS: Record<string, string> = {
   booking_invalid_interval: 'bookingFlow.errInvalidInterval',
   booking_not_editable: 'bookingFlow.errNotEditable',
   booking_already_cancelled: 'bookingFlow.errAlreadyCancelled',
+  booking_not_completed: 'bookingFlow.errNotCompleted',
+  booking_not_invoiced: 'bookingFlow.errNotInvoiced',
+  booking_invoiced: 'bookingFlow.errInvoiced',
+  booking_level_not_found: 'bookingFlow.errLevelNotFound',
+  booking_level_inactive: 'bookingFlow.errLevelInactive',
+  booking_invalid_participants: 'bookingFlow.errInvalidParticipants',
+  booking_reason_required: 'bookingFlow.errReasonRequired',
+  booking_service_line_not_found: 'bookingFlow.errServiceLineNotFound',
+  booking_service_already_added: 'bookingFlow.errServiceAlreadyAdded',
+  booking_service_not_found: 'bookingFlow.errServiceNotFound',
+  booking_service_inactive: 'bookingFlow.errServiceInactive',
+  booking_invalid_quantity: 'bookingFlow.errInvalidQuantity',
   employee_not_found: 'bookingFlow.errEmployeeNotFound',
   employee_inactive: 'bookingFlow.errEmployeeInactive',
   not_authorized: 'common.noPermission',
@@ -171,12 +264,16 @@ export async function fetchBookingsInRange(
   companyId: string,
   rangeStart: Date,
   rangeEnd: Date,
+  // Annullerede bookinger hentes kun, når kalenderen udtrykkeligt beder om
+  // dem: de optager ingen ressource, så en bjælke for dem ville læses som
+  // "optaget" i det daglige overblik.
+  opts?: { includeCancelled?: boolean },
 ): Promise<{ bookings: BookingHit[]; capped: boolean }> {
   const { data, error } = await supabase
     .from('bookings')
     .select(BOOKING_EMBED)
     .eq('company_id', companyId)
-    .eq('status', 'booked')
+    .in('status', opts?.includeCancelled ? ['booked', 'cancelled'] : ['booked'])
     .lte('starts_at', endOfDay(rangeEnd).toISOString())
     .gte('ends_at', startOfDay(rangeStart).toISOString())
     .order('starts_at')

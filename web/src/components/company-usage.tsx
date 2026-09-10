@@ -46,7 +46,7 @@ function timeframeBounds(tf: Timeframe): { from: string | null; to: string | nul
 }
 
 async function countSent(
-  table: 'parcel_notifications' | 'asset_loan_notifications',
+  table: 'parcel_notifications' | 'asset_loan_notifications' | 'booking_notifications',
   companyId: string,
   channel: NotifyChannel,
   bounds: { from: string | null; to: string | null },
@@ -95,20 +95,47 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
     queryKey: ['company-usage', companyId, timeframe],
     queryFn: async () => {
       const bounds = timeframeBounds(timeframe)
-      const [parcelEmail, parcelSms, parcelTeams, parcelSlack, assetEmail, assetSms, ai] =
-        await Promise.all([
+      const [
+        parcelEmail,
+        parcelSms,
+        parcelTeams,
+        parcelSlack,
+        assetEmail,
+        assetSms,
+        bookingEmail,
+        bookingSms,
+        bookingTeams,
+        bookingSlack,
+        ai,
+      ] = await Promise.all([
           countSent('parcel_notifications', companyId, 'email', bounds),
           countSent('parcel_notifications', companyId, 'sms', bounds),
-          // Chat-kanalerne tælles kun på pakkerne: aktiv-påmindelserne sender
-          // stadig kun e-mail/SMS. Med i totalen, så antallet af sendte
+          // Chat-kanalerne tælles på pakker og bookinger; aktiv-påmindelserne
+          // sender stadig kun e-mail/SMS. Med i totalen, så antallet af sendte
           // beskeder er sandt — men uden stykpris, for de koster os intet.
           countSent('parcel_notifications', companyId, 'teams', bounds),
           countSent('parcel_notifications', companyId, 'slack', bounds),
           countSent('asset_loan_notifications', companyId, 'email', bounds),
           countSent('asset_loan_notifications', companyId, 'sms', bounds),
+          countSent('booking_notifications', companyId, 'email', bounds),
+          countSent('booking_notifications', companyId, 'sms', bounds),
+          countSent('booking_notifications', companyId, 'teams', bounds),
+          countSent('booking_notifications', companyId, 'slack', bounds),
           countAiReads(companyId, bounds),
         ])
-      return { parcelEmail, parcelSms, parcelTeams, parcelSlack, assetEmail, assetSms, ai }
+      return {
+        parcelEmail,
+        parcelSms,
+        parcelTeams,
+        parcelSlack,
+        assetEmail,
+        assetSms,
+        bookingEmail,
+        bookingSms,
+        bookingTeams,
+        bookingSlack,
+        ai,
+      }
     },
   })
 
@@ -121,9 +148,13 @@ export function CompanyUsage({ companyId }: { companyId: string }) {
     maximumFractionDigits: 4,
   })
 
-  const emails = (counts?.parcelEmail ?? 0) + (counts?.assetEmail ?? 0)
-  const sms = (counts?.parcelSms ?? 0) + (counts?.assetSms ?? 0)
-  const chat = (counts?.parcelTeams ?? 0) + (counts?.parcelSlack ?? 0)
+  const emails = (counts?.parcelEmail ?? 0) + (counts?.assetEmail ?? 0) + (counts?.bookingEmail ?? 0)
+  const sms = (counts?.parcelSms ?? 0) + (counts?.assetSms ?? 0) + (counts?.bookingSms ?? 0)
+  const chat =
+    (counts?.parcelTeams ?? 0) +
+    (counts?.parcelSlack ?? 0) +
+    (counts?.bookingTeams ?? 0) +
+    (counts?.bookingSlack ?? 0)
   const emailUnit = platform?.cost_per_email ?? 0
   const smsUnit = platform?.cost_per_sms ?? 0
   const emailCost = emails * emailUnit

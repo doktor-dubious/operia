@@ -59,8 +59,8 @@ gaps in `../compliance-map.md`.
 | **Purpose** | Tell the receiver a parcel has arrived; remind about uncollected parcels and overdue asset loans |
 | **Data subjects** | Receiver, asset borrower |
 | **Personal data** | E-mail address / mobile number, receiver name, parcel reference, message body, delivery status. For Slack: the receiver's Slack member id (manually entered, or resolved from the work e-mail via `users.lookupByEmail` when the customer has enabled e-mail lookup) |
-| **Recipients** | **Resend** (email, US), **GatewayAPI** (SMS, DK), **Slack / Salesforce** (Slack direct messages, US — only for customers who have installed the Operia Slack app in their own workspace and enabled the channel; see `subprocessors.md` row 10) |
-| **Transfers** | US — Resend, DPF + SCCs; US — Slack (Salesforce), DPF + SCCs |
+| **Recipients** | **Resend** (email, US) *or* **Brevo** (email, FR) — whichever is selected as the platform's outbound provider, **GatewayAPI** (SMS, DK), **Slack / Salesforce** (Slack direct messages, US — only for customers who have installed the Operia Slack app in their own workspace and enabled the channel; see `subprocessors.md` row 10) |
+| **Transfers** | US — Resend, DPF + SCCs (**none** if Brevo is selected: EU/EEA); US — Slack (Salesforce), DPF + SCCs |
 | **Retention** | The recipient address is **cleared when the parcel closes** (as the asset-loan twin already did on return); the remaining metadata falls under the `notifications` retention category |
 | **Security** | Recipients are **masked** in the audit log; provider keys are edge-function secrets only |
 | **Legal basis (controller's)** | Legitimate interest in the employment context — see `legal-basis-note.md` (planned) |
@@ -84,8 +84,8 @@ gaps in `../compliance-map.md`.
 | **Purpose** | Ingest the customer's HR extract (CSV) over SFTP, e-mail or manual upload; upsert on employee number; deactivate employees missing from the file |
 | **Data subjects** | All employees of the customer |
 | **Personal data** | As §4, as delivered in the CSV |
-| **Recipients** | **Postmark** (e-mail route, US); the SFTP gateway (DCA's own AWS box, stateless); Supabase Storage (`imports` bucket) |
-| **Transfers** | US — Postmark, DPF |
+| **Recipients** | **Postmark** (e-mail route, US) *or* **Brevo** (e-mail route, FR) — whichever is selected as the inbound provider; the SFTP gateway (DCA's own AWS box, stateless); Supabase Storage (`imports` bucket) |
+| **Transfers** | US — Postmark, DPF (**none** if Brevo is selected: EU/EEA) |
 | **Retention** | Source CSV deleted from storage **after a successful import**; kept on failure for inspection; `imports` bucket purged after **30 days**; `import_runs` and `inbound_files` follow `import_retention_days` (default: keep forever) |
 | **Security** | SPF/DKIM/DMARC checks + per-company sender allowlist; bcrypt SFTP credentials; per-tenant chroot; every login/upload audited with IP |
 
@@ -140,10 +140,11 @@ gaps in `../compliance-map.md`.
 |---|---|
 | **Purpose** | Reserve internal resources (meeting rooms, vehicles, equipment) for future time intervals; prevent double-booking |
 | **Data subjects** | Employees (the booking's counterparty and the user who created it) |
-| **Personal data** | Employee reference (FK to the directory — no contact copy), booking interval, free-text purpose/title, actor user ids in `booking_events` |
-| **Recipients** | Internal only (no notifications in v1) |
-| **Transfers** | None |
-| **Retention** | Terminal bookings (held or cancelled) and their events are removed after the per-company `bookings` window; future/active bookings are never purged. Erasure of the person = anonymizing the employee row (the booking holds only the FK); the free-text title is searched by the Art. 15 export and leaves with the booking row |
+| **Personal data** | Employee reference (FK to the directory — no contact copy), booking interval, free-text purpose/title, actor user ids in `booking_events`. Since 2026-09-08, when booking notifications are enabled: the recipient address a message was sent to (`booking_notifications.recipient` — e-mail, mobile number or chat id) plus channel, language and delivery status, and the message content itself (resource, interval, purpose, employee name) |
+| **Recipients** | Internal, plus — only when booking notifications are enabled — §3's message providers: the selected outbound e-mail provider (**Resend**, US, or **Brevo**, FR), **GatewayAPI** (SMS, DK) and **Slack / Salesforce** (US, per-customer install). Two customer-nominated role mailboxes also receive booking messages: a copy recipient for every message and an invoicing mailbox for the "sent for invoicing" message. The copy recipient sees the free-text purpose |
+| **Transfers** | None for the booking record itself. When notifications are enabled, §3's transfers apply: US — Resend, DPF + SCCs (**none** if Brevo is selected: EU/EEA); US — Slack (Salesforce), DPF + SCCs |
+| **Retention** | Terminal bookings (held or cancelled) and their events are removed after the per-company `bookings` window; future/active bookings are never purged. Erasure of the person = anonymizing the employee row (the booking holds only the FK); the free-text title is searched by the Art. 15 export and leaves with the booking row. Message-log rows fall under the `notifications` category, except for bookings that have not yet ended — those rows are the dispatcher's dedup state and are kept until the booking is over |
+| **Security** | Recipients are **masked** in the audit log and provider errors sanitized before storage, as in §3; the message log is service-role write-only |
 
 ## 10. Authentication and access management
 
@@ -152,8 +153,8 @@ gaps in `../compliance-map.md`.
 | **Purpose** | Give the right people access and keep everyone else out |
 | **Data subjects** | Users with a login (managers, handlers, platform admins) |
 | **Personal data** | E-mail, password hash (Supabase Auth), roles, sign-in timestamps, WebAuthn public key, IP in login audit events |
-| **Recipients** | Supabase (Auth); Resend for invitation and reset e-mail |
-| **Transfers** | US — Resend |
+| **Recipients** | Supabase (Auth); the selected outbound e-mail provider (Resend, US, or Brevo, FR) for invitation and reset e-mail |
+| **Transfers** | US — Resend (**none** if Brevo is selected) |
 | **Retention** | Contract term; login events follow `audit_retention_days` |
 | **Note** | **No biometric data.** Passkeys store a public key; the handheld stores a boolean. The device decides what the biometric check is and never tells Operia which finger matched |
 
@@ -204,7 +205,7 @@ gaps in `../compliance-map.md`.
 |---|---|
 | **Purpose** | Send a visitor of the public savings calculator (operia-info.predictioninstitute.com) their calculation by e-mail, and — only if they asked for it (`want_demo`) — follow up about a demo |
 | **Personal data** | E-mail; optionally name and company; IP address and user agent (abuse limiting only); the submitted calculation |
-| **Recipients** | Platform admins only (`sales_leads`, RLS); Resend delivers the e-mail (see [subprocessors.md](subprocessors.md) row 3) |
+| **Recipients** | Platform admins only (`sales_leads`, RLS); the selected outbound provider delivers the e-mail (see [subprocessors.md](subprocessors.md) rows 3 and 13) |
 | **Legal basis** | Consent implicit in the request ("send me the calculation"); legitimate interest for the abuse-limiting fields |
 | **Retention** | Fixed 12 months — the `sales-leads-purge` pg_cron job deletes the whole row, including IP/user agent |
 

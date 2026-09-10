@@ -74,7 +74,11 @@ import {
   tileSubtitleShown,
   tileTitleShown,
   linkTargetsForProducts,
+  sameSidebarHidden,
+  SIDEBAR_MODULES,
+  sidebarModuleShown,
   TILE_BY_PRODUCT,
+  toggleSidebarModule,
   type LinkTarget,
   type HomeAlignX,
   type HomeAlignY,
@@ -125,7 +129,9 @@ const sameTile = (a: TileLayoutItem, b: TileLayoutItem) =>
 const sameOrder = (a: TileLayoutItem[], b: TileLayoutItem[]) =>
   a.length === b.length && a.every((t, i) => sameTile(t, b[i]))
 const sameDesign = (a: HomeDesign, b: HomeDesign) =>
-  (Object.keys(DEFAULT_HOME_DESIGN) as (keyof HomeDesign)[]).every((k) => a[k] === b[k])
+  (Object.keys(DEFAULT_HOME_DESIGN) as (keyof HomeDesign)[]).every((k) =>
+    k === 'sidebarHidden' ? sameSidebarHidden(a.sidebarHidden, b.sidebarHidden) : a[k] === b[k],
+  )
 
 // Radioknapper for en af flisesektionens placeringsakser (venstre/midt/højre
 // eller top/midt/bund). Ligger på modulniveau, så radiogruppen ikke remountes
@@ -717,6 +723,7 @@ export function HomeDesignEditor({
   saving,
   onSave,
   companyId,
+  allowProduct,
 }: {
   title: string
   subtitle?: string
@@ -728,6 +735,9 @@ export function HomeDesignEditor({
   // Null på platformsiden (standard), company_id på kundefladen — styrer
   // upload-stien i DesignImageField (storage-RLS).
   companyId?: string | null
+  // Kundefladen viser kun de produkter virksomheden har adgang til (samme
+  // filter som fliserne); udeladt på platformsiden, hvor alt er tilgængeligt.
+  allowProduct?: (product: string) => boolean
 }) {
   const { t } = useTranslation()
 
@@ -814,6 +824,9 @@ export function HomeDesignEditor({
   // Mål en billed-/tom flise kan linke til: pakkemodulets sider plus de øvrige
   // produkter, der findes i layoutet (synlige som skjulte) — dvs. dem
   // virksomheden har adgang til på denne flade.
+  // Moduler i Sidemenu-fanen — på kundefladen kun dem virksomheden har.
+  const sidebarModules = SIDEBAR_MODULES.filter((p) => !allowProduct || allowProduct(p))
+
   const linkTargets = linkTargetsForProducts(
     [...order, ...hiddenTiles]
       .filter((o) => o.kind === 'product' && o.product)
@@ -934,6 +947,7 @@ export function HomeDesignEditor({
           tabs={[
             { key: 'details', label: t('detail.tabDetails') },
             { key: 'tiles', label: t('homeDesignPage.tilesSection') },
+            { key: 'sidebar', label: t('homeDesignPage.tabSidebar') },
           ]}
           active={tab}
           onChange={setTab}
@@ -1336,6 +1350,40 @@ export function HomeDesignEditor({
               </ToggleSection>
             </div>
           </section>
+            </div>
+          )}
+
+          {/* — Sidemenu: hvilke moduler der får store knapper i den moderne
+              navigation. Fravalgte moduler forsvinder ikke — deres sider
+              bliver stående i menutræet i bund-dropdownen. — */}
+          {tab === 'sidebar' && (
+            <div className="flex flex-col gap-8">
+              <section className="flex flex-col gap-3">
+                <SectionTitle>{t('homeDesignPage.sidebarSection')}</SectionTitle>
+                <p className="text-xs text-muted-foreground">{t('homeDesignPage.sidebarHint')}</p>
+                <div className="flex flex-col gap-3">
+                  {sidebarModules.map((product) => (
+                    <label
+                      key={product}
+                      className="flex w-fit cursor-pointer items-center gap-2 text-[13px] text-foreground"
+                    >
+                      <Checkbox
+                        checked={sidebarModuleShown(design, product)}
+                        onCheckedChange={(v) =>
+                          patchDesign({
+                            sidebarHidden: toggleSidebarModule(
+                              design.sidebarHidden,
+                              product,
+                              v === true,
+                            ),
+                          })
+                        }
+                      />
+                      {t(`nav.${TILE_BY_PRODUCT[product].labelKey}`)}
+                    </label>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
         </DetailTabs>

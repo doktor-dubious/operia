@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { OperiaPage } from '@/components/operia-config-page'
+import { CompanyAccountingFields } from '@/components/company-accounting-fields'
 import { CompanyAiFields } from '@/components/company-ai-fields'
 import { CompanyEntraFields } from '@/components/company-entra-fields'
 import { CompanySlackFields } from '@/components/company-slack-fields'
@@ -39,6 +40,11 @@ function Page() {
     ...(platform?.entra_enabled ? [{ key: 'entra', labelKey: 'integrationsPage.entra' }] : []),
     ...(platform?.ai_enabled ? [{ key: 'ai', labelKey: 'integrationsPage.ai' }] : []),
     ...(platform?.slack_enabled ? [{ key: 'slack', labelKey: 'integrationsPage.slack' }] : []),
+    // Regnskab kræver både hovedafbryderen og mindst én udbudt udbyder —
+    // ellers ville kunden se en side uden noget at vælge.
+    ...(platform?.accounting_enabled && (platform.accounting_providers ?? []).length > 0
+      ? [{ key: 'accounting', labelKey: 'integrationsPage.accounting' }]
+      : []),
   ]
   // Første udbudte integration som standard — 'entra' må ikke være hardcodet,
   // for platformen kan udbyde AI uden Entra.
@@ -70,6 +76,7 @@ function Page() {
           {effective === 'entra' && <CompanyEntraFields companyId={companyId} />}
           {effective === 'ai' && <CompanyAiFields companyId={companyId} />}
           {effective === 'slack' && <CompanySlackFields companyId={companyId} />}
+          {effective === 'accounting' && <CompanyAccountingFields companyId={companyId} />}
         </div>
       )}
     </OperiaPage>

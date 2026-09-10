@@ -12,6 +12,7 @@ import {
   toBookingConfigValue,
   type BookingConfigValue,
 } from '@/components/booking-config-fields'
+import { BookingLevelsFields } from '@/components/booking-levels-fields'
 import { OperiaPage } from '@/components/operia-config-page'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -86,7 +87,12 @@ function BookingConfigPage() {
   return (
     <div className="flex min-h-full flex-col">
       <OperiaPage title={t('nav.configureBooking')} subtitle={t('bookingConfig.companySubtitle')}>
-        <BookingConfigFields idPrefix="cfg" value={value} onChange={setValue} />
+        <div className="flex flex-col gap-8">
+          <BookingConfigFields idPrefix="cfg" value={value} onChange={setValue} />
+          {/* Kursistniveauer (A-05) gemmer selv, række for række — se
+              komponentens hovedkommentar. */}
+          {companyId && <BookingLevelsFields companyId={companyId} />}
+        </div>
       </OperiaPage>
 
       {dirty && (

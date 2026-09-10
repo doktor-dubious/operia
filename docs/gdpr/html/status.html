@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Status</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Status</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#operia-gdpr-status" id="toc-operia-gdpr-status">Operia —
+GDPR status</a>
+<ul>
+<li><a href="#where-the-project-stands" id="toc-where-the-project-stands">1. Where the project stands</a></li>
+<li><a href="#the-12-work-items" id="toc-the-12-work-items">2. The 12
+work items</a></li>
+<li><a href="#decisions-only-dca-can-make" id="toc-decisions-only-dca-can-make">3. Decisions only DCA can
+make</a></li>
+<li><a href="#outstanding-by-theme" id="toc-outstanding-by-theme">4.
+Outstanding by theme</a>
+<ul>
+<li><a href="#legal-and-contractual" id="toc-legal-and-contractual">Legal and contractual</a></li>
+<li><a href="#product" id="toc-product">Product</a></li>
+<li><a href="#security-art.-32-nis2" id="toc-security-art.-32-nis2">Security (Art. 32 / NIS2)</a></li>
+<li><a href="#organisational" id="toc-organisational">Organisational</a></li>
+</ul></li>
+<li><a href="#accepted-residual-risks" id="toc-accepted-residual-risks">5. Accepted residual risks</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="operia-gdpr-status">Operia — GDPR status</h1>
+<p>Everything outstanding, in one place. This is the tracking view of
+the plan in <em>Operia — GDPR Status Review</em> (12 August 2026) §8,
+kept current as items land.</p>
+<p><strong>Last updated:</strong> 2026-08-14 · <strong>Owner:</strong>
+DCA Logic privacy owner ⟨<em>to be named</em>⟩. Related: <a href="README.md"><code>README.md</code></a> (which documents exist) · <a href="toms.md"><code>toms.md</code></a> §12 (limitations as stated to
+customers) · <a href="../compliance-map.md"><code>../compliance-map.md</code></a> (where
+it lives in the code).</p>
+<hr />
+<h2 id="where-the-project-stands">1. Where the project stands</h2>
+<p>The engineering is ahead of the paperwork, and the paperwork has now
+caught up enough to sign a first customer — <strong>provided the
+decisions in §3 are made first</strong>. No customer has been onboarded
+yet, which means no processing of real personal data has taken place
+without a DPA, and nothing here is a live breach of duty. It is a to-do
+list, not an incident list.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Layer</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Technical measures (Art. 32)</td>
+<td><strong>Strong</strong> — tenant isolation in the database,
+immutable audit, minimized logging, anonymization engine, per-company
+retention, EU hosting</td>
+</tr>
+<tr>
+<td>Data subject rights</td>
+<td><strong>Good</strong> — erasure, rectification and access (Art. 15
+export) are self-service; objection/opt-out is the remaining gap</td>
+</tr>
+<tr>
+<td>Documentation (Art. 28/30)</td>
+<td><strong>Written, unreviewed</strong> — register, ROPA, TOMs, DPA
+annexes, retention schedule, incident procedure all exist; none legally
+reviewed, none signed</td>
+</tr>
+<tr>
+<td>Third-country transfers</td>
+<td><strong>Documented, partly unresolved</strong> — bases identified
+per vendor; TIAs missing, vendor DPAs not filed, AI keys still on free
+tiers</td>
+</tr>
+<tr>
+<td>Organisation</td>
+<td><strong>Weakest link</strong> — no named privacy owner, no detection
+alerting, no drill, no offboarding runbook</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="the-12-work-items">2. The 12 work items</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Gemini free tier decision; DPF status of Anthropic, Google, Resend,
+Postmark</td>
+<td><strong>Mostly done</strong> — free tiers flagged in code + UI and
+documented as development-only; DPF verified from vendor primary
+sources. <em>Outstanding:</em> move the production AI key to a paid
+plan; confirm each vendor on the official DPF list; file vendor DPAs;
+write TIAs</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Remove real labels from git</td>
+<td><strong>Done</strong> — <code>docs/labels/</code> untracked +
+gitignored 2026-08-14. <em>Accepted residual:</em> the (synthetic)
+images remain in git history</td>
+</tr>
+<tr>
+<td>3</td>
+<td>AI notice text, <code>ai.label_read</code> audit, Android cache
+deletion</td>
+<td><strong>Done</strong> — notice and audit already existed; handheld
+now deletes captures on read and sweeps at app start</td>
+</tr>
+<tr>
+<td>4</td>
+<td>subprocessors.md, ropa.md, toms.md + compliance map update</td>
+<td><strong>Done</strong> — plus map §12 impersonation, §13 maps, §14
+privacy contacts, §15 retention, §16 SAR</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Datatilsynet standard DPA + annexes</td>
+<td><strong>Drafted</strong> (<code>DCA-DPA-1.0</code>).
+<em>Outstanding:</em> legal review, DCA’s own company details, the
+bracketed deadline numbers, English copy, and the standard clauses PDF
+paired with the annexes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>incident-response.md + customer breach contacts</td>
+<td><strong>Done</strong> — procedure, breach register, and per-customer
+security contacts in the product. <em>Outstanding:</em> the names and
+the NIS2-scope answer in §12 of the procedure; alerting; first
+drill</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Retention: per-company windows + settings UI</td>
+<td><strong>Done</strong> — eight categories on both levels (customer’s
+own, and DCA’s defaults under Operia → Opbevaring), enforced nightly;
+notification recipients cleared on close. <em>Outstanding:</em> agree
+actual values (everything still defaults to keep-until-further-notice),
+including the <code>audit</code> window that governs the legacy
+rows</td>
+</tr>
+<tr>
+<td>8</td>
+<td>SAR export</td>
+<td><strong>Done</strong> — keyed + free-text, on
+<code>/configure/personal-data</code>. <em>Outstanding:</em> package
+image files, render a readable document, raise or paginate the 500-row
+cap</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Free-text scrubbing decisions per field</td>
+<td><strong>Prepared 2026-08-14</strong> — <a href="free-text-fields.md"><code>free-text-fields.md</code></a>
+inventories all 13 fields that need a decision (out of ~180 text
+columns) with a recommendation each, and two findings were fixed rather
+than decided: <code>parcel_documents</code> had no erasure path, and
+provider error strings echoed recipient addresses. <em>Outstanding:</em>
+the decisions themselves, then implementing whatever differs from the
+recommendation</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Offboarding runbook + tenant data-return export</td>
+<td><strong>Open</strong> — cascades exist, the verified procedure and
+the export do not</td>
+</tr>
+<tr>
+<td>11</td>
+<td>MFA enrolment UI; Keystore-backed handheld session</td>
+<td><strong>Open</strong> — TOTP is enabled in configuration but no user
+can enrol; the handheld session token still sits in plain
+SharedPreferences</td>
+</tr>
+<tr>
+<td>12</td>
+<td>“Data &amp; privacy” transparency screen; EU-only mode; compliance
+report export</td>
+<td><strong>Partly</strong> — <code>/configure/privacy</code> and
+<code>/configure/personal-data</code> are the seed. EU-only mode is
+blocked on e-mail (both providers are US). Compliance report export not
+started</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="decisions-only-dca-can-make">3. Decisions only DCA can make</h2>
+<p>These block other work and cannot be resolved from the code.</p>
+<ol type="1">
+<li><strong>Name the privacy owner</strong>, technical lead and deputy —
+every document in this folder has a placeholder for it, and the incident
+procedure has no first step without it.</li>
+<li><strong>DCA Logic’s legal identity</strong> — company name, CVR,
+address, signatory — for the DPA annexes and the ROPA.</li>
+<li><strong>The paid AI plan.</strong> Which vendor is production
+(recommendation: Mistral, EU, with a DPA and zero data retention), and
+when the key moves off the free tier. Until then no customer may point
+at AI label reading with real labels.</li>
+<li><strong>Retention values</strong> — at minimum the
+<code>audit</code> window, because it is the only mechanism that can
+ever remove the pre-2026-07-20 rows containing names, invitee e-mails
+and unmasked recipients. Suggested starting points are in <a href="retention-schedule.md"><code>retention-schedule.md</code></a>.</li>
+<li><strong>The bracketed numbers in the DPA</strong> — SAR assistance
+days, data-return window, deletion window, inspection notice
+period.</li>
+<li><strong>Free-text fields (item 9)</strong> — 13 fields, one decision
+each (scrub / time-limit / evidence). Recommendations are in <a href="free-text-fields.md"><code>free-text-fields.md</code></a>; the DPA
+currently promises “evidence” for the handover fields, so changing your
+mind on those later means changing the annex.</li>
+<li><strong>NIS2 scope</strong> — is DCA Logic itself in scope, and
+which CSIRT applies?</li>
+<li><strong>The AWS region</strong> of
+<code>ftp.predictioninstitute.com</code> /
+<code>operia.predictioninstitute.com</code>. If it is not an EU region,
+the sub-processor register and DPA Bilag C.5 are wrong and the host must
+move.</li>
+</ol>
+<hr />
+<h2 id="outstanding-by-theme">4. Outstanding by theme</h2>
+<h3 id="legal-and-contractual">Legal and contractual</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Legal review of the DPA annexes
+before the first signature (§2 item 5)</label></li>
+<li><label><input type="checkbox"></input>Vendor DPAs executed and filed:
+Supabase, Resend, Postmark, GatewayAPI, Mistral, Anthropic, Google,
+HeiGIT</label></li>
+<li><label><input type="checkbox"></input>One Transfer Impact Assessment per
+US vendor → <code>tia/</code></label></li>
+<li><label><input type="checkbox"></input>Official DPF-list verification with
+certification IDs → <code>subprocessors.md</code> §4</label></li>
+<li><label><input type="checkbox"></input><code>legal-basis-note.md</code>
+(legitimate interest in the employment context) and an Art. 13 employee
+notice template customers can reuse</label></li>
+<li><label><input type="checkbox"></input><code>data-subject-rights.md</code>
+— how each right is executed, and what is still manual</label></li>
+<li><label><input type="checkbox"></input>English courtesy copy of the
+annexes</label></li>
+</ul>
+<h3 id="product">Product</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Per-employee notification opt-out —
+the Art. 21 objection right has no surface</label></li>
+<li><label><input type="checkbox"></input>SAR export: package the image files,
+produce a readable document, handle &gt;500 rows</label></li>
+<li><label><input type="checkbox"></input>Tenant data-return export (Art.
+28(3)(g))</label></li>
+<li><label><input type="checkbox"></input>Free-text scrubbing, once item 9 is
+decided — the field list and recommendations are ready in <a href="free-text-fields.md"><code>free-text-fields.md</code></a></label></li>
+<li><label><input type="checkbox"></input>“Data &amp; privacy” transparency
+screen for the customer (sub-processors, retention in force, links to
+the DPA) — largely assembly of what now exists</label></li>
+<li><label><input type="checkbox"></input>Compliance report export (retention
+settings, users and roles, audit statistics, sub-processors) for the
+customer’s auditor</label></li>
+<li><label><input type="checkbox"></input>EU-only mode — blocked on finding an
+EU e-mail provider</label></li>
+</ul>
+<h3 id="security-art.-32-nis2">Security (Art. 32 / NIS2)</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>MFA enrolment UI; confirm hosted MFA
+state in the Dashboard</label></li>
+<li><label><input type="checkbox"></input>Keystore-backed session storage on
+the handheld</label></li>
+<li><label><input type="checkbox"></input>Confirm the hosted password policy
+and passkey activation in the Dashboard</label></li>
+<li><label><input type="checkbox"></input>Error-level audit alerting to a DCA
+channel (the taxonomy and the delivery mechanism both already
+exist)</label></li>
+<li><label><input type="checkbox"></input>Confirm who receives Supabase
+platform alerts</label></li>
+</ul>
+<h3 id="organisational">Organisational</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Name the privacy owner and deputies;
+date the reviews</label></li>
+<li><label><input type="checkbox"></input>Weekly log review actually running,
+recorded in <a href="breach-register.md"><code>breach-register.md</code></a></label></li>
+<li><label><input type="checkbox"></input>First tabletop exercise</label></li>
+<li><label><input type="checkbox"></input><code>offboarding.md</code> —
+verified end-of-contract deletion and return runbook</label></li>
+<li><label><input type="checkbox"></input>Quarterly review cadence for this
+folder and the compliance map</label></li>
+</ul>
+<hr />
+<h2 id="accepted-residual-risks">5. Accepted residual risks</h2>
+<p>Documented deliberately, so they read as decisions rather than
+oversights.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Why it is accepted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synthetic label images remain in git history</td>
+<td>The images are test data, the repository is private, and a history
+rewrite would invalidate every clone. A real label would change this
+answer</td>
+</tr>
+<tr>
+<td><code>parcel_events</code> is never purged by a window</td>
+<td>It is the chain of custody; it dies with the parcel. Erasure is met
+by anonymizing the person</td>
+</tr>
+<tr>
+<td>Exception reasons are copied verbatim into the audit log</td>
+<td>For an exception, the reason <em>is</em> the audit trail. Every
+other event type stays minimized</td>
+</tr>
+<tr>
+<td>Anonymization clears <code>external_id</code></td>
+<td>A returning person becomes a new employee; re-identification after
+erasure would defeat the erasure</td>
+</tr>
+<tr>
+<td>Log-drain copies are beyond erasure</td>
+<td>Which is exactly why <code>audit_log</code> is minimized at the
+point of writing</td>
+</tr>
+<tr>
+<td>No consent machinery</td>
+<td>The basis is the controller’s legitimate interest in the employment
+context; consent would be invalid there and would wrongly imply
+revocable custody records</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

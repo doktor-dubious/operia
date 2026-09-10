@@ -33,6 +33,7 @@ const SECTION_ORDER = [
   'bookings_as_subject',
   'bookings_mentioning',
   'booking_events_as_actor',
+  'booking_notifications',
   'files',
   'audit_as_actor',
 ]

@@ -183,6 +183,30 @@ personal data is removed instead.
   `parcels.receiver_employee_id` / `assets.assigned_to_employee_id`. No
   open-booking gate on anonymization is needed: bookings are time-bounded,
   unlike parcels.
+- `20260909090000_booking_cancellation_reason.sql` — cancelling a booking now
+  requires a reason (EVU A-07). The free text lives **only** on
+  `bookings.cancellation_reason`, never in `booking_events` or `audit_log`: the
+  event carries `has_reason: true` and nothing else, because that log is
+  immutable and forwarded to customer log drains, where free text could never be
+  withdrawn. The reason is searched by `sar_export`'s `bookings_mentioning`
+  section alongside `bookings.title`, the same treatment
+  `parcels.removed_reason` already gets. Authorization moved from
+  `can_operate_bookings` to a dedicated `can_cancel_bookings`
+  (manager/booking_manager): withdrawing a booking from the invoice basis is a
+  disposition, not day-to-day handling, and a `booking_handler` is now refused
+  server-side as well as hidden in the UI.
+- `20260908160000_booking_notifications.sql` — the booking message log
+  (`booking_notifications`) is the one place the booking product stores a contact
+  address: `recipient` holds the email/phone/chat id a message actually went to,
+  the same trade-off already accepted for `parcel_notifications` (documentation of
+  an attempt). It is minimized the same way: masked via `maskRecipient()` before
+  anything reaches `audit_log`, provider errors sanitized with
+  `sanitizeProviderError()`, and the rows purged under the `notifications`
+  retention category (see §6). Two per-company **role addresses** are new —
+  `companies.booking_copy_email` and `booking_invoice_email`. They are mailboxes
+  the customer nominates, not directory data, and the copy recipient sees
+  `bookings.title` (free text, already registered in `gdpr/free-text-fields.md`) —
+  the UI says so at the field, so the choice of mailbox is an informed one.
 
 ## 6. Retention & data minimization (G, N)
 
@@ -260,6 +284,16 @@ personal data is removed instead.
   booking whose *end time* had aged out (a retroactively registered one) was
   deleted on the `ends_at` clock instead of the `cancelled_at` clock — i.e.
   before its window had run.
+
+- `20260908160000_booking_notifications.sql` — `booking_notifications` joins the
+  `notifications` retention category, but through its **own** function
+  (`purge_booking_notifications()`, hung on the `operia-retention-purge` cron job
+  next to `run_retention_purge()`) rather than a branch inside the latter. The
+  reason is durability, not taste: `run_retention_purge()` is re-created in full by
+  new migrations, so a branch added inside it would vanish silently the next time
+  someone rewrites it — visible only as a message log that grew forever. Rows for a
+  booking that has not yet ended are kept regardless of the window: they are the
+  dispatcher's dedup state, and deleting them would re-send the reminder.
 
 ## 7. Secrets & credential handling (N)
 
@@ -665,6 +699,46 @@ rather than decided (`20260814190000_parcel_documents_erasure.sql`):
   export and leaves the system with the booking row (retention purge); it is
   deliberately kept out of the immutable `booking_events`/`audit_log`.
 
+## 18. Accounting integration — Visma e-conomic (N, G)
+
+Built 2026-09-05 (`20260905090000_accounting_integration.sql`, edge function
+`economic-config`, `_shared/economic.ts`). First step only: connect and verify. No
+invoice data flows yet — that lands with the booking invoicing work (EVU C-01/C-02).
+
+- **Two tokens, two owners.** e-conomic authenticates every call with DCA's
+  `X-AppSecretToken` (the Operia app in DCA's developer agreement) plus the customer's
+  `X-AgreementGrantToken` (their permission for that app to touch their books).
+  Both are write-only secrets in the §7 pattern: `platform_secrets` (new — the first
+  platform-level secret kept in the database rather than as an edge env secret, so DCA
+  staff can rotate it from Operia → Integrationer) and `company_accounting_secret`
+  have no RLS policies and no grants; only the service-role edge function reads them.
+  The browser sees the mirrored booleans `platform_settings.economic_app_secret_set`
+  and `company_accounting_config.token_set`, never the values.
+- **Mirrors cannot be forged.** `guard_platform_settings_mirrors()` and
+  `guard_accounting_config_status()` reset the mirrored/verification columns on any
+  write that carries `auth.uid()` (a browser session); service-role writes pass.
+- **Authorization re-verified server-side.** App-secret actions require a platform
+  admin; token and test actions require a manager of that company; everything except
+  `clear_token` additionally requires the platform to offer the integration and the
+  provider (`accounting_enabled` + `accounting_providers`). A customer can always revoke
+  their own token.
+- **What the test call sends and stores.** `GET /self` sends only the two tokens; the
+  stored result is the agreement number and the customer's own company name
+  (`agreement_number`, `agreement_company_name`, `verified_at`) — no personal data.
+  e-conomic's error text and `logId` stay in the function log; the browser gets a
+  reason code.
+- **Audit.** New category `accounting`: `accounting.platform_changed`,
+  `accounting.config_updated` (triggers), `accounting.app_secret_set/cleared`,
+  `accounting.secret_set/cleared`, `accounting.verified` (edge function). Client
+  mirror in `operia.logs.tsx`.
+- **Sub-processor.** Visma e-conomic becomes a recipient of customer data the day
+  invoices are transferred — registered now in
+  [`gdpr/subprocessors.md`](gdpr/subprocessors.md) row 12 so the 30-day notice can
+  run before that.
+- **Disaster recovery.** `platform_secrets` holds the app token: it is *data*, not
+  schema, so it is only in database backups / the password manager — noted in
+  [`disaster-recovery.md`](disaster-recovery.md).
+
 ## Known gaps / roadmap
 
 | Gap | Status |
@@ -685,6 +759,6 @@ rather than decided (`20260814190000_parcel_documents_erasure.sql`):
 | Right of access (Art. 15) | **Largely fixed 2026-08-14** (§16) — `sar_export()` + the screen on `/configure/personal-data` answer a request for employees *and*, via folded free-text search, for people with no row (proxy collectors, private senders). Remaining: image files are listed rather than packaged, sections cap at 500 rows, and there is no PDF rendering — the export is JSON. |
 | Consent / legal basis / opt-out | **Open** — no consent column, no legal-basis record, no per-employee notification preference or opt-out. Notification toggles exist only at platform and company level; the data subject has no control. |
 | Per-company retention | **Fixed 2026-08-14** (§15) — `company_retention` gives the controller its own window per category, resolved customer → platform → keep forever. `parcel_events` remains deliberately without one (it follows the parcel). Remaining: agree actual values with each customer; see [`docs/gdpr/retention-schedule.md`](gdpr/retention-schedule.md). |
-| Processor agreements / transfers | **Partly (2026-08-14)** — the register now exists: [`docs/gdpr/subprocessors.md`](gdpr/subprocessors.md) lists every recipient (Supabase/AWS, Resend, Postmark, GatewayAPI, Mistral, Anthropic, Google AI + Maps, OpenRouteService, customer log drains), what each receives, where it is processed and on what transfer basis, with a dated verification log. Verified from vendor primary sources: **Resend, Postmark (ActiveCampaign) and Google LLC are DPF-certified; Supabase and Anthropic are not — they rely on SCCs.** Still **open**: confirm each on the official `dataprivacyframework.gov` list, execute/file the vendor DPAs, write one TIA per US vendor, confirm the AWS region of DCA's own gateway/web box, and move the AI keys off free tiers. The DPA annexes are **drafted** (`docs/gdpr/dpa/bilag-da.md`, version `DCA-DPA-1.0`, Datatilsynet's standard clauses as the body) but not yet legally reviewed or signed by anyone; §14 adds the in-product contacts and signature record the annexes depend on. |
+| Processor agreements / transfers | **Partly (2026-08-14)** — the register now exists: [`docs/gdpr/subprocessors.md`](gdpr/subprocessors.md) lists every recipient (Supabase/AWS, Resend, Postmark, GatewayAPI, Mistral, Anthropic, Google AI + Maps, OpenRouteService, customer log drains), what each receives, where it is processed and on what transfer basis, with a dated verification log. Verified from vendor primary sources: **Resend, Postmark (ActiveCampaign) and Google LLC are DPF-certified; Supabase and Anthropic are not — they rely on SCCs.** Since 2026-09-08 both e-mail legs can instead point at **Brevo** (Sendinblue SAS, FR, row 13), which removes the transfer entirely — see §5 of the register for what an EU-only configuration now looks like. Still **open**: confirm each on the official `dataprivacyframework.gov` list, execute/file the vendor DPAs, write one TIA per US vendor, confirm the AWS region of DCA's own gateway/web box, and move the AI keys off free tiers. The DPA annexes are **drafted** (`docs/gdpr/dpa/bilag-da.md`, version `DCA-DPA-1.0`, Datatilsynet's standard clauses as the body) but not yet legally reviewed or signed by anyone; §14 adds the in-product contacts and signature record the annexes depend on. |
 | Free AI tiers train on the data | **Documented, decision pending (2026-08-14)** — Gemini (`20260806193000_ai_gemini_lite_models.sql`) *and* Mistral's free "Experiment" plan both permit the vendor to use requests for model improvement. Both providers are now flagged `hasFreeTier` in `web/src/lib/ai.ts` and carry a warning on Operia → Integrationer, and the rule ("free tier = development with synthetic labels only; production requires a paid plan with a DPA") is written into [`subprocessors.md`](gdpr/subprocessors.md) §2. **Open**: actually moving the production key to a paid plan — intended provider is Mistral (EU, DPA, zero data retention). Anthropic has no free tier. |
 | Real personal data in git history | **Partly (2026-08-14)** — `docs/labels/` is untracked and gitignored, so no label images are in the working tree of any future commit. The 13 images committed 2026-08-06 → 2026-08-13 **remain reachable in git history**; the current set is synthetic test labels, so this is documented as an accepted residual rather than rewritten. If a real label ever entered the repo, history rewrite (`git filter-repo`) + force-push is required, and any clone/fork must be re-cloned. |

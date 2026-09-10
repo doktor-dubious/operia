@@ -4,20 +4,21 @@
 // Resends send-API kvitterer kun "accepteret i køen" — om postkassen findes
 // afgøres senere af den modtagende server. Et hårdt bounce (ukendt adresse) og
 // en spam-klage kommer derfor tilbage som webhook-events, IKKE i send-svaret.
-// Her matches event'ets email_id mod provider_id på asset_loan_notifications /
-// parcel_notifications, og udfaldet skrives til audit_log via
-// log_notification_event, så det lyser i Logs:
-//   • email.bounced   → '*.reminder_bounced' / '*.notification_bounced' (error)
+// Her oversættes Resends eventnavne til det fælles udfald, og
+// _shared/mail-events.ts gør resten (match på provider_id → audit_log):
+//   • email.bounced    → '*.reminder_bounced' / '*.notification_bounced' (error)
 //   • email.complained → '*_complained'                                  (warning)
+// Sidestykket for Brevo er brevo-webhook.
 //
 // SIKKERHED: Resend signerer webhooken via Svix (svix-id/-timestamp/-signature).
-// Signaturen verificeres mod RESEND_WEBHOOK_SECRET, så ingen kan forfalske
-// bounce-events. Deployes MED --no-verify-jwt (Resend sender ingen Supabase-JWT).
+// Signaturen verificeres mod RESEND_WEBHOOK_SECRET i _shared/standard-webhook.ts,
+// så ingen kan forfalske bounce-events. Deployes MED --no-verify-jwt (Resend sender ingen Supabase-JWT).
 // Notifikationsrækkernes status RØRES bevidst ikke — dedup-indekset (status='sent')
 // skal bestå, så cron ikke gen-sender til en død adresse; loggen bærer udfaldet.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { maskRecipient } from '../_shared/notify.ts'
+import { recordMailOutcome } from '../_shared/mail-events.ts'
+import { verifyStandardWebhook } from '../_shared/standard-webhook.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -30,58 +31,6 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
   })
-}
-
-function base64ToBytes(b64: string): Uint8Array {
-  const bin = atob(b64)
-  const out = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-  return out
-}
-function bytesToBase64(bytes: Uint8Array): string {
-  let bin = ''
-  for (const b of bytes) bin += String.fromCharCode(b)
-  return btoa(bin)
-}
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let r = 0
-  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return r === 0
-}
-
-// Svix-signaturverifikation (som Resend/Stripe-webhooks): HMAC-SHA256 over
-// "{id}.{timestamp}.{body}" med den base64-dekodede whsec_-nøgle. Header'en kan
-// bære flere signaturer (nøgle-rotation) adskilt af mellemrum som "v1,<sig>".
-async function verifySvix(
-  secret: string,
-  id: string,
-  timestamp: string,
-  sigHeader: string,
-  body: string,
-): Promise<boolean> {
-  const ts = Number(timestamp)
-  if (!Number.isFinite(ts)) return false
-  // Replay-værn: ±5 min (svix-timestamp er unix-sekunder).
-  if (Math.abs(Date.now() / 1000 - ts) > 300) return false
-
-  const keyBytes = base64ToBytes(secret.replace(/^whsec_/, ''))
-  const key = await crypto.subtle.importKey(
-    'raw',
-    keyBytes,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const mac = new Uint8Array(
-    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${id}.${timestamp}.${body}`)),
-  )
-  const expected = bytesToBase64(mac)
-  for (const part of sigHeader.split(' ')) {
-    const value = part.split(',')[1]
-    if (value && timingSafeEqual(value, expected)) return true
-  }
-  return false
 }
 
 type ResendEvent = {
@@ -105,7 +54,16 @@ Deno.serve(async (req) => {
   const signature = req.headers.get('svix-signature')
   const body = await req.text()
   if (!id || !timestamp || !signature) return json({ error: 'missing_signature' }, 400)
-  if (!(await verifySvix(secret, id, timestamp, signature, body))) {
+  // keyMode 'svix': Resends whsec_-hemmelighed base64-dekodes. AhaSend gør det
+  // modsatte — se _shared/standard-webhook.ts.
+  if (!(await verifyStandardWebhook({
+    secret,
+    id,
+    timestamp,
+    signatureHeader: signature,
+    body,
+    keyMode: 'svix',
+  }))) {
     return json({ error: 'bad_signature' }, 401)
   }
 
@@ -133,68 +91,12 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  // Matchen sker på provider_id (Resend-id gemt ved afsendelse). Nyeste række
-  // vinder, hvis et id mod forventning skulle gå igen.
-  const { data: assetRow } = await admin
-    .from('asset_loan_notifications')
-    .select('company_id, loan_id, asset_id, recipient, channel, loan:asset_loans(to_name), asset:assets(name, asset_tag)')
-    .eq('provider_id', emailId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (assetRow) {
-    const a = assetRow as unknown as {
-      company_id: string
-      loan_id: string
-      asset_id: string | null
-      recipient: string | null
-      channel: string
-      loan: { to_name: string | null } | null
-      asset: { name: string | null; asset_tag: string | null } | null
-    }
-    // Marker lånet, så Låner-fanen kan vise en rød note — men KUN hvis lånets
-    // aktuelle to_email stadig er den adresse der bouncede (ellers har manageren
-    // allerede rettet den, og markeringen ville være forældet).
-    if (isBounce && a.recipient) {
-      await admin
-        .from('asset_loans')
-        .update({ bounced_at: new Date().toISOString(), bounce_reason: reason.slice(0, 300) })
-        .eq('id', a.loan_id)
-        .eq('to_email', a.recipient)
-    }
-    await admin.rpc('log_notification_event', {
-      p_company_id: a.company_id,
-      p_action: isBounce ? 'asset.reminder_bounced' : 'asset.reminder_complained',
-      p_entity_type: 'asset_loan',
-      p_entity_id: a.loan_id,
-      p_summary: `${a.asset?.name || a.asset?.asset_tag || '—'}`,
-      p_detail: { channel: a.channel, recipient: maskRecipient(a.recipient), reason, event: type },
-    })
-    return json({ ok: true, matched: 'asset' })
-  }
-
-  const { data: parcelRow } = await admin
-    .from('parcel_notifications')
-    .select('company_id, parcel_id, recipient, channel')
-    .eq('provider_id', emailId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (parcelRow) {
-    await admin.rpc('log_notification_event', {
-      p_company_id: parcelRow.company_id,
-      p_action: isBounce ? 'parcel.notification_bounced' : 'parcel.notification_complained',
-      p_entity_type: 'parcel',
-      p_entity_id: parcelRow.parcel_id,
-      p_summary: null,
-      p_detail: { channel: parcelRow.channel, recipient: maskRecipient(parcelRow.recipient), reason, event: type },
-    })
-    return json({ ok: true, matched: 'parcel' })
-  }
-
-  // Ukendt email_id (fx invitations-/velkomstmail, som ikke spores her) — kvittér
-  // uden at logge, så Resend ikke gen-forsøger.
-  return json({ ok: true, matched: null })
+  const matched = await recordMailOutcome(admin, {
+    providerId: emailId,
+    kind: isBounce ? 'bounce' : 'complaint',
+    reason,
+    event: type,
+  })
+  // Ukendt email_id kvitteres uden at logge, så Resend ikke gen-forsøger.
+  return json({ ok: true, matched })
 })

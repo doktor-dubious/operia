@@ -50,7 +50,8 @@ Set via `supabase secrets set` on the project. Custom secrets referenced by the 
 
 | Secret | Used by |
 |---|---|
-| `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_WEBHOOK_SECRET` | invite/reset emails, resend-webhook |
+| `RESEND_API_KEY`, `RESEND_FROM`, `RESEND_WEBHOOK_SECRET` | invite/reset emails, resend-webhook (used while `email_provider = 'resend'`) |
+| `BREVO_WEBHOOK_SECRET` | brevo-webhook. The Brevo **API key** is *not* an edge secret — it lives in `platform_secrets['brevo_api_key']` and is therefore inside the database backup; `BREVO_API_KEY`/`BREVO_FROM` exist only as local/dev fallbacks |
 | `GATEWAYAPI_TOKEN`, `GATEWAYAPI_SENDER` | SMS dispatch |
 | `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_TENANT_ID` | entra-sync / entra-config |
 | `GOOGLE_MAPS_API_KEY`, `ORS_API_KEY` | route-calc / maps-key-status |
@@ -58,6 +59,13 @@ Set via `supabase secrets set` on the project. Custom secrets referenced by the 
 
 > `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` are **auto-injected** into
 > edge functions by the platform — do **not** set them manually.
+
+### 1b. Platform secrets kept in the database (`platform_secrets`)
+
+Since 2026-09-05 some platform-level secrets are *rows*, not env secrets, so DCA staff can
+rotate them from the UI (Operia → Integrationer): today `economic_app_secret_token` (the
+e-conomic AppSecretToken). They are recovered by a data restore (§4) — otherwise re-enter
+them in the UI. Keep a copy in the password manager alongside §1.
 
 ### 2. Vault secret for pg_cron (silent failure if missing)
 

@@ -9,6 +9,7 @@ import {
   Camera,
   CirclePlus,
   Cog,
+  ConciergeBell,
   FileText,
   Handshake,
   LayoutGrid,
@@ -155,7 +156,14 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'bookingList', href: '/booking', icon: CalendarCheck, productKey: 'booking' },
       { labelKey: 'bookingResources', href: '/booking/resources', icon: Boxes, productKey: 'booking' },
       { labelKey: 'bookingCategories', href: '/booking/categories', icon: Tag, productKey: 'booking' },
+      { labelKey: 'bookingServices', href: '/booking/services', icon: ConciergeBell, productKey: 'booking' },
     ],
+  },
+  {
+    // Ruteplanlægnings-modulet: én side (ruterne) — egen gruppe, så modulet
+    // kan stå med sin egen overskrift i sidemenuen som pakker/aktiver/booking.
+    labelKey: 'groupRoutePlanning',
+    items: [{ labelKey: 'routePlans', href: '/products/routes', icon: Route, productKey: 'routes' }],
   },
   {
     labelKey: 'groupProducts',
@@ -163,7 +171,6 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'lockers', href: '/products/lockers', icon: Lock, productKey: 'lockers' },
       { labelKey: 'iot', href: '/products/iot', icon: Radio, productKey: 'iot' },
       { labelKey: 'shipping', href: '/products/shipping', icon: Ship, productKey: 'shipping' },
-      { labelKey: 'routes', href: '/products/routes', icon: Route, productKey: 'routes' },
     ],
   },
 ]
@@ -367,15 +374,35 @@ export const SIMPLE_NAV_HREFS = [
   '/assets/search',
   '/assets/new',
   '/booking/calendar',
+  '/products/routes',
 ]
 
-export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
+// Hvilket sidemenu-modul (SIDEBAR_MODULES i lib/home-tiles) en knap hører til.
+// Modulerne kan slås fra pr. kunde i Home-design → Sidemenu; er de slået fra,
+// falder knapperne tilbage til bund-dropdownen (modernMenuNavGroups).
+const SIDEBAR_MODULE_PREFIXES: [string, string][] = [
+  ['/parcels', 'parcels'],
+  ['/assets', 'assets'],
+  ['/booking', 'booking'],
+  ['/products/routes', 'routes'],
+]
+
+export function sidebarModuleOf(href: string): string | null {
+  return SIDEBAR_MODULE_PREFIXES.find(([prefix]) => href.startsWith(prefix))?.[1] ?? null
+}
+
+// `hiddenModules` = fravalgte moduler fra Home-designet (tom/udeladt = alle med).
+export function simpleNavItems(
+  access: AccessInfo | undefined,
+  hiddenModules?: ReadonlySet<string>,
+): NavItem[] {
   if (!access) return []
   const byHref = new Map(navGroups.flatMap((g) => g.items).map((i) => [i.href, i]))
   return SIMPLE_NAV_HREFS.map((href) => byHref.get(href)).filter(
     (item): item is NavItem =>
       !!item &&
       (!item.productKey || access.isPlatformAdmin || access.products.has(item.productKey)) &&
+      !hiddenModules?.has(sidebarModuleOf(item.href) ?? '') &&
       canAccessPath(item.href, access),
   )
 }
@@ -388,13 +415,16 @@ export function simpleNavItems(access: AccessInfo | undefined): NavItem[] {
 // hører til en anden navGroup end det forrige.
 export type SimpleNavGroup = { labelKey: string; items: NavItem[] }
 
-export function simpleNavGroups(access: AccessInfo | undefined): SimpleNavGroup[] {
+export function simpleNavGroups(
+  access: AccessInfo | undefined,
+  hiddenModules?: ReadonlySet<string>,
+): SimpleNavGroup[] {
   const groupOf = new Map<string, string>()
   for (const group of navGroups) {
     for (const item of group.items) groupOf.set(item.href, group.labelKey)
   }
   const out: SimpleNavGroup[] = []
-  for (const item of simpleNavItems(access)) {
+  for (const item of simpleNavItems(access, hiddenModules)) {
     const labelKey = groupOf.get(item.href)
     if (!labelKey) continue // punkt uden gruppe — kan ikke få en overskrift
     const last = out.at(-1)
@@ -408,8 +438,13 @@ export function simpleNavGroups(access: AccessInfo | undefined): SimpleNavGroup[
 // punkter der allerede står som store knapper i sidemenuen. Pakkegruppen
 // forsvinder derfor ikke længere helt — oversigt/rapporter/statistik bliver
 // tilbage her, så alt i modulet kan nås ét sted fra.
-export function modernMenuNavGroups(access: AccessInfo | undefined): NavGroup[] {
-  const inRail = new Set(SIMPLE_NAV_HREFS)
+export function modernMenuNavGroups(
+  access: AccessInfo | undefined,
+  hiddenModules?: ReadonlySet<string>,
+): NavGroup[] {
+  // Kun de knapper der faktisk står i skinnen tages ud af menutræet — et
+  // fravalgt modul skal kunne nås her i stedet.
+  const inRail = new Set(simpleNavItems(access, hiddenModules).map((item) => item.href))
   return visibleNavGroups(access)
     .map((group) => ({ ...group, items: group.items.filter((item) => !inRail.has(item.href)) }))
     .filter((group) => group.items.length > 0)

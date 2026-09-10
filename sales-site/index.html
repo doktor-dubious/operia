@@ -227,6 +227,11 @@
   .op-lead .msg.ok{color:var(--headgrad)}
   .op-lead .msg.err{color:#f2a9a0}
   .op-privacy{font-size:11.5px;color:rgba(255,255,255,.4);margin:10px 0 0;line-height:1.5}
+  /* Sidefod med de juridiske dokumenter — uden for panelet, på sidens egen baggrund */
+  .op-legal{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 22px;margin:36px 0 0;padding-top:20px;border-top:1px solid var(--line);font-size:13px}
+  .op-legal a{color:var(--muted);text-decoration:none}
+  .op-legal a:hover{color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px}
+  .op-legal a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
 
   .op-cta{
     display:block;width:100%;margin-top:20px;padding:15px;border-radius:10px;border:none;background:var(--cta);color:var(--cta-ink);
@@ -310,6 +315,15 @@
       <button class="op-cta" type="button" id="op-book">Book en demo af Operia</button>
     </div>
   </div>
+
+  <!-- Juridiske sider. Ligger som selvstændige dokumenter under /legal/, fordi
+       e-conomic (og andre integrationspartnere) skal kunne henvise til faste
+       URL'er for vilkår, privatliv og databehandleraftale. -->
+  <p class="op-legal">
+    <a href="/legal/eula.html">Vilkår for brug</a>
+    <a href="/legal/privacy.html">Privatlivspolitik</a>
+    <a href="/legal/dpa.html">Databehandleraftale</a>
+  </p>
 </div>
 
 <script>

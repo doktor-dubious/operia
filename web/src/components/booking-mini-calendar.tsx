@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   addDays,
   capFirst,
-  diffDays,
   longDayFormat,
   monthFormat,
   toISODate,
@@ -144,79 +143,6 @@ function MonthHeader({
           <ChevronRight className="size-4" />
         </Button>
       </div>
-    </div>
-  )
-}
-
-/**
- * Den lille kalender ved siden af tidslinjen. Klik på en dato flytter
- * visningen dertil; træk hen over flere datoer sætter perioden (som
- * Google Kalender).
- */
-export function MiniCalendar({
-  rangeStart,
-  rangeEnd,
-  today,
-  onPickDay,
-  onPickRange,
-  className,
-}: {
-  rangeStart: Date
-  rangeEnd: Date
-  today: Date
-  onPickDay: (d: Date) => void
-  onPickRange: (from: Date, to: Date) => void
-  className?: string
-}) {
-  const [month, setMonth] = useState(() => new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1))
-  const [drag, setDrag] = useState<{ from: Date; to: Date } | null>(null)
-  // Trækket læses i en window-listener, som ikke må se en forældet værdi.
-  const dragRef = useRef<{ from: Date; to: Date } | null>(null)
-  dragRef.current = drag
-
-  // Følg med når tidslinjen navigeres udenom den lille kalender.
-  const startMonthKey = `${rangeStart.getFullYear()}-${rangeStart.getMonth()}`
-  useEffect(() => {
-    setMonth(new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startMonthKey])
-
-  useEffect(() => {
-    const done = () => {
-      const d = dragRef.current
-      if (!d) return
-      setDrag(null)
-      const [from, to] = d.from <= d.to ? [d.from, d.to] : [d.to, d.from]
-      if (diffDays(from, to) === 0) onPickDay(from)
-      else onPickRange(from, to)
-    }
-    window.addEventListener('pointerup', done)
-    return () => window.removeEventListener('pointerup', done)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onPickDay, onPickRange])
-
-  // Under et træk vises trækket; ellers tidslinjens nuværende periode.
-  const shown = drag
-    ? drag.from <= drag.to
-      ? { from: drag.from, to: drag.to }
-      : { from: drag.to, to: drag.from }
-    : { from: rangeStart, to: rangeEnd }
-
-  return (
-    <div className={cn('flex flex-col gap-2 rounded-md border border-border bg-panel p-3', className)}>
-      <MonthHeader
-        month={month}
-        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-        onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-      />
-      <MonthGrid
-        month={month}
-        today={today}
-        from={shown.from}
-        to={shown.to}
-        onDayDown={(d) => setDrag({ from: d, to: d })}
-        onDayEnter={(d) => setDrag((prev) => (prev ? { ...prev, to: d } : prev))}
-      />
     </div>
   )
 }

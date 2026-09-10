@@ -33,6 +33,12 @@ import {
 import { TextTemplateFields } from '@/components/text-template-fields'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { supabase } from '@/lib/supabase'
+import {
+  ALL_TEMPLATE_CATEGORIES,
+  TEMPLATE_CATEGORY_LABEL_KEY,
+  presentCategories,
+  templateCategory,
+} from '@/lib/templates'
 import { cn } from '@/lib/utils'
 
 // Konfigurér → Skabeloner: virksomhedens skabeloner (pakkelabel + pakke-
@@ -79,6 +85,7 @@ function TemplatesPage() {
   const { data, isPending } = useCompanyTemplates(companyId)
   const queryClient = useQueryClient()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [category, setCategory] = useState<string>(ALL_TEMPLATE_CATEGORIES)
   const [lang, setLang] = useState('da')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -90,7 +97,18 @@ function TemplatesPage() {
   // Distinkte skabeloner (én pr. key) til combo-boxen.
   const templates = [...new Map(rows.map((r) => [r.key, { name: r.name, kind: r.kind }])).entries()]
     .map(([key, v]) => ({ key, ...v }))
-  const activeKey = selectedKey ?? templates[0]?.key ?? null
+  // Kategorifilteret indsnævrer kun listen; kategorierne udledes af nøglerne
+  // (lib/templates.ts) og vises kun hvis de har rækker.
+  const categories = presentCategories(templates.map((tp) => tp.key))
+  const visible =
+    category === ALL_TEMPLATE_CATEGORIES
+      ? templates
+      : templates.filter((tp) => templateCategory(tp.key) === category)
+  // Et skift af kategori må ikke efterlade et valg uden for listen — så falder
+  // den tilbage på den første synlige skabelon.
+  const activeKey =
+    (selectedKey && visible.some((tp) => tp.key === selectedKey) ? selectedKey : visible[0]?.key) ??
+    null
   const isLabel = templates.find((tp) => tp.key === activeKey)?.kind === 'label'
   // Labels ligger i én sprogneutral række ('*'); tekstskabeloner pr. sprog.
   const activeLang = isLabel ? '*' : lang
@@ -178,6 +196,26 @@ function TemplatesPage() {
         </header>
 
         <div className="mb-6 flex flex-wrap items-end gap-3 border-b border-border pb-6">
+          {categories.length > 1 && (
+            <div className="flex flex-col gap-2">
+              <Label className="text-label">{t('templatesPage.categoryLabel')}</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_TEMPLATE_CATEGORIES}>
+                    {t('templatesPage.categoryAll')}
+                  </SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {t(TEMPLATE_CATEGORY_LABEL_KEY[c])}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex flex-1 flex-col gap-2">
             <Label className="text-label">{t('templatesPage.templateLabel')}</Label>
             <Select value={activeKey ?? undefined} onValueChange={setSelectedKey}>
@@ -185,7 +223,7 @@ function TemplatesPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {templates.map((tp) => (
+                {visible.map((tp) => (
                   <SelectItem key={tp.key} value={tp.key}>
                     {tp.name}
                   </SelectItem>

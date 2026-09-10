@@ -1,0 +1,301 @@
+Daniel Trampedach_
+
+Kravspecifikation
+Booking- og faktureringsløsning til EVU, herunder integration til Dalux/FM
+
+1. Formål og afgrænsning
+Dette dokument beskriver de krav, som booking- og faktureringsløsningen til EVU skal opfylde. Formålet er at give et konkret beslutningsgrundlag for, om løsningen reelt løfter EVU-opgaven — særligt på fakturering, datakvalitet og sammenhæng til Kundens FM-system (Dalux) — og at fastlægge, hvad der er leveret i dag, og hvad der leveres som afgrænsede udviklingsmoduler.
+
+Specifikationen omfatter booking af lokaler og ressourcer, tilhørende tilkøbsydelser, dataflow fra booking til faktura, sporbarhed og revisionsspor samt udveksling af data med Dalux/FM. Kundens egne systemer — Dalux og regnskabssystemet — er ikke en del af leverancen, men grænsefladerne til dem er.
+
+Dokumentet er et udkast. Punkter markeret "Afklares" kræver stillingtagen fra Kunden, før de kan prissættes og tidsfastsættes.
+
+2. Sådan læses kravene
+Hvert krav har et entydigt ID, en prioritet og en status. Acceptkriteriet angiver, hvornår kravet betragtes som opfyldt.
+
+* Prioritet — Skal: kravet er en forudsætning for løsningen. Bør: kravet vægtes, men er ikke en forudsætning. Kan: kravet er ønskeligt og prissættes særskilt.
+
+* Status — Opfyldt i dag: funktionen er til stede i den nuværende løsning. Delvist: funktionen findes i en begrænset form. Udvikling: funktionen leveres som et afgrænset udviklingsmodul. Afklares: kravet afventer stillingtagen eller oplysninger fra Kunden.
+ 
+Bemærk, at integrationen kan gå begge veje: data kan sendes ud til Dalux/FM, og data kan trækkes ind i bookingsystemet. Begge retninger håndteres i dag via fil. En direkte, automatisk to-vejs-integration er et udviklingsspor via Daluxs API.
+
+3. Booking og ressourcestyring
+ID , Krav og acceptkriterie , Prioritet , Status
+
+ID: A-01
+Krav og acceptkriterie: Systemet skal kunne booke et lokale eller en ressource over en sammenhængende periode med start- og sluttidspunkt.
+Accept: Booking oprettes med periode og fremgår af booking- og rapportoversigten.
+Prioritet: Skal
+
+ID: A-02
+Krav og acceptkriterie: En booking skal følge en fast statusmodel: booket → i brug → afsluttet → faktureret. Status skal følge forløbet automatisk.
+Accept: Statusskift sker uden manuel indtastning og kan aflæses på bookingen.
+Prioritet: Skal
+
+ID: A-03
+Krav og acceptkriterie: En booking skal kunne genåbnes og rettes frem til fakturering.
+Accept: Booking kan åbnes fra rapporten, rettes og gemmes, og ændringen slår igennem på fakturagrundlaget.
+Prioritet: Skal
+
+ID: A-04
+Krav og acceptkriterie: Systemet skal kunne udsende bekræftelse på oprettelse og ændring af en booking til rekvirent og relevante modtagere.
+Accept: Bekræftelsesmail afsendes automatisk og logges.
+Prioritet: Bør
+
+ID: A-05
+Krav og acceptkriterie: Systemet skal kunne registrere antal kursister og kursistniveau på den enkelte booking.
+Accept: Felterne kan udfyldes, ændres og indgår i fakturagrundlaget.
+Prioritet: Skal
+
+ID: A-06
+Krav og acceptkriterie: Systemet skal kunne registrere tilkøbsydelser med antal og enhedspris pr. booking: forplejning, overnatning, rengøring og øvrige tilkøb.
+Accept: Ydelser kan tilføjes fra en vedligeholdt ydelsesliste med antal og pris.
+Prioritet: Skal
+
+ID: A-07
+Krav og acceptkriterie: Systemet skal kunne registrere afbestilling af en booking med tidspunkt, årsag og afbestillingsansvarlig.
+Accept: Afbestilling registreres, bookingen udgår af fakturagrundlaget og handlingen fremgår af ændringsloggen.
+Prioritet: Skal
+
+4. Integration til Dalux og Kundens FM-system
+4.1 Nuværende grundlag
+Systemet eksporterer udvalgte bookinger og afregningsdata som struktureret CSV-fil fra rapporten, klar til import i Dalux/FM. Udtrækket følger de anvendte filtre og kan køres on-demand eller planlagt. Modsat vej kan bookinger importeres fra CSV via systemets importfunktion, så et udtræk fra Dalux kan lægges ind manuelt eller planlagt. Øvrige datatyper — fx lokaler og aktiver — samt automatisk synkronisering hører under API-sporet.
+
+Dalux udstiller et REST-API til både FM og Field. Adgang sker med en API-nøgle i X-API-KEY-headeren, og for FM oprettes en API-identitet af Kundens Dalux-administrator med rollestyret, afgrænset adgang. Med API-adgang kan integrationen køre automatisk i begge retninger.
+
+4.2 Krav
+ID , Krav og acceptkriterie , Prioritet , Status
+
+ID: B-01
+Krav og acceptkriterie: Systemet skal kunne eksportere bookinger og afregningsdata som struktureret fil (CSV) klar til import i Dalux/FM.
+Accept: Udtræk kan dannes fra rapporten og følger de anvendte filtre.
+Prioritet: Skal
+
+ID: B-02
+Krav og acceptkriterie: Eksporten skal kunne køres både on-demand og planlagt.
+Accept: Udtræk kan startes manuelt eller afvikles efter en fast plan.
+Prioritet: Skal
+
+ID: B-03
+Krav og acceptkriterie: Systemet skal kunne importere bookinger fra fil (CSV) via en importfunktion med kolonnemapning.
+Accept: Et udtræk fra Dalux kan indlæses uden manuel omformatering af filen.
+Prioritet: Skal
+
+ID: B-04
+Krav og acceptkriterie: Filformat, felter og mapping mellem systemet og Dalux/FM skal være dokumenteret og aftalt skriftligt.
+Accept: Feltmapping foreligger som bilag og er godkendt af Kunden.
+Prioritet: Skal
+
+ID: B-05
+Krav og acceptkriterie: Systemet skal kunne integrere direkte med Dalux via Daluxs REST-API, med automatisk udveksling i begge retninger.
+Accept: Integration afvikles automatisk uden filhåndtering; udvikles som afgrænset modul.
+Prioritet: Skal
+
+ID: B-06
+Krav og acceptkriterie: API-adgang skal ske med API-nøgle (X-API-KEY) via en API-identitet oprettet af Kundens Dalux-administrator med rollestyret, afgrænset adgang.
+Accept: Adgang er begrænset til de nødvendige data og kan tilbagekaldes af Kunden.
+Prioritet: Skal
+
+ID: B-07
+Krav og acceptkriterie: Synkroniseringsfrekvensen skal kunne konfigureres (fx løbende, dagligt eller on-demand).
+Accept: Frekvens kan indstilles uden ny udvikling.
+Prioritet: Bør
+
+ID: B-08
+Krav og acceptkriterie: Hvilke datatyper der udveksles skal være defineret: bookinger, lokaler/aktiver og afregningslinjer.
+Accept: Datatyper og retning er beskrevet pr. objekt i integrationsbilaget.
+Prioritet: Skal
+
+ID: B-09
+Krav og acceptkriterie: Fejl i integrationen skal logges, kunne aflæses og kunne gensendes uden datatab eller dubletter.
+Accept: Afviste poster fremgår af en fejlliste og kan gensendes.
+Prioritet: Skal
+
+ID: B-10
+Krav og acceptkriterie: Adgangsnøgler og hemmeligheder må ikke ligge i klienten, men skal opbevares serverside.
+Accept: Nøgler håndteres i server-/edge-laget og er ikke tilgængelige i browseren.
+Prioritet: Skal
+
+5. Dataflow fra booking til afregning
+5.1 Nuværende flow
+Et lokale bookes over en periode. Status følger forløbet — booket, i brug, afsluttet, faktureret. Systemet danner automatisk en fakturakladde efter princippet lokale × antal dage × pris og sender den til regnskabssystemet, hvorefter fakturanummeret skrives tilbage på bookingen. Ændringer før fakturering foretages ved at åbne bookingen igen fra rapporten.
+
+5.2 Faktureringsgevinsten
+Den manuelle overførsel af ophold til faktura bortfalder. Fakturering sker i én arbejdsgang med ensartede linjer og fuld sporbarhed fra booking til fakturanummer, hvilket fjerner glemte faktureringer og reducerer afstemningsarbejdet ved månedsafslutning.
+5.3 Krav
+
+ID , Krav og acceptkriterie , Prioritet , Status
+
+ID: C-01
+Krav og acceptkriterie: Systemet skal automatisk danne en fakturakladde ud fra bookingen efter princippet lokale × antal dage × pris.
+Accept: Kladden dannes uden manuel indtastning af linjer.
+Prioritet: Skal
+
+ID: C-02
+	
+Fakturakladden skal kunne overføres til regnskabssystemet, og fakturanummeret skal skrives tilbage på bookingen.
+Accept: Fakturanummer er synligt på bookingen og i rapporten.
+Prioritet: Skal
+
+ID: C-03
+Krav og acceptkriterie: Fakturering skal kunne udføres samlet for et filtreret udvalg af bookinger med ensartede linjer.
+Accept: En periode kan faktureres i én arbejdsgang.
+Prioritet: Skal
+
+ID: C-04
+Krav og acceptkriterie: Systemet skal sikre, at ingen afsluttet booking kan overses ved fakturering.
+Accept: Afsluttede, ikke-fakturerede bookinger kan listes og afstemmes.
+Prioritet: Skal
+
+ID: C-05
+Krav og acceptkriterie: Priser skal vedligeholdes i systemet pr. lokale/ressource og pr. ydelse, med mulighed for tidsafgrænsede takster.
+Accept: Prisliste kan opdateres uden udvikling, og ændringer påvirker ikke allerede fakturerede bookinger.
+Prioritet: Skal
+
+ID: C-06
+Krav og acceptkriterie: Tilkøbsydelser skal kunne faktureres som særskilte fakturalinjer med egen tekst, antal og enhedspris.
+Accept: Forplejning, overnatning, rengøring og øvrige tilkøb fremgår som selvstændige linjer.
+Prioritet: Skal
+
+ID: C-07
+Krav og acceptkriterie: Fakturagrundlaget skal kunne beregnes pr. kursist og differentieres på kursistniveau.
+Accept: Antal kursister og niveau indgår i beregningen af linjebeløb.
+Prioritet: Skal
+
+ID: C-08
+Krav og acceptkriterie: Der skal være et godkendelsestrin før fakturering, så en ansvarlig frigiver grundlaget.
+Accept: Fakturering kan først gennemføres efter registreret godkendelse, og godkender fremgår af loggen.
+Prioritet: Bør
+
+ID: C-09
+Krav og acceptkriterie: Systemet skal kunne danne kreditnota ved afbestilling eller nedjustering efter fakturering.
+Accept: Kreditnota dannes med reference til den oprindelige faktura.
+Prioritet: Skal
+
+ID: C-10
+Krav og acceptkriterie: Ændringer i deltagerantal skal slå igennem på fakturagrundlaget frem til fakturering.
+Accept: Ændret antal giver ændret linjebeløb, og ændringen er sporbar.
+Prioritet: Skal
+
+6. Sporbarhed, ændringslog og dokumentation
+Systemet fører en automatisk ændringslog. Hver oprettelse, ændring, statusskift, fakturering og sletning af en booking gemmes med dato, tidspunkt, bruger, ændringstype og før/efter-værdi — og dermed konsekvensen for leverance og fakturering. Loggen fanges på databaseniveau, så den gælder uanset hvor ændringen kommer fra og ikke kan omgås.
+
+ID , Krav og acceptkriterie , Prioritet , Status
+
+ID: D-01
+Krav og acceptkriterie: Systemet skal føre en automatisk ændringslog over oprettelse, ændring, statusskift, fakturering og sletning af bookinger.
+Accept: Hver hændelse gemmes med dato, tidspunkt, bruger, ændringstype og før/efter-værdi.
+Prioritet: Skal
+
+ID: D-02
+Krav og acceptkriterie: Loggen skal fanges på databaseniveau, så den gælder uanset hvilken kanal ændringen kommer fra og ikke kan omgås.
+Accept: Ændringer foretaget uden om brugerfladen logges på samme måde.
+Prioritet: Skal
+
+ID: D-03
+Krav og acceptkriterie: Logposter må ikke kunne redigeres eller slettes af brugere.
+Accept: Loggen er skrivebeskyttet for alle roller.
+Prioritet: Skal
+
+ID: D-04
+Krav og acceptkriterie: Ændringer skal kunne aflæses med konsekvens for leverance og fakturering.
+Accept: Før/efter-værdier viser, hvad ændringen betyder for leverance og fakturagrundlag.
+Prioritet: Skal
+
+ID: D-05
+Krav og acceptkriterie: Ændringer skal vises i en samlet historik-oversigt i systemet med filtrering på periode, booking og bruger.
+Accept: Historikken kan fremsøges i brugerfladen.
+Prioritet: Skal
+
+ID: D-06
+Krav og acceptkriterie: Historik og rapporter skal kunne eksporteres til CSV og PDF til brug ved afstemning med Kunden.
+Accept: Eksport indeholder de filtrerede poster i læsbar form.
+Prioritet: Skal
+
+ID: D-07
+Krav og acceptkriterie: Opbevaringsperioden for ændringsloggen skal være aftalt og overholdt.
+Accept: Periode fremgår af aftalen, og data er tilgængelige i hele perioden.
+Prioritet: Skal
+
+7. Rapportering og afstemning
+
+ID , Krav og acceptkriterie , Prioritet , Status
+
+ID: E-01
+Krav og acceptkriterie: Rapporten skal kunne filtreres på periode, lokale/ressource, afdeling eller kunde, bookingstatus og faktureringsstatus.
+Accept: Filtrene kan kombineres, og resultatet kan eksporteres.
+Prioritet: Skal
+
+ID: E-02
+Krav og acceptkriterie: Der skal kunne trækkes en afstemningsrapport, der viser den fulde kæde fra booking til fakturanummer.
+Accept: Rapporten kan anvendes direkte ved afstemning med Kunden.
+Prioritet: Skal
+
+ID: E-03
+Krav og acceptkriterie: Rapporter skal kunne eksporteres til CSV og PDF.
+Accept: Begge formater kan dannes fra rapportvisningen.
+Prioritet: Skal
+
+ID: E-04
+Krav og acceptkriterie: Der skal kunne trækkes en oversigt over ikke-fakturerede, afsluttede bookinger.
+Accept: Oversigten kan dannes for en valgt periode.
+Prioritet: Bør
+
+8. Drift, sikkerhed og support
+
+ID , Krav og acceptkriterie , Prioritet , Status
+
+
+ID: F-01
+Krav og acceptkriterie: Adgang til systemet skal være rollestyret, med adskilte rettigheder for booking, drift, økonomi og administration.
+Accept: Roller kan tildeles pr. bruger, og rettigheder kan dokumenteres.
+Prioritet: Skal
+
+ID: F-02
+Krav og acceptkriterie: Systemet skal tilgås via browser uden lokal installation.
+Accept: Løsningen kører i gængse browsere på Kundens udstyr.
+Prioritet: Skal
+
+ID: F-03
+Krav og acceptkriterie: Persondata skal behandles efter GDPR, og der skal foreligge databehandleraftale.
+Accept: Databehandleraftale er indgået før idriftsættelse.
+Prioritet: Skal
+
+ID: F-04
+Krav og acceptkriterie: Data skal hostes inden for EU/EØS, og hostingsted skal kunne dokumenteres.
+Accept: Hostingsted og underdatabehandlere fremgår af databehandleraftalen.
+Prioritet: Skal
+
+ID: F-05
+Krav og acceptkriterie: Der skal tages backup, og aftalte mål for gendannelse (RPO/RTO) skal overholdes.
+Accept: Backupfrekvens og gendannelsestider fremgår af driftsaftalen.
+Prioritet: Skal
+
+ID: F-06
+Krav og acceptkriterie: Login skal kunne ske via Kundens eksisterende identitetsstyring (SSO).
+Accept: Brugere tilgår systemet med organisationskonto.
+Prioritet: Kan
+
+ID: F-07
+Krav og acceptkriterie: Support skal ydes inden for et aftalt supportvindue med aftalte reaktionstider.
+Accept: Supportvindue, kanaler og reaktionstider fremgår af aftalen.
+Prioritet: Skal
+
+ID: F-08
+Krav og acceptkriterie: Kunden skal ved ophør kunne få udleveret sine data i et almindeligt anvendeligt format.
+Accept: Fuldt dataudtræk kan leveres som struktureret fil.
+Prioritet: Skal
+
+9. Hvad der fortsat kræver manuel kontrol
+
+Med den nuværende løsning dannes selve opholdsfakturaen automatisk. Følgende håndteres fortsat manuelt, indtil de tilhørende moduler er leveret:
+
+* Tillægsydelser og antal — forplejning, overnatning, rengøring og øvrige tilkøb — indtil datamodellen er udvidet (A-06, C-06).
+
+* Antal kursister og kursistniveau, herunder differentierede takster (A-05, C-07).
+
+* Kreditnotaer ved afbestilling efter fakturering (A-07, C-09).
+
+* Godkendelse af fakturagrundlaget før fakturering (C-08).
+
+* Overførsel af data til og fra Dalux, som i dag sker via fil frem for automatisk synkronisering (B-05).

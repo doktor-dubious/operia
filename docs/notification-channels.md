@@ -5,6 +5,7 @@ steps to recreate Slack on a production account. Written 2026-09-04, when Teams 
 parked.
 
 **Related:** [`teams-app/README.md`](../teams-app/README.md) (Teams package + architecture),
+[`email/README.md`](../email/README.md) (the *inbound* email leg, which has its own provider choice),
 [`docs/gdpr/subprocessors.md`](gdpr/subprocessors.md) (Slack is a sub-processor),
 [`docs/disaster-recovery.md`](disaster-recovery.md) (what git does and doesn't hold).
 
@@ -14,12 +15,23 @@ parked.
 
 | Channel | State | Notes |
 |---|---|---|
-| **Email** (Resend) | Live | Original channel. |
+| **Email** (Resend **or** Brevo) | Live | Original channel. Since 2026-09-08 the provider is a platform choice on Operia → Integrationer → E-mail — see §5. |
 | **SMS** (GatewayAPI) | Live | Gated on the `sms_notifications` add-on. |
 | **Slack** | **Live and verified end-to-end** | Sends a DM to the recipient. Gated on `slack_notifications` + a per-customer OAuth install. |
 | **Teams** | **Parked — see §4** | Bot registered and authenticating; sender not written. Blocked on a tenant that actually has Teams. |
 
-All four are described **once** in `supabase/functions/_shared/channels.ts`. The dispatcher
+Three streams send over these channels, each with its own master switch, settings, templates
+and message log: **parcels** (`dispatch-parcel-notifications`), **asset loans**
+(`dispatch-asset-reminders`, email/SMS only) and, since 2026-09-08, **bookings**
+(`dispatch-booking-notifications` — EVU requirement A-04). The booking stream reads its work
+out of the append-only `booking_events` log rather than polling for state, so every create,
+change, cancellation and invoicing mark is confirmed exactly once; reminders are found by
+looking ahead in the calendar. Its settings live on Operia → Notifikationer and
+Konfigurér → Notifikationer under the type **Booking-flow**, and it adds two per-customer
+addresses: a copy recipient for every booking message and an invoicing mailbox that is the
+sole recipient of the "sent for invoicing" message.
+
+All four channels are described **once** in `supabase/functions/_shared/channels.ts`. The dispatcher
 does not know channel names: a channel's add-on, toggle column, recipient field, template
 suffix, rendering and sender all live in that registry. Adding a fifth means a migration
 (enum value, toggle columns, templates) plus one entry there — not edits across the
@@ -30,7 +42,9 @@ dispatcher, the test function and the UI.
 Nothing sends until **all** of these are true. This is deliberate: a channel that is
 merely configured must never start messaging real people by itself.
 
-1. `platform_settings.parcel_notifications_enabled` — global master switch
+1. The master switch for the stream that is sending — `platform_settings.parcel_notifications_enabled`,
+   `asset_notifications_enabled` or `booking_notifications_enabled`. Each is independent: booking
+   confirmations can be live while parcel notifications are off, and vice versa.
 2. `platform_settings.<channel>_enabled` — DCA offers the integration at all (Slack only)
 3. `company_features` holds the channel's add-on (`slack_notifications`, `sms_notifications`, …)
 4. `companies.notify_<channel>_enabled` (null = inherit the platform default, which is `false`
@@ -175,7 +189,10 @@ Transient failures (rate limit, 5xx, network, secret lookup) are **deferred**, n
 `failed` — they must not count against the three attempts. They are not silent either: the
 dispatcher writes a `parcel.notifications_deferred` warning to Logs per customer/channel, at
 most once an hour, with the deferred count and the reason, and every deferral goes to the
-edge-function console. The daily status digest keeps a *per-channel* window, so a deferred
+edge-function console. The booking dispatcher does the same under
+`booking.notifications_deferred`, and writes `booking.notification_log_failed` (error) when a
+message went out but its `booking_notifications` row could not be written — the next run
+cannot see that send, so the recipient may get it twice. The daily status digest keeps a *per-channel* window, so a deferred
 Slack digest is still owed everything since its own last send even if the e-mail went out.
 
 When someone's Slack account uses a **different** address than their Operia record, fill in
@@ -291,3 +308,202 @@ A **Power Automate Workflow webhook** posts to a Teams *channel*: no Azure, no b
 consent, no store submission. Roughly half a day. It is **not** FP Trax parity — no DM to
 the named recipient — but it is a real Teams story for department-level pickup notices, and
 it is demoable without any of the above.
+
+---
+
+## 5. Email — choosing a provider
+
+Two outbound providers are wired in, and the choice is a single dropdown on
+**Operia → Integrationer → E-mail** (`platform_settings.email_provider`). Both stay
+fully working, so a disruption at one is a UI change, not a deploy.
+
+| | Resend | Brevo | AhaSend |
+|---|---|---|---|
+| Vendor | Plus Five Five, Inc. (US) | Sendinblue SAS, Paris (**EU**) | TakTek GmbH, Vienna (**EU**) |
+| API | `POST https://api.resend.com/emails`, `Authorization: Bearer` | `POST https://api.brevo.com/v3/smtp/email`, `api-key:` header | `POST https://api.ahasend.com/v2/accounts/{account_id}/messages`, `Authorization: Bearer` |
+| Key lives in | edge secret `RESEND_API_KEY` | `platform_secrets['brevo_api_key']`, typed into the UI | `platform_secrets['ahasend_api_key']` + `platform_settings.ahasend_account_id` (an id, not a secret) |
+| Success code | 200 | 201 | **202** — and the per-recipient row can still carry `error`, so the row is checked, not just the status |
+| Message id | `id` (uuid) | `messageId` (`<…@smtp-relay.mailin.fr>`) | `data[0].id` |
+| Link rewriting | off by default; if enabled, a subdomain of *your* domain | **forced, cannot be disabled** | off by default, and we also force it off per message |
+| Bounce webhook | `resend-webhook` — Standard Webhooks, **`whsec_` base64-decoded** (`RESEND_WEBHOOK_SECRET`) | `brevo-webhook` — **unsigned by the provider**; the shared secret in the URL is the only guard (`BREVO_WEBHOOK_SECRET`) | `ahasend-webhook` — Standard Webhooks, **secret used as raw UTF-8** (`AHASEND_WEBHOOK_SECRET`) |
+
+Everything else is shared: `_shared/send-email.ts` resolves the provider (cached one
+minute per isolate, falling back to the edge secrets if the lookup fails) and both
+webhooks converge on `_shared/mail-events.ts`, which matches the provider's message id
+against `provider_id` and writes the outcome to `audit_log`.
+
+**The sender.** `platform_settings.email_from` overrides the `RESEND_FROM`/`BREVO_FROM`
+edge secret. Brevo only accepts a sender that is **verified in the account**, so the
+Test-connection button also reports whether the current sender is on Brevo's sender list —
+an unverified sender otherwise shows up as a silent 400 on the first real message.
+
+### Brevo setup
+
+```bash
+# 1. Paste the v3 API key on Operia → Integrationer → E-mail (never in git).
+# 2. Verify the sender domain/address in Brevo → Senders.
+# 3. Bounce webhook — one secret, then register the URL with Brevo:
+openssl rand -hex 32
+supabase secrets set BREVO_WEBHOOK_SECRET=<value>
+supabase functions deploy brevo-webhook --use-api --no-verify-jwt
+```
+
+Register the webhook in Brevo (Transactional → Settings → Webhook) for the events
+`hard_bounce`, `soft_bounce`, `blocked`, `invalid_email`, `spam`, `error` with the URL
+
+```
+https://rjlxmdfmktucunxehtqz.supabase.co/functions/v1/brevo-webhook?token=<BREVO_WEBHOOK_SECRET>
+```
+
+`soft_bounce` is accepted and deliberately **ignored** — Brevo retries those itself, and a
+temporarily full mailbox should not light up red in the customer's log.
+
+### Brevo gotcha: a 201 does **not** mean it was sent (paid for on 2026-09-08)
+
+Brevo's send API answers `201 {"messageId": "<…@smtp-relay.mailin.fr>"}` even when it is about to
+throw the message away. Sender validation happens *after* the API call, and the rejection shows up
+only as an `error` event:
+
+```
+Sending has been rejected because the sender you used noreply@predictioninstitute.com
+is not valid. Validate your sender or authenticate your domain
+```
+
+So `email_sent: true` in the audit log means **the provider accepted it**, never "it was
+delivered". The asynchronous half is what the webhook is for — `brevo-webhook` counts `error`
+as a bounce, so once the webhook is registered this lands in Logs as `auth.password_reset_bounced`
+at level `error`. Until it is registered, a rejection like this is invisible.
+
+Brevo accepts a sender by either route, and both count:
+
+1. the **address** is verified individually (Brevo → Senders, confirmation mail), or
+2. the whole **domain** is authenticated (Brevo → Domains, DKIM/SPF DNS records).
+
+Domain authentication is the one you want in production — it covers `noreply@`, `support@` and
+anything else without a mailbox having to exist. The **Test forbindelse** button checks both and
+says which sender it checked; it deliberately does not treat "only an individual sender exists" as
+a pass for a different address on that domain.
+
+Check it from the CLI with the account's API key:
+
+```bash
+curl -s -H "api-key: $KEY" https://api.brevo.com/v3/senders          # verified addresses
+curl -s -H "api-key: $KEY" https://api.brevo.com/v3/senders/domains  # authenticated domains
+curl -s -G -H "api-key: $KEY" --data-urlencode "messageId=<id>" \
+     https://api.brevo.com/v3/smtp/statistics/events                 # what happened to one message
+```
+
+That last one is the delivery log we never had with Resend, whose key here is send-only.
+
+### Brevo gotcha: authorised IPs block the API key (paid for on 2026-09-08)
+
+Brevo has an **IP allowlist on API keys**. It starts in a "learning phase" that authorises the
+IPs it sees, then activates blocking on its own. Supabase Edge Functions egress from **dynamic,
+mostly IPv6** addresses, so blocking is guaranteed to trigger sooner or later. The symptom is a
+`401` whose body is *not* about the key:
+
+```
+brevo_401: We have detected you are using an unrecognised IP address 2406:da18:… .
+If you performed this action make sure to add the new IP address in this link: …
+```
+
+**Fix:** Brevo → account dropdown → **Settings → Security → Authorised IPs** → either
+*Deactivate blocking* or pick *Allow unknown IP addresses to make API calls without review*.
+Allowlisting individual addresses cannot work — there is no stable egress IP to list. Brevo also
+emails an "authorise this IP" link when it blocks one; that only fixes the one address.
+
+This failure is now **visible** rather than silent: `request-password-reset` writes the provider's
+error into the audit row (`email_sent: false`, `email_error`, level `error`), which is exactly how
+it was found.
+
+### Bounces on account mail (reset + invite)
+
+Reset and invite mail used to store no message id, so a hard bounce on them matched nothing in
+`resend-webhook`/`brevo-webhook` and was acknowledged and dropped — "I never got the mail" could
+be neither confirmed nor denied. Since `20260908170000` the send records the provider's message id
+in **`account_emails`** (a match index: masked recipient only, rows dropped after 30 days), and
+`_shared/mail-events.ts` matches it and logs:
+
+| Event | Action | Level |
+|---|---|---|
+| hard bounce | `auth.password_reset_bounced` / `user.invite_bounced` | **error** |
+| spam complaint | `auth.password_reset_complained` / `user.invite_complained` | **warning** |
+
+The same commit added the missing `booking_notifications` branch, so all four message logs are now
+covered, and restored a rule in `audit_level` that `20260908160000` had silently dropped (a failed
+reset mail was scoring `success` instead of `error`).
+
+**When you redefine `audit_level`, copy the live body** (`pg_get_functiondef`) and add your branch.
+Several migrations redefine it, and writing it from memory rolls back an earlier one's rule without
+any error.
+
+### Testing edge functions locally: grant `service_role` first
+
+`supabase db reset --local` does **not** give `service_role` the same privileges the hosted
+project has. Measured 2026-09-08: **61 tables** lacked `service_role` SELECT locally, **0** in
+production. Production and a rebuild into another hosted project are unaffected — this is an
+artefact of the local CLI stack only.
+
+It matters because it makes local testing lie. `supabase-js` does not throw on a missing
+privilege — the query just comes back empty — so `isPlatformAdmin()` returned false (403 from
+`mail-config`) and `mailConfig()` fell back to Resend without a word. After every local reset:
+
+```bash
+psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+  -c "grant select on all tables in schema public to service_role;"
+```
+
+(`20260908170000` grants `account_emails` and `platform_secrets` explicitly, so those two work
+without the blanket grant. Its comment describes this as a rebuild risk — that is overstated;
+the measurement above is the accurate version.)
+
+### AhaSend
+
+Added 2026-09-08 as a third outbound provider, specifically because it is the only one of the
+three that is **both EU-hosted and leaves links alone**. Open and click tracking are off by
+default, and `_shared/send-email.ts` additionally sets `ahasend-track-opens: false` and
+`ahasend-track-clicks: false` on every message, so switching tracking on account-wide cannot
+start wrapping password-reset links behind our back.
+
+Two config values, not one: the API key (secret, in `platform_secrets`) and the **account id**,
+a UUID that forms part of the send URL. The account id is not a secret and lives in
+`platform_settings.ahasend_account_id`, editable in the UI.
+
+**The `202` trap.** AhaSend answers `202 Accepted` with a list of one row per recipient, and a
+row can carry `error` even though the HTTP status was a success — the same shape of trap as
+Brevo's "201 then rejected". The sender therefore inspects `data[0].error`, not just the status.
+
+**The signature trap.** AhaSend follows Standard Webhooks like Resend, with one difference their
+docs call out: the secret is used as **raw UTF-8 bytes**, where Svix/Resend strips `whsec_` and
+base64-decodes. Get it wrong and nothing errors — every webhook just fails verification silently.
+`_shared/standard-webhook.ts` takes `keyMode` as a required argument for exactly that reason;
+both modes are covered by the local signing test described in that file's header.
+
+**The secret comes FROM AhaSend — do not invent one.** This is the opposite of Brevo, where we
+generate a token and put it in the URL. AhaSend generates the signing secret when the webhook is
+created and returns it **once**, in the `secret` field of the 201 response; it cannot be read back
+afterwards. Generating our own with `openssl rand` would leave every webhook failing verification
+in silence, since a wrong key produces no error — only a signature that never matches.
+
+Create the webhook, then copy the returned secret into the edge secret:
+
+```bash
+curl -X POST "https://api.ahasend.com/v2/accounts/$ACCOUNT_ID/webhooks" \
+  -H "Authorization: Bearer $AHASEND_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"name":"Operia bounce",
+       "url":"https://rjlxmdfmktucunxehtqz.supabase.co/functions/v1/ahasend-webhook",
+       "scope":"global","enabled":true,
+       "on_bounced":true,"on_failed":true,"on_suppressed":true}'
+# → 201 { ..., "secret": "..." }   ← this value, once only
+
+supabase secrets set AHASEND_WEBHOOK_SECRET='<the secret from the response>'
+supabase functions deploy ahasend-webhook --use-api --no-verify-jwt
+```
+
+`on_suppressed` matters: it means the address is on AhaSend's suppression list and the message was
+never sent — otherwise indistinguishable from a success. `on_transient_error` is deliberately left
+off; a greylisting deferral is normal and should not light up red in the customer's log (observed
+in production 2026-09-08: one.com greylisted the first message, AhaSend retried ~20 minutes later
+and it delivered).
+
+If the secret is ever lost, delete the webhook and create a new one — there is no way to re-read it.

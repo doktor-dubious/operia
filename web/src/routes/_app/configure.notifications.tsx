@@ -25,10 +25,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MessageSquare } from 'lucide-react'
 import {
   AssetFlowFields,
+  BookingFlowFields,
   ChannelToggles,
+  DEFAULT_BOOKING_REMINDER_HOURS,
   DEFAULT_STATUS_TIME,
   ParcelFlowFields,
   QuietHoursField,
+  type BookingFlowValue,
   type ChannelToggleValue,
   type ParcelFlowValue,
   type ParcelNotifyValue,
@@ -57,7 +60,7 @@ function useCompanyNotifications(companyId: string | null) {
       const { data, error } = await supabase
         .from('companies')
         .select(
-          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, notify_teams_enabled, notify_slack_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled',
+          'quiet_hours_start, quiet_hours_end, notify_email_enabled, notify_sms_enabled, notify_teams_enabled, notify_slack_enabled, parcel_reminder_1_days, parcel_reminder_2_days, parcel_reminder_max, parcel_reminder_1_enabled, parcel_reminder_2_enabled, parcel_arrival_enabled, parcel_status_enabled, parcel_status_time, asset_reminder_1_days, asset_reminder_2_days, asset_reminder_max, asset_reminder_1_enabled, asset_reminder_2_enabled, booking_created_enabled, booking_updated_enabled, booking_cancelled_enabled, booking_reminder_enabled, booking_reminder_hours, booking_invoiced_enabled, booking_notify_booker, booking_copy_email, booking_invoice_email',
         )
         .eq('id', companyId!)
         .single()
@@ -73,6 +76,11 @@ type Values = {
   channels: ChannelToggleValue
   parcel: ParcelNotifyValue
   asset: ParcelFlowValue
+  booking: BookingFlowValue
+  // Postkasserne arves ikke: en adresse er kundens egen, og platformen har
+  // ingen standard at falde tilbage på. De gemmes derfor altid som de står.
+  copyEmail: string
+  invoiceEmail: string
 }
 
 // Effektivt kanalvalg: virksomhedens override (null = arv) over platformens
@@ -127,6 +135,17 @@ function NotificationsPage() {
       reminder2: row.asset_reminder_2_days ?? p.asset_reminder_2_days,
       maxReminders: row.asset_reminder_max ?? p.asset_reminder_max,
     },
+    booking: {
+      createdEnabled: row.booking_created_enabled ?? p.booking_created_enabled,
+      updatedEnabled: row.booking_updated_enabled ?? p.booking_updated_enabled,
+      cancelledEnabled: row.booking_cancelled_enabled ?? p.booking_cancelled_enabled,
+      reminderEnabled: row.booking_reminder_enabled ?? p.booking_reminder_enabled,
+      reminderHours: row.booking_reminder_hours ?? p.booking_reminder_hours,
+      invoicedEnabled: row.booking_invoiced_enabled ?? p.booking_invoiced_enabled,
+      notifyBooker: row.booking_notify_booker ?? p.booking_notify_booker,
+    },
+    copyEmail: row.booking_copy_email ?? '',
+    invoiceEmail: row.booking_invoice_email ?? '',
   })
 
   useEffect(() => {
@@ -153,6 +172,15 @@ function NotificationsPage() {
       data.asset_reminder_max != null ||
       data.asset_reminder_1_enabled != null ||
       data.asset_reminder_2_enabled != null)
+  const bookingOverridden =
+    !!data &&
+    (data.booking_created_enabled != null ||
+      data.booking_updated_enabled != null ||
+      data.booking_cancelled_enabled != null ||
+      data.booking_reminder_enabled != null ||
+      data.booking_reminder_hours != null ||
+      data.booking_invoiced_enabled != null ||
+      data.booking_notify_booker != null)
   const channelsOverridden =
     !!data && NOTIFY_CHANNELS.some((c) => (data as ToggleRow)[CHANNEL_TOGGLE[c]] != null)
 
@@ -160,17 +188,24 @@ function NotificationsPage() {
   const j = (o: unknown) => JSON.stringify(o)
   const parcelDirty = !!values && !!initial && j(values.parcel) !== j(initial.parcel)
   const assetDirty = !!values && !!initial && j(values.asset) !== j(initial.asset)
+  const bookingDirty = !!values && !!initial && j(values.booking) !== j(initial.booking)
+  const addressesDirty =
+    !!values &&
+    !!initial &&
+    (values.copyEmail !== initial.copyEmail || values.invoiceEmail !== initial.invoiceEmail)
   const channelsDirty = !!values && !!initial && j(values.channels) !== j(initial.channels)
   const quietDirty =
     !!values &&
     !!initial &&
     (values.quietStart !== initial.quietStart || values.quietEnd !== initial.quietEnd)
-  const dirty = parcelDirty || assetDirty || channelsDirty || quietDirty
+  const dirty =
+    parcelDirty || assetDirty || bookingDirty || addressesDirty || channelsDirty || quietDirty
 
   const save = async () => {
     if (!values || !companyId) return
     const p = values.parcel
     const a = values.asset
+    const b = values.booking
     const pr1 = Math.max(1, Math.round(p.reminder1))
     const pr2 = Math.max(pr1 + 1, Math.round(p.reminder2))
     const ar1 = Math.max(1, Math.round(a.reminder1))
@@ -205,6 +240,23 @@ function NotificationsPage() {
               asset_reminder_2_enabled: a.r1Enabled && a.r2Enabled,
             }
           : {}),
+        ...(bookingDirty || bookingOverridden
+          ? {
+              booking_created_enabled: b.createdEnabled,
+              booking_updated_enabled: b.updatedEnabled,
+              booking_cancelled_enabled: b.cancelledEnabled,
+              booking_reminder_enabled: b.reminderEnabled,
+              booking_reminder_hours: Math.min(
+                336,
+                Math.max(1, Math.round(b.reminderHours) || DEFAULT_BOOKING_REMINDER_HOURS),
+              ),
+              booking_invoiced_enabled: b.invoicedEnabled,
+              booking_notify_booker: b.notifyBooker,
+            }
+          : {}),
+        // Adresserne arves ikke — tom streng betyder "ingen", ikke "arv".
+        booking_copy_email: values.copyEmail.trim() || null,
+        booking_invoice_email: values.invoiceEmail.trim() || null,
       })
       .eq('id', companyId)
       .select('id')
@@ -225,7 +277,19 @@ function NotificationsPage() {
   const reset = async () => {
     if (!companyId) return
     const patch =
-      notifType === 'asset_reminder'
+      notifType === 'booking_flow'
+        ? {
+            // Postkasserne nulstilles IKKE: de arves ikke fra platformen, så
+            // "brug standarden" ville betyde "slet kundens adresser".
+            booking_created_enabled: null,
+            booking_updated_enabled: null,
+            booking_cancelled_enabled: null,
+            booking_reminder_enabled: null,
+            booking_reminder_hours: null,
+            booking_invoiced_enabled: null,
+            booking_notify_booker: null,
+          }
+        : notifType === 'asset_reminder'
         ? {
             asset_reminder_1_days: null,
             asset_reminder_2_days: null,
@@ -280,7 +344,12 @@ function NotificationsPage() {
 
   if (isPending || !values || !companyId) return <Skeleton className="h-40 w-full" />
 
-  const activeOverridden = notifType === 'asset_reminder' ? assetOverridden : parcelOverridden
+  const activeOverridden =
+    notifType === 'asset_reminder'
+      ? assetOverridden
+      : notifType === 'booking_flow'
+        ? bookingOverridden
+        : parcelOverridden
 
   return (
     <div className="flex min-h-full flex-col">
@@ -358,6 +427,9 @@ function NotificationsPage() {
                   <SelectItem value="asset_reminder">
                     {t('notificationsPage.typeAssetReminder')}
                   </SelectItem>
+                  <SelectItem value="booking_flow">
+                    {t('notificationsPage.typeBookingFlow')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -401,6 +473,44 @@ function NotificationsPage() {
                   }
                 />
               </>
+            )}
+            {notifType === 'booking_flow' && (
+              <BookingFlowFields
+                value={values.booking}
+                onChange={(patch) =>
+                  setValues({ ...values, booking: { ...values.booking, ...patch } })
+                }
+                addresses={
+                  <div className="flex flex-col gap-5 border-t border-border pt-5">
+                    <Field label={t('notificationsPage.bookingCopyEmail')}>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        {t('notificationsPage.bookingCopyEmailHint')}
+                      </p>
+                      <Input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="off"
+                        placeholder={t('notificationsPage.bookingEmailPlaceholder')}
+                        value={values.copyEmail}
+                        onChange={(e) => setValues({ ...values, copyEmail: e.target.value })}
+                      />
+                    </Field>
+                    <Field label={t('notificationsPage.bookingInvoiceEmail')}>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        {t('notificationsPage.bookingInvoiceEmailHint')}
+                      </p>
+                      <Input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="off"
+                        placeholder={t('notificationsPage.bookingEmailPlaceholder')}
+                        value={values.invoiceEmail}
+                        onChange={(e) => setValues({ ...values, invoiceEmail: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                }
+              />
             )}
           </section>
         </div>

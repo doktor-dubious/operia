@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Free Text Fields</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Free Text Fields</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#free-text-fields-scrubbing-decisions" id="toc-free-text-fields-scrubbing-decisions">Free-text fields —
+scrubbing decisions</a>
+<ul>
+<li><a href="#how-a-field-gets-on-this-list" id="toc-how-a-field-gets-on-this-list">How a field gets on this
+list</a></li>
+<li><a href="#the-three-possible-answers" id="toc-the-three-possible-answers">The three possible answers</a></li>
+<li><a href="#tier-1-names-a-third-party-by-design" id="toc-tier-1-names-a-third-party-by-design">Tier 1 — names a third
+party by design</a></li>
+<li><a href="#tier-2-can-name-someone-weak-as-evidence" id="toc-tier-2-can-name-someone-weak-as-evidence">Tier 2 — can name
+someone, weak as evidence</a></li>
+<li><a href="#tier-3-addresses-rather-than-names" id="toc-tier-3-addresses-rather-than-names">Tier 3 — addresses rather
+than names</a></li>
+<li><a href="#also-worth-a-decision-though-not-free-text" id="toc-also-worth-a-decision-though-not-free-text">Also worth a
+decision, though not free text</a></li>
+<li><a href="#already-handled-for-completeness" id="toc-already-handled-for-completeness">Already handled — for
+completeness</a></li>
+<li><a href="#fixed-rather-than-decided-2026-08-14" id="toc-fixed-rather-than-decided-2026-08-14">Fixed rather than decided
+(2026-08-14)</a></li>
+<li><a href="#open" id="toc-open">Open</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="free-text-fields-scrubbing-decisions">Free-text fields —
+scrubbing decisions</h1>
+<p>Work item 9. Free text is where personal data hides from every
+automatic erasure path: a name typed into a note has no foreign key, so
+anonymizing the <em>employee</em> never reaches it.</p>
+<p>This is the complete decision list. <strong>Recommended</strong> is a
+proposal — the controller’s own retention needs may overrule it, and the
+column marked <em>decided</em> is what actually applies.</p>
+<p><strong>Last reviewed:</strong> 2026-08-14 · <strong>Owner:</strong>
+DCA Logic privacy owner ⟨<em>to be named</em>⟩. Related: <a href="retention-schedule.md"><code>retention-schedule.md</code></a> · <a href="ropa.md"><code>ropa.md</code></a> §2 · <a href="dpa/bilag-da.md"><code>dpa/bilag-da.md</code></a> C.3 (which
+currently promises the “evidence” answer for the handover fields) · <a href="../compliance-map.md"><code>../compliance-map.md</code></a>.</p>
+<hr />
+<h2 id="how-a-field-gets-on-this-list">How a field gets on this
+list</h2>
+<p>All three must be true:</p>
+<ol type="1">
+<li><strong>A user types it freely</strong> — not a picker, not an enum,
+not a generated value.</li>
+<li><strong>It can plausibly contain a person’s name or contact
+details.</strong></li>
+<li><strong>It survives every existing erasure path</strong> — employee
+anonymization, loan-return clearing, parcel-file deletion, row
+deletion.</li>
+</ol>
+<p>Fail any one and there is nothing to decide. That is why this list
+has 13 entries and not the ~180 text columns in the schema.</p>
+<h2 id="the-three-possible-answers">The three possible answers</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Answer</th>
+<th>Means</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Scrub</strong></td>
+<td>Cleared by an erasure path (anonymization, or a trigger at
+closure)</td>
+<td>The text is gone; if it documented an exception, that documentation
+is gone too</td>
+</tr>
+<tr>
+<td><strong>Time-limit</strong></td>
+<td>No targeted scrubbing; the row dies with its retention window</td>
+<td>Simple, but until the window expires the data is intact — and a
+window must actually be set</td>
+</tr>
+<tr>
+<td><strong>Evidence</strong></td>
+<td>Deliberately retained for the lifetime of the record, and documented
+as such</td>
+<td>Defensible only where the field genuinely <em>is</em> the proof of
+something</td>
+</tr>
+</tbody>
+</table>
+<p>“Evidence” is a real answer under GDPR, but only when written down
+with its reasoning — which is what this file is for.</p>
+<hr />
+<h2 id="tier-1-names-a-third-party-by-design">Tier 1 — names a third
+party by design</h2>
+<p>These are the handover fields. The person named is usually
+<strong>not</strong> an employee and has no row anywhere in the
+system.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Field</th>
+<th>What it holds</th>
+<th>Recommended</th>
+<th>Reasoning</th>
+<th>Decided</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>parcels.delivered_to</code></td>
+<td>Name of whoever actually collected — often a proxy</td>
+<td><strong>Evidence</strong></td>
+<td>It is the proof the parcel reached a human. Scrubbing it while
+keeping the signature image beside it is incoherent: you would destroy
+the readable half of the evidence and keep the biometric-looking
+half</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>parcels.sender</code></td>
+<td>Sender; on a private shipment a named individual</td>
+<td><strong>Time-limit</strong></td>
+<td>Not evidence of custody — it is intake convenience and now feeds
+sender suggestions. The <code>parcels</code> retention window is the
+right instrument</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>parcels.receiver_override_reason</code></td>
+<td>Manager’s reason for handing the parcel to someone other than the
+addressee</td>
+<td><strong>Evidence</strong></td>
+<td>The reason <em>is</em> the audit trail for the exception — the same
+decision already taken and documented for its copy in
+<code>audit_log</code> (2026-07-30)</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>parcels.removed_reason</code></td>
+<td>Manager’s reason for voiding a registration</td>
+<td><strong>Evidence</strong></td>
+<td>Same as #3: a withdrawn registration is the hardest event in the
+flow and must stay explainable</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>parcels.delivered_note</code></td>
+<td>Free note at handover</td>
+<td><strong>Scrub on anonymize</strong></td>
+<td>Unlike #1 it is not the proof of anything; it is a convenience note
+that happens to be next to one</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="tier-2-can-name-someone-weak-as-evidence">Tier 2 — can name
+someone, weak as evidence</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Field</th>
+<th>What it holds</th>
+<th>Recommended</th>
+<th>Reasoning</th>
+<th>Decided</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td><code>parcels.condition_note</code></td>
+<td>Condition text at intake (“dented, courier confirmed”)</td>
+<td><strong>Scrub on anonymize</strong></td>
+<td>The <em>photo</em> is the condition evidence; the note rarely
+carries the weight</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>asset_loans.note</code></td>
+<td>Free note on a loan</td>
+<td><strong>Scrub on return</strong></td>
+<td>The return trigger already clears name, address, e-mail, phone and
+<code>bounce_reason</code> — the note was simply overlooked</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>assets.retired_reason</code></td>
+<td>Why an asset was retired</td>
+<td><strong>Time-limit</strong></td>
+<td>Usually about the asset, occasionally about a person</td>
+<td></td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>routes.notes</code></td>
+<td>Free note on a route plan</td>
+<td><strong>Time-limit</strong></td>
+<td>Covered by the <code>routes</code> retention window</td>
+<td></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>routes.description</code></td>
+<td>Route description</td>
+<td><strong>Time-limit</strong></td>
+<td>As #9</td>
+<td></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>storage_locations.notes</code></td>
+<td>Note on a storage location</td>
+<td><strong>Time-limit</strong></td>
+<td>Configuration data, but “Anna’s office” is a real pattern</td>
+<td></td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>storage_locations.description</code></td>
+<td>Description of a location</td>
+<td><strong>Time-limit</strong></td>
+<td>As #11</td>
+<td></td>
+</tr>
+<tr>
+<td>12a</td>
+<td><code>bookings.title</code></td>
+<td>Booking purpose (“Interview with …”, “1:1 Anna/Bo”)</td>
+<td><strong>Time-limit</strong></td>
+<td>Can name colleagues or external guests by design of use, though the
+field asks for a purpose. Searched by the SAR export
+(<code>bookings_mentioning</code>); dies with the booking under the
+<code>bookings</code> window. Deliberately never copied into
+<code>booking_events</code>/<code>audit_log</code>. <strong>Leaves the
+system in booking notifications</strong> (2026-09-08): the templates
+interpolate it, so it reaches the employee, the requester and — where
+the customer has set one — the fixed copy mailbox. The field hint on
+Konfigurér → Notifikationer says so, so choosing that mailbox is an
+informed decision</td>
+<td></td>
+</tr>
+<tr>
+<td>12b</td>
+<td><code>booking_resources.description</code></td>
+<td>Resource description</td>
+<td><strong>Time-limit</strong></td>
+<td>Configuration data, same “Anna’s office” pattern as #11</td>
+<td></td>
+</tr>
+<tr>
+<td>12c</td>
+<td><code>booking_participant_levels.name</code></td>
+<td>Participant level name (“Niveau 1”, “Grundforløb”)</td>
+<td><strong>Time-limit</strong></td>
+<td>Configuration data, maintained by the customer on Configure →
+Booking. Names a course tier, not a person; same class as #12b. Lives as
+long as the level does (deleting one is blocked while any booking
+references it)</td>
+<td></td>
+</tr>
+<tr>
+<td>12d</td>
+<td><code>bookings.cancellation_reason</code></td>
+<td>Why a booking was cancelled (“aflyst pga. Annas sygdom”)</td>
+<td><strong>Time-limit</strong></td>
+<td>Required since 2026-09-09 (EVU A-07), written by a manager and can
+name someone other than the booking’s employee — same class as
+<code>parcels.removed_reason</code>. Searched by the SAR export
+(<code>bookings_mentioning</code>), and deliberately
+<strong>not</strong> copied into
+<code>booking_events</code>/<code>audit_log</code>: that log is
+immutable and forwarded to customer log drains, so free text there could
+never be removed. Dies with the booking under the <code>bookings</code>
+window</td>
+<td></td>
+</tr>
+<tr>
+<td>12e</td>
+<td><code>booking_services.name</code> / <code>.description</code></td>
+<td>Add-on service catalogue (“Forplejning”, “Overnatning”)</td>
+<td><strong>Time-limit</strong></td>
+<td>Configuration data maintained by the customer, same class as
+#12b/#12c. Names a purchasable service, not a person; lives as long as
+the service does (deletion is blocked while any booking line references
+it)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="tier-3-addresses-rather-than-names">Tier 3 — addresses rather
+than names</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Field</th>
+<th>Recommended</th>
+<th>Reasoning</th>
+<th>Decided</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>13</td>
+<td><code>routes.from_address</code> /
+<code>routes.to_address</code></td>
+<td><strong>Time-limit</strong></td>
+<td>Home addresses are personal data, but they are the <em>function</em>
+of a route plan; the <code>routes</code> window is the proportionate
+control</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="also-worth-a-decision-though-not-free-text">Also worth a
+decision, though not free text</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>import_runs.created_by_email</code></td>
+<td>An employee’s own address, kept as the import audit trail. Governed
+by the <code>imports</code> retention window and untouched by
+anonymization. <strong>Recommended: time-limit</strong> — it documents
+who ran an import</td>
+</tr>
+<tr>
+<td><code>import_runs.file_name</code>,
+<code>inbound_files.file_name</code></td>
+<td>Customer-chosen filenames can contain a name
+(<code>medarbejdere-anna.csv</code>). Same window as above; <strong>no
+separate action recommended</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="already-handled-for-completeness">Already handled — for
+completeness</h2>
+<p>So the next reviewer does not re-open settled ground:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field(s)</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>employees.*</code> (name, e-mail, phone, NFC id, employee no.,
+external id)</td>
+<td><code>anonymize_employee_internal()</code></td>
+</tr>
+<tr>
+<td><code>asset_loans.to_name/to_address/to_email/to_phone</code>,
+<code>asset_loan_notifications.recipient</code>,
+<code>asset_loans.bounce_reason</code></td>
+<td>Cleared on return (<code>20260720130100</code>)</td>
+</tr>
+<tr>
+<td><code>parcel_notifications.recipient</code></td>
+<td>Cleared when the parcel closes (<code>20260814140000</code>)</td>
+</tr>
+<tr>
+<td><code>app_users.full_name/email</code></td>
+<td>Removed with the auth user</td>
+</tr>
+<tr>
+<td><code>feedback.message/subject</code> + screenshot</td>
+<td>Deletable; DCA is controller</td>
+</tr>
+<tr>
+<td><code>asset_documents.note</code> + photo</td>
+<td>Platform-admin deletion (<code>20260801180000</code>)</td>
+</tr>
+<tr>
+<td><code>parcel_documents.note</code> + file</td>
+<td>Platform-admin deletion (<code>20260814190000</code> — <strong>this
+was missing until the review that produced this file</strong>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fixed-rather-than-decided-2026-08-14">Fixed rather than decided
+(2026-08-14)</h2>
+<p>Three findings from the field-by-field sweep were plain gaps, not
+judgement calls:</p>
+<ol type="1">
+<li><strong><code>parcel_documents</code> had no erasure path.</strong>
+Its asset twin got one in <code>20260801180000</code>; the parcel side
+never did, so the <em>photo</em> could be deleted by a platform admin
+but the note beside it could not — by anyone. Fixed in
+<code>20260814190000</code> with the same model: platform-admin-only
+deletion, UPDATE still revoked (erasure is deletion, never rewriting),
+and the deletion written to the parcel’s immutable history as
+<code>document_deleted</code>.</li>
+<li><strong>Provider error strings echoed recipients.</strong>
+<code>parcel_notifications.error</code>,
+<code>asset_loan_notifications.error</code> and
+<code>log_drains.last_error</code> store the raw vendor response, and a
+rejection routinely quotes the address that failed
+(<code>550 5.1.1 &lt;anna@firma.dk&gt; unknown</code>). The recipient
+column itself is masked in the audit log and cleared at closure — so
+letting the same address survive in the error text is a back door.
+<code>sanitizeProviderError()</code> in
+<code>supabase/functions/_shared/notify.ts</code> now masks e-mail
+addresses and 8+ digit numbers <strong>at the point of storage</strong>
+(not in the response to the manager who typed the address), and the
+migration nulled any pre-existing rows that matched. Status codes,
+timeouts and vendor error codes are deliberately left readable — they
+are what you debug on.</li>
+<li><strong>Deleting evidence was logged as a routine success.</strong>
+Testing the new deletion path showed
+<code>parcel.document_deleted</code> — and
+<code>asset.document_deleted</code>, since 2026-08-01 — classified as
+<code>success</code> in the audit taxonomy. The rule
+<code>like &#39;%.deleted&#39;</code> needs a literal dot immediately before
+“deleted”, and both actions end in <code>_deleted</code>. The function
+already carried escaped twins for <code>_failed</code>,
+<code>_bounced</code>, <code>_overridden</code> and
+<code>_complained</code>; <code>_deleted</code> was missing. Fixed in
+<code>20260814200000</code> — deletion of evidence now surfaces at
+<strong>warning</strong> level, which is what the weekly review in <a href="incident-response.md"><code>incident-response.md</code></a> §7
+filters on.</li>
+</ol>
+<h2 id="open">Open</h2>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Fill in the <strong>Decided</strong>
+column and date it.</label></li>
+<li><label><input type="checkbox"></input>Implement whatever differs from the
+recommendation.</label></li>
+<li><label><input type="checkbox"></input>For every “Evidence” row, make sure
+the reasoning above is reflected in <a href="retention-schedule.md"><code>retention-schedule.md</code></a> and
+DPA Bilag C.3, so the customer’s DPO reads the same answer we
+do.</label></li>
+</ul>
+</body>
+</html>

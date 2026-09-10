@@ -1,0 +1,212 @@
+-------------------------
+PAGE 1:
+1) Describe your app, its functions, and why it needs to be integrated with e-conomic
+Operia is a multi-tenant SaaS platform for internal logistics, used by companies and public institutions to replace manual logbooks and spreadsheets. Its modules cover parcel track & trace, asset and inventory management, route planning, and booking of rooms, vehicles and equipment — each with a complete, immutable audit trail.
+
+The booking module produces billable events: a room or resource reserved for a period, the number of participants, and add-on services such as catering, accommodation and cleaning. Today our customers retype this into their accounting system by hand, which is slow and leads to forgotten or incorrect invoicing.
+
+The e-conomic integration closes that gap. Operia creates invoice drafts in the customer's own e-conomic agreement from the booking data — customer, layout, payment terms, and invoice lines built from resources, services and rates — books them once approved, and writes the resulting invoice number back onto the booking. It reads customers and products in order to map Operia's resources and services to the corresponding e-conomic entities. Access is granted by the customer with their own AgreementGrantToken and can be revoked at any time; the app only ever touches that customer's own agreement.
+
+2) Describe the purpose of your app and how it provides value for your customers
+Operia's purpose is to give an organisation one auditable record of its internal logistics — from the moment a parcel arrives or a room is booked, until it is resolved and invoiced. Every action is logged with user and timestamp in a record that cannot be edited or deleted, so the data holds up in audits, disputes and public tenders.
+
+For customers who invoice their bookings, the e-conomic integration removes the manual step between the two systems. Invoicing happens in one operation with uniform lines and full traceability from booking to invoice number, which eliminates forgotten invoicing and cuts reconciliation work at month end. Staff who book rooms need no access to the accounting system, and the finance team receives a consistent, approved basis instead of e-mails and spreadsheets.
+
+A typical customer is an educational institution that rents out course rooms with catering and accommodation: bookings, participant counts and add-on services become invoice drafts in e-conomic without anyone retyping them.
+
+-------------------------
+PAGE 2:
+3) Which best describes your product?
+→ Supports accounting processes
+
+4) What did you build your app to achieve? (select all that apply)
+→ Our app is an extension of the e-conomic platform, increasing value for customers
+
+5) Who did you build your app for? (select all that apply)
+→ for our own customers who are already using e-conomic
+
+6) Does your app involve generative AI? Includes ChatGPT, GPT-4, Gemini, local LLMs, AI assistants, or AI-powered chatbots.
+→ Yes
+
+"Operia includes an optional AI label-reading feature: a photo of a parcel label is sent to a vision model to extract recipient and sender fields, so they need not be typed. It is disabled by default, requires explicit per-customer activation, and is unrelated to the e-conomic integration — no accounting data, invoice data or e-conomic data is ever sent to an AI provider."
+
+7) Does your app suggest and/or automatically execute accounting actions?
+→ Suggests actions
+
+8) Does your app drive usage into e-conomic, or reduce the need to use the e-conomic UI?
+→ Drives usage into e-conomic
+
+9) Does your app integrate with platforms other than e-conomic?
+→ Yes
+
+Microsoft Entra ID (employee directory sync), 
+Slack (notifications), 
+GatewayAPI (SMS), 
+Resend and Postmark (e-mail), 
+OpenRouteService,
+Google Maps (route planning and geocoding),
+Mistral / Google Gemini / Anthropic (optional AI label reading),
+SFTP for HR file import
+
+-------------------------
+PAGE 3 (Data usage & AI):
+
+10) How do you use e-conomic data? (select all that apply)
+→ Automation workflows only
+
+11) Can a customer's data be seen by or shared with anyone other than that customer?
+→ No, strictly per-customer isolated
+
+12) Do you store e-conomic data outside our platform?
+→ Yes, persistently → More that 30 days.
+
+
+13) Does your app create a secondary system of record? (A parallel database that mirrors or replaces e-conomic as a source of truth.)
+→ No
+
+14) Expected API call pattern per customer
+→ On-demand only
+
+-------------------------
+PAGE 4 (Technical compliance)
+
+15) Have you tested connecting, disconnecting, and reconnecting your app with a sandbox account?
+→ Not yet
+
+16) Does your app retry failed auth requests, and prompt customers to reconnect when needed?
+→ Yes, prompts customer to reconnect when needed
+
+17) Can your app handle the following error scenarios? (confirm all that apply)
+→ Revoked user tokens, asks customer to reconnect
+→ API syntax and validation errors, handled without crashing
+❌ Expired access tokens, re-authenticates gracefully
+❌ Rate limit errors, backs off and retrie
+
+18) Does your app maintain API error logs shareable for troubleshooting?
+→ Yes
+
+19) Do you provide in-app customer support contact?
+→ No
+
+20) Which API areas does your app use? (select all that apply)
+→ Legacy REST, plus Customers API and Products API
+
+21) Expected number of connected customers within the first month of official app/integration launch
+→ 1-10
+
+22) Private app or publicly available?
+→ Private / internal only
+
+-------------------------
+PAGE 5 (Security):
+
+23) Has your company ever had a security breach requiring notification to customers or authorities?
+→ No
+
+24) Has your company received regulatory complaints, lawsuits, or government investigative requests?
+→ No
+
+25) Confirm the following security practices are in place (check all that apply)
+- ✅ API keys are stored securely — genuinely strong: edge secrets, Postgres Vault, per-customer secret tables with no policies or grants, never in the browser or the repo.
+- ✅ Customer data is isolated — the best-evidenced item: row-level security on company_id on every tenant table, enforced in the database rather than application code, with guard triggers against cross-tenant foreign keys.
+- ✅ Data is secured in transit and at rest — TLS throughout, SFTP over SSH, encryption at rest via Supabase/AWS.
+- ⚠️  MFA for admin access — your call, and it depends on facts I don't have. Operia's own platform-admin login has no MFA: TOTP is enabled in config but there's no enrolment UI, so no one can add a factor, and passkeys default
+to off. If you have MFA on your Supabase, AWS and GitHub accounts, that arguably satisfies "admin access to your systems". Tick it only on that basis.
+- ❌ Regular vulnerability assessments — there's no scanning, pentest or SAST/DAST. The systematic code-review passes are good practice but aren't a vulnerability assessment programme.
+- ⚠️  Regular updating of dependencies — no Dependabot or Renovate configuration exists, so updates are ad hoc. Tick only if you do it on a real cadence.
+
+26) Where are your clients going to connect to the API from?
+→ "API calls are made server-side from Supabase Edge Functions hosted in AWS eu-north-1 (Stockholm, Sweden). No calls are made from end-user browsers or devices."
+
+27) Have you worked with legal counsel on regulatory requirements for your use of e-conomic data?
+→ Not yet
+
+28) Has your company obtained a security review (ISAE 3000, ISO 27001, SOC 2, etc.)?
+→ No
+
+-------------------------
+PAGE 6 (Legal declaration):
+
+29) Use case
+
+✅ My app does not replicate core accounting functionality offered by e-conomic, and is not designed to compete with e-conomic's core product.
+
+✅ My app does not create a secondary system of record from e-conomic data.
+
+30) Data & AI
+
+✅ e-conomic data accessed via the API is not used to train AI or machine learning models, unless explicitly permitted in writing by e-conomic.
+
+✅ Data is not retained beyond what is operationally necessary and is not shared with third parties outside the scope of my app's declared functionality.
+
+31) Identity & enforcement
+
+✅ All information provided in this declaration is accurate and complete. I understand that misrepresentation may result in immediate termination of API access.
+
+✅ I agree that e-conomic may verify the information provided and conduct use-case reviews at any time, including requesting a product demo.
+
+
+
+-------------
+1) Short description* (0/200) Add a short app description
+→ Book lokaler, køretøjer og udstyr — og overfør fakturagrundlaget direkte til e-conomic. Fuld sporbarhed fra booking til fakturanummer, uden dobbelttastning.
+
+2) Categories
+→ Inventory and Logistics
+* Marketing
+→ Online Booking
+* Bank and Payments
+* Payroll
+* Projects and time
+* Point of sale
+* Reminder and debt collection
+* Reports
+* Subscriptions
+* Webshop
+* Document handling
+* Production
+* EDI
+* CRM
+* Compliance
+* Property Management
+
+3) Full app description
+→ 
+Operia er et dansk system til intern logistik: pakkehåndtering med fuld kæde fra modtagelse til udlevering, aktiv- og lagerstyring, ruteplanlægning og booking af lokaler, køretøjer og udstyr. Alt registreres i et evisionsspor, der hverken kan ændres eller slettes — data holder ved revision, tvister og udbud.
+
+For organisationer, der fakturerer deres bookinger, forbinder integrationen de to systemer. En booking bærer alt det, fakturaen skal bruge: ressource, periode, antal deltagere og tilkøb som forplejning, overnatning og rengøring. Operia danner fakturagrundlaget efter jeres egen prisliste, en ansvarlig godkender det, og kladden oprettes i jeres eget e-conomic-regnskab. Fakturanummeret skrives tilbage på bookingen, så kæden fra booking til faktura kan følges begge veje.
+
+Det fjerner den manuelle overførsel: ingen glemte faktureringer, ensartede fakturalinjer og markant mindre afstemning ved månedsafslutning. Medarbejdere, der booker lokaler, behøver ingen adgang til regnskabssystemet, og økonomifunktionen modtager et godkendt grundlag i stedet for mails og regneark.
+
+I giver selv adgangen med et AgreementGrantToken fra jeres egen aftale og kan trække den tilbage når som helst. Operia rører aldrig andet end jeres eget regnskab. Løsningen hostes i EU, og databehandleraftalen bygger på Datatilsynets standardkontraktsbestemmelser.
+
+
+4) Feature list
+
+A) Headline
+→ Fra booking til fakturanummer — uden at taste noget to gange
+
+
+B..) Features
+→ Booking af lokaler, køretøjer og udstyr — kalenderoverblik pr. ressource og kategori. Dobbeltbooking forhindres i databasen, ikke i browseren, så to brugere aldrig kan reservere samme tidsrum.
+
+→ Fakturagrundlag på bookingen — antal deltagere, niveau og tilkøb som forplejning, overnatning og rengøring registreres, hvor bookingen laves.
+
+→ Prisliste med tidsafgrænsede takster — priser pr. ressource og pr. ydelse vedligeholdes af jer selv. Ændringer påvirker aldrig allerede fakturerede bookinger.
+
+→ Automatisk fakturakladde — lokale × antal dage × pris, med tilkøb som selvstændige linjer. Kladden dannes uden manuel indtastning.
+
+→ Godkendelse før fakturering — en ansvarlig frigiver grundlaget, og godkenderen fremgår af loggen.
+
+→ Overførsel til e-conomic — kladden oprettes i jeres eget regnskab, og fakturanummeret skrives tilbage på bookingen.
+
+→ Afstemning — afsluttede, ikke-fakturerede bookinger kan listes for en periode, så ingen booking bliver overset. Rapporter eksporteres til CSV og PDF.
+
+→ Uforanderlig ændringslog — hver oprettelse, ændring, statusskift og fakturering gemmes med bruger, tidspunkt og før/efter-værdi. Loggen fanges i databasen og kan ikke omgås.
+
+→ Rollestyret adgang — adskilte rettigheder til booking, drift og økonomi.
+
+→ EU-hosting og GDPR — databehandleraftale på Datatilsynets standardbestemmelser, opbevaringsperioder pr. kunde og indsigtsudtræk som selvbetjening.
+
+
+  - Exact-zero forecasts skip the 1-copy minimum. Only empirical-quantile engines produce exact zeros. The naive delivered 0 on 3,758 rows and would gain about 207 if floored like the FMs effectively are.

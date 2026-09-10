@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Subprocessors</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Subprocessors</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#operia-sub-processor-register" id="toc-operia-sub-processor-register">Operia — sub-processor
+register</a>
+<ul>
+<li><a href="#register" id="toc-register">1. Register</a>
+<ul>
+<li><a href="#listed-but-not-engaged" id="toc-listed-but-not-engaged">Listed but not engaged</a></li>
+<li><a href="#not-sub-processors" id="toc-not-sub-processors">Not
+sub-processors</a></li>
+</ul></li>
+<li><a href="#free-tiers-development-only" id="toc-free-tiers-development-only">2. Free tiers: development
+only</a></li>
+<li><a href="#change-procedure-art.-282" id="toc-change-procedure-art.-282">3. Change procedure (Art.
+28(2))</a></li>
+<li><a href="#verification-log-and-open-items" id="toc-verification-log-and-open-items">4. Verification log and open
+items</a></li>
+<li><a href="#eu-only-configuration" id="toc-eu-only-configuration">5.
+EU-only configuration</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="operia-sub-processor-register">Operia — sub-processor
+register</h1>
+<p><strong>Controller:</strong> each customer company.
+<strong>Processor:</strong> DCA Logic. <strong>Status:</strong> living
+document — this is the register required by GDPR Art. 28(2) and (4), and
+Annex B of every data processing agreement. <strong>Last
+reviewed:</strong> 2026-09-08 (AhaSend added) · <strong>Owner:</strong>
+DCA Logic privacy owner (see <a href="toms.md">toms.md</a> §10).</p>
+<p>A sub-processor is any third party that processes personal data on
+DCA Logic’s behalf in order to deliver Operia. This register lists every
+one of them, what data it receives, where it is processed, on what legal
+basis it may leave the EU/EEA, and <strong>which product feature engages
+it</strong> — so a customer can prove that a feature they have not
+enabled means no transfer to that vendor.</p>
+<blockquote>
+<p><strong>How to read the “engaged by” column.</strong> Vendors marked
+<em>always</em> are part of the platform. All others are engaged only
+when the named feature is switched on. Every optional vendor can be
+switched off without losing the parcel core.</p>
+</blockquote>
+<hr />
+<h2 id="register">1. Register</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Vendor (legal entity)</th>
+<th>Service in Operia</th>
+<th>Personal data received</th>
+<th>Processing location</th>
+<th>Transfer basis (EU→3rd country)</th>
+<th>Engaged by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Supabase, Inc.</strong> (US)</td>
+<td>Database, Auth, Storage, Edge Functions — the platform itself</td>
+<td>All tenant data: employee master data, parcels, receivers/senders,
+photos, signatures, notification logs, audit log, auth credentials</td>
+<td><strong>EU — AWS <code>eu-north-1</code> (Stockholm)</strong>;
+support/administration may be accessed from the US</td>
+<td>SCCs in Supabase’s DPA (Supabase is <strong>not</strong>
+DPF-listed)</td>
+<td><em>always</em></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Amazon Web Services</strong> (AWS EMEA SARL / AWS,
+Inc.)</td>
+<td>Underlying infrastructure for Supabase (<code>eu-north-1</code>) and
+for DCA’s own gateway + web host
+(<code>ftp.predictioninstitute.com</code>,
+<code>operia.predictioninstitute.com</code>)</td>
+<td>Same as row 1 while at rest/in transit on the infrastructure; the
+gateway additionally streams HR CSVs (see row 6)</td>
+<td>EU (Supabase project); <strong>DCA’s own box: region to be confirmed
+— see §4 open items</strong></td>
+<td>Sub-processor of Supabase under its DPA; AWS SCCs + DPF (AWS,
+Inc. is DPF-certified)</td>
+<td><em>always</em></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Plus Five Five, Inc.</strong> (trading as
+<strong>Resend</strong>, US)</td>
+<td>Transactional email — <strong>only while Resend is the selected
+outbound provider</strong> (Operia → Integrationer → E-mail; Brevo, row
+13, is the EU alternative): invitations, password resets, parcel
+notification email; the requested calculation e-mail from the public
+savings calculator (<strong>DCA as controller</strong> — see <a href="ropa.md">ropa.md</a> §15)</td>
+<td>Recipient name + email address, parcel barcode/reference, company
+name; for the calculator e-mail: the visitor’s name, e-mail, company and
+calculation</td>
+<td>US</td>
+<td><strong>EU-U.S. Data Privacy Framework</strong> (certified) + SCCs
+in Resend’s DPA</td>
+<td>Email notifications, user invitations (<em>always</em> for account
+e-mails); the public sales site’s “send me the calculation”</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>ActiveCampaign, LLC</strong> (trading as
+<strong>Postmark</strong>, US)</td>
+<td>Inbound email receiver for HR file ingestion (Flow 0 email route) —
+<strong>only while Postmark is the selected inbound provider</strong>
+(Brevo, row 13, is the EU alternative)</td>
+<td>Whatever the customer’s HR system e-mails: employee CSV (name,
+employee no., e-mail, phone, department), sender address</td>
+<td>US</td>
+<td><strong>EU-U.S. Data Privacy Framework</strong> (certified,
+effective 2023-07-11) + Postmark DPA</td>
+<td><em>Data Transfer → email ingest</em> only</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>GatewayAPI A/S</strong> (DK)</td>
+<td>SMS delivery for parcel notifications and reminders</td>
+<td>Recipient MSISDN, message text (may contain receiver name, parcel
+reference)</td>
+<td><strong>EU (Denmark)</strong></td>
+<td>None needed — EU/EEA</td>
+<td><em>SMS notifications</em> only</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Mistral AI SAS</strong> (FR)</td>
+<td>AI label reading (OCR of the parcel label photo)</td>
+<td>The full label photo: receiver and sender name, address, phone,
+carrier data</td>
+<td><strong>EU (France)</strong></td>
+<td>None needed — EU/EEA</td>
+<td><em>AI label reading</em>, if the customer selects Mistral</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Anthropic PBC</strong> (US)</td>
+<td>AI label reading (vision model)</td>
+<td>Same as row 6</td>
+<td>US</td>
+<td><strong>SCCs</strong> in Anthropic’s commercial DPA (Anthropic’s own
+privacy policy names adequacy + SCCs; DPF certification
+<strong>not</strong> asserted by the vendor — treat as SCC-based)</td>
+<td><em>AI label reading</em>, if the customer selects Anthropic</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Google LLC</strong> (US)</td>
+<td>(a) Gemini API for AI label reading; (b) Geocoding / Routes / Maps
+JavaScript API for route planning</td>
+<td>(a) Same as row 6; (b) employee and delivery
+<strong>addresses</strong>, and the browser’s IP when the Maps JS API
+loads</td>
+<td>US (global endpoints)</td>
+<td><strong>EU-U.S. Data Privacy Framework</strong> (Google LLC
+certified) — for Cloud/business services Google additionally relies on
+<strong>SCCs</strong> in the Google Cloud DPA</td>
+<td>(a) <em>AI label reading</em> with Google selected; (b) <em>route
+planning</em> with Google as maps provider</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>HeiGIT gGmbH</strong> (DE) — OpenRouteService</td>
+<td>Geocoding + route calculation (default maps provider)</td>
+<td>Employee and delivery addresses</td>
+<td><strong>EU (Germany)</strong></td>
+<td>None needed — EU/EEA</td>
+<td><em>Route planning</em> (default provider)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Salesforce, Inc.</strong> (US) — trading as
+<strong>Slack</strong></td>
+<td>Slack delivery of parcel notifications as a direct message to the
+receiver</td>
+<td>The receiver’s work e-mail address (used to look the person up in
+the customer’s workspace via <code>users.lookupByEmail</code>), the
+resulting Slack user id, and the message text (may contain receiver
+name, parcel barcode/count, company name)</td>
+<td>US (Slack’s global infrastructure; some plans offer regional data
+residency, not assumed here)</td>
+<td><strong>EU-U.S. Data Privacy Framework</strong> — Salesforce,
+Inc. is DPF-certified and lists Slack among the covered entities —
+<strong>plus SCCs</strong> in the Salesforce/Slack DPA. <em>Vendor
+statement, not yet verified against the official list — see §4 open item
+1.</em></td>
+<td><em>Slack notifications</em> only, and only after the customer has
+installed the Operia app in their own workspace</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Customer-configured log drain target</strong></td>
+<td>Receives the customer’s own audit events (HTTP/NDJSON, Datadog,
+Loki)</td>
+<td><code>audit_log</code> rows — minimized: actor id, employee numbers,
+masked recipients; never names or message content</td>
+<td>Wherever the customer points it</td>
+<td><strong>Not DCA’s sub-processor</strong> — the customer chooses the
+destination and instructs the transfer as controller</td>
+<td><em>Log drains</em>, per company</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Visma e-conomic A/S</strong> (DK)</td>
+<td>Accounting integration: invoice drafts from booking transferred to
+the customer’s own e-conomic agreement (built 2026-09-05: connection +
+verification only; invoice transfer follows)</td>
+<td>Today: nothing beyond the two API tokens and the agreement number.
+When invoicing lands: customer/debtor name and address, invoice lines
+(resource, dates, participant counts, add-on services, amounts), contact
+name on the booking</td>
+<td><strong>EU (Denmark)</strong> — Visma e-conomic’s data centres are
+in the EU</td>
+<td>None needed — EU/EEA. Note: the customer is <em>also</em> Visma’s
+own customer (their accounting agreement) — Visma processes the invoice
+data primarily as the customer’s processor; DCA’s role is limited to the
+transfer</td>
+<td><em>Accounting integration</em>, per company, only after the
+customer has saved their own AgreementGrantToken</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Sendinblue SAS</strong> (trading as <strong>Brevo</strong>,
+FR)</td>
+<td>Email — both legs, when selected: (a) outbound transactional mail
+(invitations, password resets, parcel/asset notifications, the sales
+calculator e-mail); (b) inbound receiver for HR file ingestion (Flow 0
+email route)</td>
+<td>(a) same as row 3, <strong>plus open/click tracking</strong>: Brevo
+rewrites every link through its own redirect domain
+(<code>*.sendibt3.com</code>) and embeds a tracking pixel, so it also
+records whether a named recipient opened a message and which links they
+followed. This <strong>cannot be switched off for transactional
+mail</strong> — Brevo offers only <em>anonymisation</em> of the events
+(see §4 open item 7); (b) same as row 4</td>
+<td><strong>EU (France)</strong> — Brevo is a French
+controller/processor and states EU-only hosting</td>
+<td>None needed — EU/EEA. Note the group has US and Indian entities, so
+<strong>support access</strong> from outside the EU is possible: get
+this in writing in the DPA and record it here (§4 open item 6)</td>
+<td>(a) <em>email notifications, user invitations</em> while
+<code>email_provider = &#39;brevo&#39;</code>; (b) <em>Data Transfer → email
+ingest</em> while <code>email_inbound_provider = &#39;brevo&#39;</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>TakTek GmbH</strong> (trading as <strong>AhaSend</strong>,
+AT)</td>
+<td>Outbound transactional email — <strong>only while AhaSend is the
+selected outbound provider</strong> (Operia → Integrationer →
+E-mail)</td>
+<td>Same as row 3: recipient name + email address, parcel
+barcode/reference, company name; for the calculator e-mail the visitor’s
+details. <strong>No open/click tracking</strong>: it is off by default
+and Operia additionally sets
+<code>ahasend-track-opens</code>/<code>-track-clicks</code> to false on
+every message, so no behavioural data is generated</td>
+<td><strong>EU (Austria)</strong> — Austrian company, European
+infrastructure per the vendor (<strong>verify and record the hosting
+region — §4 open item 8</strong>)</td>
+<td>None needed — EU/EEA, subject to confirming the hosting region and
+executing the DPA (ahasend.com/dpa; the vendor states it has an
+appointed DPO)</td>
+<td><em>Email notifications, user invitations</em> while
+<code>email_provider = &#39;ahasend&#39;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="listed-but-not-engaged">Listed but not engaged</h3>
+<p><code>OpenAI, L.L.C.</code>, <code>xAI Corp.</code> and
+<code>DeepSeek</code> appear in the AI provider catalogue
+(<code>web/src/lib/ai.ts</code>) but <strong>no code path sends data to
+them</strong> — no models are enabled and the edge function rejects
+them. They enter this register the day a model is enabled, and each
+addition is a new transfer decision.</p>
+<h3 id="not-sub-processors">Not sub-processors</h3>
+<ul>
+<li><strong>Microsoft (Entra ID / Graph API)</strong> — when a customer
+enables AD employee sync, Operia <em>reads from the customer’s own
+Microsoft tenant</em> using credentials the customer supplies. Microsoft
+is the customer’s processor, not DCA’s.</li>
+<li><strong>The customer’s own SFTP/e-mail infrastructure</strong> on
+the sending side of Flow 0.</li>
+</ul>
+<hr />
+<h2 id="free-tiers-development-only">2. Free tiers: development
+only</h2>
+<p>Two vendors offer free tiers whose terms permit the vendor to use
+submitted content for model improvement — <strong>Google</strong>
+(Gemini free tier) and <strong>Mistral</strong> (the free “Experiment”
+plan). Sending customer personal data under those terms is not
+defensible.</p>
+<p><strong>Rule:</strong> an AI vendor may only be made available to
+customers in production when DCA’s API key for it is on a <strong>paid
+plan with a data processing agreement</strong> (and, where offered, zero
+data retention). Free-tier keys are for development and testing
+<strong>with synthetic labels only</strong>.</p>
+<p>This is enforced by documentation and UI warning, not by the API: the
+provider is flagged <code>hasFreeTier</code> in
+<code>web/src/lib/ai.ts</code> and Operia → Integrations shows the
+warning next to the provider before a platform admin exposes it to
+customers. Anthropic has no free API tier (the key requires credit from
+the first call), so the flag is false there.</p>
+<p>Current state (2026-08-14): DCA’s Google and Mistral keys are
+<strong>free-tier development keys</strong>. Production intent is a
+<strong>paid Mistral plan</strong> (EU processing, DPA, zero data
+retention).</p>
+<hr />
+<h2 id="change-procedure-art.-282">3. Change procedure (Art. 28(2))</h2>
+<p>Customers give <strong>general written authorization</strong> for
+sub-processors in the DPA.</p>
+<ol type="1">
+<li>Any new external service that receives personal data is added to
+this register <strong>before</strong> it goes live, in the same commit
+as the code that engages it.</li>
+<li>Customers are notified in writing <strong>at least 30 days</strong>
+before the change takes effect, at the data protection contact the
+customer maintains in-product under <strong>Konfigurér →
+Databeskyttelse</strong>
+(<code>companies.privacy_contact_email</code>).</li>
+<li>A customer may object on reasonable data-protection grounds within
+the notice period; if the objection cannot be resolved, the customer may
+terminate the affected feature or the contract.</li>
+<li>Every sub-processor is bound by a written agreement imposing the
+same duties DCA owes the customer (Art. 28(4)).</li>
+</ol>
+<p>Standing PR question: <em>does this change add a sub-processor or a
+personal-data field?</em> If yes, this file and <a href="ropa.md">ropa.md</a> change in the same commit.</p>
+<hr />
+<h2 id="verification-log-and-open-items">4. Verification log and open
+items</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Checked</th>
+<th>Vendor</th>
+<th>Finding</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-14</td>
+<td>Resend (Plus Five Five, Inc.)</td>
+<td>DPF-certified (EU-U.S. + UK extension); DPA also incorporates SCCs
+modules 2 and 3</td>
+<td>resend.com/legal/dpa, resend.com changelog “Data Privacy Framework
+Certification”</td>
+</tr>
+<tr>
+<td>2026-08-14</td>
+<td>Postmark (ActiveCampaign, LLC)</td>
+<td>DPF-certified, effective 2023-07-11 (EU), 2023-10-12 (UK),
+2024-09-15 (CH)</td>
+<td>activecampaign.com/legal/dpf, postmarkapp.com/dpa</td>
+</tr>
+<tr>
+<td>2026-08-14</td>
+<td>Google LLC</td>
+<td>DPF-certified, covering Google LLC and its wholly-owned US
+subsidiaries; SCCs additionally incorporated for Cloud/business
+services</td>
+<td>policies.google.com/privacy/frameworks</td>
+</tr>
+<tr>
+<td>2026-08-14</td>
+<td>Anthropic PBC</td>
+<td><strong>No DPF claim on Anthropic’s own pages.</strong> The privacy
+policy names Art. 45 adequacy and Art. 46 SCCs; the commercial DPA
+includes SCCs automatically. Third-party summaries claiming DPF listing
+were contradictory and are not evidence.</td>
+<td>anthropic.com/legal/privacy</td>
+</tr>
+<tr>
+<td>2026-08-14</td>
+<td>Supabase, Inc.</td>
+<td>Not DPF-listed; relies on SCCs (EU + UK addendum) in its DPA</td>
+<td>supabase.com/legal/dpa</td>
+</tr>
+<tr>
+<td>2026-09-08</td>
+<td>Brevo (Sendinblue SAS)</td>
+<td>French company, Paris; states EU-only hosting for customer data, so
+<strong>no transfer basis is needed for the processing itself</strong>.
+Group entities exist in the US and India — support/administrative access
+from outside the EU is the open question, not the storage.</td>
+<td>brevo.com/legal/privacypolicy, brevo.com/legal/notice</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Open items — do these before the register is handed to a
+customer:</strong></p>
+<ol type="1">
+<li><strong>Look each US vendor up on the official list</strong> at
+<code>dataprivacyframework.gov/list</code> and record the certification
+ID and status date here. (The list page renders client-side and could
+not be queried programmatically on 2026-08-14; the rows above rest on
+the vendors’ own statements.)</li>
+<li><strong>Confirm the AWS region</strong> of
+<code>ftp.predictioninstitute.com</code> /
+<code>operia.predictioninstitute.com</code> and record it in row 2. If
+it is not an EU region, move it.</li>
+<li><strong>Execute or confirm the DPA with each vendor</strong>
+(Supabase, Resend, Postmark, GatewayAPI, Mistral, Anthropic, Google,
+HeiGIT, <strong>Salesforce/Slack</strong>) and file a copy; note the
+date here.</li>
+<li><strong>Write one short TIA</strong> per US vendor (rows 1–4, 7, 8,
+10) — <code>docs/gdpr/tia/</code>.</li>
+<li><strong>Move the AI keys to paid plans</strong> before any customer
+reads real labels (§2).</li>
+<li><strong>Brevo:</strong> execute the DPA and get the
+<strong>support-access</strong> position in writing (which group
+entities may access customer data, and from where). Until then row 13
+says “EU processing, access to be confirmed” — do not claim a fully
+EU-contained mail path to a customer.</li>
+<li><strong>Brevo open/click tracking</strong> (found 2026-09-08): it is
+on and cannot be disabled for transactional mail, so Brevo records open
+and click behaviour for <em>password reset and invitation</em> mail —
+data neither the register nor the privacy text previously claimed.
+Decide one of: (a) enable Brevo’s <strong>tracking
+anonymisation</strong> so events cannot be tied to a person,
+<ol start="2" type="a">
+<li>keep account/security mail on Resend and use Brevo only for
+notifications (the provider is resolved centrally in
+<code>_shared/send-email.ts</code>, so a per-message-type split is a
+small change), or (c) document the tracking here and in the privacy
+text. Until then, treat (a) as the minimum. <strong>Update
+2026-09-08:</strong> option (b) got easier — AhaSend (row 14) is
+EU-hosted <em>and</em> leaves links alone, so it covers both concerns
+without keeping a US vendor for auth mail.</li>
+</ol></li>
+<li><strong>AhaSend:</strong> confirm the hosting region in writing and
+execute the DPA; record the date and the sub-processor list here. Row 14
+currently rests on the vendor’s own “European infrastructure” statement,
+not on a verified fact.</li>
+</ol>
+<hr />
+<h2 id="eu-only-configuration">5. EU-only configuration</h2>
+<p>A customer who requires that no personal data leaves the EU/EEA can
+run Operia that way today by configuring:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Setting</th>
+<th>EU-only choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI label reading</td>
+<td><strong>Mistral</strong> (FR) — or the feature disabled
+entirely</td>
+</tr>
+<tr>
+<td>Maps provider</td>
+<td><strong>OpenRouteService</strong> (DE) — the default</td>
+</tr>
+<tr>
+<td>SMS</td>
+<td>GatewayAPI (DK) — the only option</td>
+</tr>
+<tr>
+<td>Slack notifications</td>
+<td><strong>Not compatible</strong> — Slack (US) is the only
+implementation. Leave the channel off (it is off by default and
+additionally gated on the <code>slack_notifications</code> add-on).
+Microsoft Teams, when built, keeps the messages inside the customer’s
+own tenant and is the EU-friendly alternative.</td>
+</tr>
+<tr>
+<td>Email (outbound)</td>
+<td><strong>AhaSend</strong> (TakTek GmbH, AT) — the preferred EU option
+since 2026-09-08: EU-hosted <em>and</em> no link rewriting, so
+password-reset links stay intact. <strong>Brevo</strong> (FR) is the
+alternative but forces click tracking (§4 open item 7). Resend (US)
+remains as a fallback and must then be left unselected.</td>
+</tr>
+<tr>
+<td>Email (inbound)</td>
+<td><strong>Brevo</strong> (FR) — select it as
+<code>email_inbound_provider</code> and move the MX records. Postmark
+(US) remains as a fallback.</td>
+</tr>
+<tr>
+<td>Log drain</td>
+<td>The customer’s own EU destination</td>
+</tr>
+</tbody>
+</table>
+<p>The core platform (database, storage, auth, functions) is already in
+<code>eu-north-1</code>.</p>
+</body>
+</html>

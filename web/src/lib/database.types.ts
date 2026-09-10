@@ -34,6 +34,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_emails: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          kind: string
+          provider: string
+          provider_id: string
+          recipient_masked: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          kind: string
+          provider: string
+          provider_id: string
+          recipient_masked: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          kind?: string
+          provider?: string
+          provider_id?: string
+          recipient_masked?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_text_override: {
         Row: {
           company_id: string | null
@@ -680,6 +710,104 @@ export type Database = {
           },
         ]
       }
+      booking_notifications: {
+        Row: {
+          audience: Database["public"]["Enums"]["booking_notification_audience"]
+          booking_id: string
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at: string
+          error: string | null
+          event_id: number | null
+          id: string
+          kind: Database["public"]["Enums"]["booking_notification_kind"]
+          lang: string
+          provider_id: string | null
+          recipient: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Insert: {
+          audience: Database["public"]["Enums"]["booking_notification_audience"]
+          booking_id: string
+          channel: Database["public"]["Enums"]["notification_channel"]
+          company_id: string
+          created_at?: string
+          error?: string | null
+          event_id?: number | null
+          id?: string
+          kind: Database["public"]["Enums"]["booking_notification_kind"]
+          lang?: string
+          provider_id?: string | null
+          recipient?: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Update: {
+          audience?: Database["public"]["Enums"]["booking_notification_audience"]
+          booking_id?: string
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          company_id?: string
+          created_at?: string
+          error?: string | null
+          event_id?: number | null
+          id?: string
+          kind?: Database["public"]["Enums"]["booking_notification_kind"]
+          lang?: string
+          provider_id?: string | null
+          recipient?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_participant_levels: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_participant_levels_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_resources: {
         Row: {
           asset_id: string | null
@@ -744,10 +872,110 @@ export type Database = {
           },
         ]
       }
+      booking_service_lines: {
+        Row: {
+          booking_id: string
+          company_id: string
+          created_at: string
+          id: string
+          price_mode: string
+          quantity: number
+          service_id: string
+          unit_price: number
+        }
+        Insert: {
+          booking_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          price_mode: string
+          quantity?: number
+          service_id: string
+          unit_price: number
+        }
+        Update: {
+          booking_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          price_mode?: string
+          quantity?: number
+          service_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_service_lines_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_service_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_service_lines_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "booking_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_services: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          has_quantity: boolean
+          id: string
+          is_active: boolean
+          name: string
+          price_mode: string
+          unit_price: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          has_quantity?: boolean
+          id?: string
+          is_active?: boolean
+          name: string
+          price_mode?: string
+          unit_price?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          has_quantity?: boolean
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_mode?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_services_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           all_day: boolean
           booked_by: string | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           company_id: string
@@ -755,6 +983,10 @@ export type Database = {
           employee_id: string | null
           ends_at: string
           id: string
+          invoiced_at: string | null
+          invoiced_by: string | null
+          participant_count: number | null
+          participant_level_id: string | null
           resource_id: string
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
@@ -763,6 +995,7 @@ export type Database = {
         Insert: {
           all_day?: boolean
           booked_by?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           company_id: string
@@ -770,6 +1003,10 @@ export type Database = {
           employee_id?: string | null
           ends_at: string
           id?: string
+          invoiced_at?: string | null
+          invoiced_by?: string | null
+          participant_count?: number | null
+          participant_level_id?: string | null
           resource_id: string
           starts_at: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -778,6 +1015,7 @@ export type Database = {
         Update: {
           all_day?: boolean
           booked_by?: string | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           company_id?: string
@@ -785,6 +1023,10 @@ export type Database = {
           employee_id?: string | null
           ends_at?: string
           id?: string
+          invoiced_at?: string | null
+          invoiced_by?: string | null
+          participant_count?: number | null
+          participant_level_id?: string | null
           resource_id?: string
           starts_at?: string
           status?: Database["public"]["Enums"]["booking_status"]
@@ -803,6 +1045,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_participant_level_id_fkey"
+            columns: ["participant_level_id"]
+            isOneToOne: false
+            referencedRelation: "booking_participant_levels"
             referencedColumns: ["id"]
           },
           {
@@ -912,8 +1161,17 @@ export type Database = {
           asset_reminder_2_days: number | null
           asset_reminder_2_enabled: boolean | null
           asset_reminder_max: number | null
+          booking_cancelled_enabled: boolean | null
+          booking_copy_email: string | null
+          booking_created_enabled: boolean | null
+          booking_invoice_email: string | null
+          booking_invoiced_enabled: boolean | null
+          booking_notify_booker: boolean | null
+          booking_reminder_enabled: boolean | null
+          booking_reminder_hours: number | null
           booking_retro_allowed: boolean
           booking_time_mode: string
+          booking_updated_enabled: boolean | null
           created_at: string
           default_currency: string
           default_language: string
@@ -946,7 +1204,6 @@ export type Database = {
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           registration_no: string | null
-          slack_lookup_by_email: boolean
           security_contact_email: string | null
           security_contact_name: string | null
           security_contact_phone: string | null
@@ -955,6 +1212,7 @@ export type Database = {
           shipping_margin_fixed: number | null
           shipping_margin_percent: number | null
           shipping_model: string | null
+          slack_lookup_by_email: boolean
           supported_currencies: string[]
           supported_languages: string[]
           timezone: string
@@ -969,8 +1227,17 @@ export type Database = {
           asset_reminder_2_days?: number | null
           asset_reminder_2_enabled?: boolean | null
           asset_reminder_max?: number | null
+          booking_cancelled_enabled?: boolean | null
+          booking_copy_email?: string | null
+          booking_created_enabled?: boolean | null
+          booking_invoice_email?: string | null
+          booking_invoiced_enabled?: boolean | null
+          booking_notify_booker?: boolean | null
+          booking_reminder_enabled?: boolean | null
+          booking_reminder_hours?: number | null
           booking_retro_allowed?: boolean
           booking_time_mode?: string
+          booking_updated_enabled?: boolean | null
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -1003,7 +1270,6 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
-          slack_lookup_by_email?: boolean
           security_contact_email?: string | null
           security_contact_name?: string | null
           security_contact_phone?: string | null
@@ -1012,6 +1278,7 @@ export type Database = {
           shipping_margin_fixed?: number | null
           shipping_margin_percent?: number | null
           shipping_model?: string | null
+          slack_lookup_by_email?: boolean
           supported_currencies?: string[]
           supported_languages?: string[]
           timezone?: string
@@ -1026,8 +1293,17 @@ export type Database = {
           asset_reminder_2_days?: number | null
           asset_reminder_2_enabled?: boolean | null
           asset_reminder_max?: number | null
+          booking_cancelled_enabled?: boolean | null
+          booking_copy_email?: string | null
+          booking_created_enabled?: boolean | null
+          booking_invoice_email?: string | null
+          booking_invoiced_enabled?: boolean | null
+          booking_notify_booker?: boolean | null
+          booking_reminder_enabled?: boolean | null
+          booking_reminder_hours?: number | null
           booking_retro_allowed?: boolean
           booking_time_mode?: string
+          booking_updated_enabled?: boolean | null
           created_at?: string
           default_currency?: string
           default_language?: string
@@ -1060,7 +1336,6 @@ export type Database = {
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           registration_no?: string | null
-          slack_lookup_by_email?: boolean
           security_contact_email?: string | null
           security_contact_name?: string | null
           security_contact_phone?: string | null
@@ -1069,12 +1344,86 @@ export type Database = {
           shipping_margin_fixed?: number | null
           shipping_margin_percent?: number | null
           shipping_model?: string | null
+          slack_lookup_by_email?: boolean
           supported_currencies?: string[]
           supported_languages?: string[]
           timezone?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      company_accounting_config: {
+        Row: {
+          agreement_company_name: string | null
+          agreement_number: number | null
+          company_id: string
+          created_at: string
+          enabled: boolean
+          provider: string
+          token_set: boolean
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          agreement_company_name?: string | null
+          agreement_number?: number | null
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          provider?: string
+          token_set?: boolean
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          agreement_company_name?: string | null
+          agreement_number?: number | null
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          provider?: string
+          token_set?: boolean
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_accounting_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_accounting_secret: {
+        Row: {
+          access_token: string | null
+          company_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          company_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          company_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_accounting_secret_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_ai_config: {
         Row: {
@@ -2709,8 +3058,36 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_secrets: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
+          accounting_enabled: boolean
+          accounting_providers: string[]
+          ahasend_account_id: string | null
+          ahasend_api_key_set: boolean
           ai_enabled: boolean
           ai_model_costs: Json
           ai_models: string[]
@@ -2726,18 +3103,31 @@ export type Database = {
           asset_reminder_2_enabled: boolean
           asset_reminder_max: number
           audit_retention_days: number | null
+          booking_cancelled_enabled: boolean
+          booking_created_enabled: boolean
+          booking_invoiced_enabled: boolean
+          booking_notifications_enabled: boolean
+          booking_notify_booker: boolean
+          booking_reminder_enabled: boolean
+          booking_reminder_hours: number
           booking_retro_allowed: boolean
           booking_time_mode: string
+          booking_updated_enabled: boolean
           bookings_retention_days: number | null
+          brevo_api_key_set: boolean
           cost_per_email: number
           cost_per_sms: number
           default_currency: string
           default_language: string
+          economic_app_secret_set: boolean
           email_allowlist_required: boolean
           email_antispoof_enabled: boolean
           email_antispoof_strict: boolean
           email_base_domain: string | null
           email_enabled: boolean
+          email_from: string | null
+          email_inbound_provider: string
+          email_provider: string
           employees_retention_days: number | null
           entra_anonymize_retired: boolean
           entra_enabled: boolean
@@ -2789,6 +3179,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accounting_enabled?: boolean
+          accounting_providers?: string[]
+          ahasend_account_id?: string | null
+          ahasend_api_key_set?: boolean
           ai_enabled?: boolean
           ai_model_costs?: Json
           ai_models?: string[]
@@ -2804,18 +3198,31 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          booking_cancelled_enabled?: boolean
+          booking_created_enabled?: boolean
+          booking_invoiced_enabled?: boolean
+          booking_notifications_enabled?: boolean
+          booking_notify_booker?: boolean
+          booking_reminder_enabled?: boolean
+          booking_reminder_hours?: number
           booking_retro_allowed?: boolean
           booking_time_mode?: string
+          booking_updated_enabled?: boolean
           bookings_retention_days?: number | null
+          brevo_api_key_set?: boolean
           cost_per_email?: number
           cost_per_sms?: number
           default_currency?: string
           default_language?: string
+          economic_app_secret_set?: boolean
           email_allowlist_required?: boolean
           email_antispoof_enabled?: boolean
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          email_from?: string | null
+          email_inbound_provider?: string
+          email_provider?: string
           employees_retention_days?: number | null
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
@@ -2867,6 +3274,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accounting_enabled?: boolean
+          accounting_providers?: string[]
+          ahasend_account_id?: string | null
+          ahasend_api_key_set?: boolean
           ai_enabled?: boolean
           ai_model_costs?: Json
           ai_models?: string[]
@@ -2882,18 +3293,31 @@ export type Database = {
           asset_reminder_2_enabled?: boolean
           asset_reminder_max?: number
           audit_retention_days?: number | null
+          booking_cancelled_enabled?: boolean
+          booking_created_enabled?: boolean
+          booking_invoiced_enabled?: boolean
+          booking_notifications_enabled?: boolean
+          booking_notify_booker?: boolean
+          booking_reminder_enabled?: boolean
+          booking_reminder_hours?: number
           booking_retro_allowed?: boolean
           booking_time_mode?: string
+          booking_updated_enabled?: boolean
           bookings_retention_days?: number | null
+          brevo_api_key_set?: boolean
           cost_per_email?: number
           cost_per_sms?: number
           default_currency?: string
           default_language?: string
+          economic_app_secret_set?: boolean
           email_allowlist_required?: boolean
           email_antispoof_enabled?: boolean
           email_antispoof_strict?: boolean
           email_base_domain?: string | null
           email_enabled?: boolean
+          email_from?: string | null
+          email_inbound_provider?: string
+          email_provider?: string
           employees_retention_days?: number | null
           entra_anonymize_retired?: boolean
           entra_enabled?: boolean
@@ -3305,6 +3729,14 @@ export type Database = {
         Args: { p_company_id: string; p_provider: string; p_version: string }
         Returns: undefined
       }
+      add_booking_service: {
+        Args: {
+          p_booking_id: string
+          p_quantity?: number
+          p_service_id: string
+        }
+        Returns: string
+      }
       admin_platform_admins: {
         Args: never
         Returns: {
@@ -3368,6 +3800,14 @@ export type Database = {
         Args: { p_ids: string[]; p_label?: string }
         Returns: number
       }
+      assert_booking_level: {
+        Args: {
+          p_company_id: string
+          p_level_id: string
+          p_require_active: boolean
+        }
+        Returns: undefined
+      }
       assert_booking_not_retro: {
         Args: {
           p_all_day: boolean
@@ -3375,6 +3815,39 @@ export type Database = {
           p_ends_at: string
           p_starts_at: string
         }
+        Returns: undefined
+      }
+      assert_booking_open: {
+        Args: { p_booking_id: string }
+        Returns: {
+          all_day: boolean
+          booked_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          ends_at: string
+          id: string
+          invoiced_at: string | null
+          invoiced_by: string | null
+          participant_count: number | null
+          participant_level_id: string | null
+          resource_id: string
+          starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          title: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      assert_participant_count: {
+        Args: { p_count: number }
         Returns: undefined
       }
       asset_flow_note: {
@@ -3390,11 +3863,15 @@ export type Database = {
         Args: { p_action: string; p_detail?: Json }
         Returns: string
       }
+      can_cancel_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_manage_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_operate_assets: { Args: { p_company_id: string }; Returns: boolean }
       can_operate_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
-      cancel_booking: { Args: { p_booking_id: string }; Returns: undefined }
+      cancel_booking: {
+        Args: { p_booking_id: string; p_reason: string }
+        Returns: undefined
+      }
       checkin_asset: {
         Args: {
           p_asset_id: string
@@ -3440,6 +3917,8 @@ export type Database = {
           p_all_day?: boolean
           p_employee_id: string
           p_ends_at: string
+          p_participant_count?: number
+          p_participant_level_id?: string
           p_resource_id: string
           p_starts_at: string
           p_title?: string
@@ -3526,7 +4005,11 @@ export type Database = {
       }
       log_password_reset_done: { Args: never; Returns: undefined }
       log_password_reset_requested: {
-        Args: { p_email: string }
+        Args: {
+          p_email: string
+          p_email_error?: string
+          p_email_sent?: boolean
+        }
         Returns: undefined
       }
       mask_login_email: { Args: { p_email: string }; Returns: string }
@@ -3565,6 +4048,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_booking_notifications: { Args: never; Returns: undefined }
+      record_account_email: {
+        Args: {
+          p_email: string
+          p_kind: string
+          p_provider: string
+          p_provider_id: string
+        }
+        Returns: undefined
+      }
       record_ai_label_read: {
         Args: {
           p_actor: string
@@ -3598,6 +4091,10 @@ export type Database = {
       }
       release_import_lock_self: {
         Args: { p_company_id: string }
+        Returns: undefined
+      }
+      remove_booking_service: {
+        Args: { p_line_id: string }
         Returns: undefined
       }
       remove_parcel: {
@@ -3637,6 +4134,10 @@ export type Database = {
         Args: { p_company_id: string; p_entries: Json; p_platform: string }
         Returns: Json
       }
+      set_booking_invoiced: {
+        Args: { p_booking_id: string; p_invoiced?: boolean }
+        Returns: undefined
+      }
       set_company_sftp_password: {
         Args: { p_company_id: string; p_password: string }
         Returns: undefined
@@ -3673,10 +4174,16 @@ export type Database = {
           p_booking_id: string
           p_employee_id: string
           p_ends_at: string
+          p_participant_count?: number
+          p_participant_level_id?: string
           p_resource_id: string
           p_starts_at: string
           p_title?: string
         }
+        Returns: undefined
+      }
+      update_booking_service: {
+        Args: { p_line_id: string; p_quantity: number }
         Returns: undefined
       }
       write_off_asset: {
@@ -3711,6 +4218,13 @@ export type Database = {
         | "retired"
         | "written_off"
       batch_status: "open" | "finished"
+      booking_notification_audience: "employee" | "booker" | "copy" | "economy"
+      booking_notification_kind:
+        | "created"
+        | "updated"
+        | "cancelled"
+        | "reminder"
+        | "invoiced"
       booking_status: "booked" | "cancelled"
       notification_channel: "email" | "sms" | "teams" | "slack"
       notification_kind:
@@ -3889,6 +4403,14 @@ export const Constants = {
         "written_off",
       ],
       batch_status: ["open", "finished"],
+      booking_notification_audience: ["employee", "booker", "copy", "economy"],
+      booking_notification_kind: [
+        "created",
+        "updated",
+        "cancelled",
+        "reminder",
+        "invoiced",
+      ],
       booking_status: ["booked", "cancelled"],
       notification_channel: ["email", "sms", "teams", "slack"],
       notification_kind: [

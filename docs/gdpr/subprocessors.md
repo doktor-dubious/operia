@@ -3,7 +3,7 @@
 **Controller:** each customer company. **Processor:** DCA Logic.
 **Status:** living document — this is the register required by GDPR Art. 28(2) and (4), and
 Annex B of every data processing agreement.
-**Last reviewed:** 2026-09-04 · **Owner:** DCA Logic privacy owner (see [toms.md](toms.md) §10).
+**Last reviewed:** 2026-09-08 (AhaSend added) · **Owner:** DCA Logic privacy owner (see [toms.md](toms.md) §10).
 
 A sub-processor is any third party that processes personal data on DCA Logic's behalf in order
 to deliver Operia. This register lists every one of them, what data it receives, where it is
@@ -22,8 +22,8 @@ so a customer can prove that a feature they have not enabled means no transfer t
 |---|---|---|---|---|---|---|
 | 1 | **Supabase, Inc.** (US) | Database, Auth, Storage, Edge Functions — the platform itself | All tenant data: employee master data, parcels, receivers/senders, photos, signatures, notification logs, audit log, auth credentials | **EU — AWS `eu-north-1` (Stockholm)**; support/administration may be accessed from the US | SCCs in Supabase's DPA (Supabase is **not** DPF-listed) | *always* |
 | 2 | **Amazon Web Services** (AWS EMEA SARL / AWS, Inc.) | Underlying infrastructure for Supabase (`eu-north-1`) and for DCA's own gateway + web host (`ftp.predictioninstitute.com`, `operia.predictioninstitute.com`) | Same as row 1 while at rest/in transit on the infrastructure; the gateway additionally streams HR CSVs (see row 6) | EU (Supabase project); **DCA's own box: region to be confirmed — see §4 open items** | Sub-processor of Supabase under its DPA; AWS SCCs + DPF (AWS, Inc. is DPF-certified) | *always* |
-| 3 | **Plus Five Five, Inc.** (trading as **Resend**, US) | Transactional email: invitations, password resets, parcel notification email; the requested calculation e-mail from the public savings calculator (**DCA as controller** — see [ropa.md](ropa.md) §15) | Recipient name + email address, parcel barcode/reference, company name; for the calculator e-mail: the visitor's name, e-mail, company and calculation | US | **EU-U.S. Data Privacy Framework** (certified) + SCCs in Resend's DPA | Email notifications, user invitations (*always* for account e-mails); the public sales site's "send me the calculation" |
-| 4 | **ActiveCampaign, LLC** (trading as **Postmark**, US) | Inbound email receiver for HR file ingestion (Flow 0 email route) | Whatever the customer's HR system e-mails: employee CSV (name, employee no., e-mail, phone, department), sender address | US | **EU-U.S. Data Privacy Framework** (certified, effective 2023-07-11) + Postmark DPA | *Data Transfer → email ingest* only |
+| 3 | **Plus Five Five, Inc.** (trading as **Resend**, US) | Transactional email — **only while Resend is the selected outbound provider** (Operia → Integrationer → E-mail; Brevo, row 13, is the EU alternative): invitations, password resets, parcel notification email; the requested calculation e-mail from the public savings calculator (**DCA as controller** — see [ropa.md](ropa.md) §15) | Recipient name + email address, parcel barcode/reference, company name; for the calculator e-mail: the visitor's name, e-mail, company and calculation | US | **EU-U.S. Data Privacy Framework** (certified) + SCCs in Resend's DPA | Email notifications, user invitations (*always* for account e-mails); the public sales site's "send me the calculation" |
+| 4 | **ActiveCampaign, LLC** (trading as **Postmark**, US) | Inbound email receiver for HR file ingestion (Flow 0 email route) — **only while Postmark is the selected inbound provider** (Brevo, row 13, is the EU alternative) | Whatever the customer's HR system e-mails: employee CSV (name, employee no., e-mail, phone, department), sender address | US | **EU-U.S. Data Privacy Framework** (certified, effective 2023-07-11) + Postmark DPA | *Data Transfer → email ingest* only |
 | 5 | **GatewayAPI A/S** (DK) | SMS delivery for parcel notifications and reminders | Recipient MSISDN, message text (may contain receiver name, parcel reference) | **EU (Denmark)** | None needed — EU/EEA | *SMS notifications* only |
 | 6 | **Mistral AI SAS** (FR) | AI label reading (OCR of the parcel label photo) | The full label photo: receiver and sender name, address, phone, carrier data | **EU (France)** | None needed — EU/EEA | *AI label reading*, if the customer selects Mistral |
 | 7 | **Anthropic PBC** (US) | AI label reading (vision model) | Same as row 6 | US | **SCCs** in Anthropic's commercial DPA (Anthropic's own privacy policy names adequacy + SCCs; DPF certification **not** asserted by the vendor — treat as SCC-based) | *AI label reading*, if the customer selects Anthropic |
@@ -31,6 +31,9 @@ so a customer can prove that a feature they have not enabled means no transfer t
 | 9 | **HeiGIT gGmbH** (DE) — OpenRouteService | Geocoding + route calculation (default maps provider) | Employee and delivery addresses | **EU (Germany)** | None needed — EU/EEA | *Route planning* (default provider) |
 | 10 | **Salesforce, Inc.** (US) — trading as **Slack** | Slack delivery of parcel notifications as a direct message to the receiver | The receiver's work e-mail address (used to look the person up in the customer's workspace via `users.lookupByEmail`), the resulting Slack user id, and the message text (may contain receiver name, parcel barcode/count, company name) | US (Slack's global infrastructure; some plans offer regional data residency, not assumed here) | **EU-U.S. Data Privacy Framework** — Salesforce, Inc. is DPF-certified and lists Slack among the covered entities — **plus SCCs** in the Salesforce/Slack DPA. *Vendor statement, not yet verified against the official list — see §4 open item 1.* | *Slack notifications* only, and only after the customer has installed the Operia app in their own workspace |
 | 11 | **Customer-configured log drain target** | Receives the customer's own audit events (HTTP/NDJSON, Datadog, Loki) | `audit_log` rows — minimized: actor id, employee numbers, masked recipients; never names or message content | Wherever the customer points it | **Not DCA's sub-processor** — the customer chooses the destination and instructs the transfer as controller | *Log drains*, per company |
+| 12 | **Visma e-conomic A/S** (DK) | Accounting integration: invoice drafts from booking transferred to the customer's own e-conomic agreement (built 2026-09-05: connection + verification only; invoice transfer follows) | Today: nothing beyond the two API tokens and the agreement number. When invoicing lands: customer/debtor name and address, invoice lines (resource, dates, participant counts, add-on services, amounts), contact name on the booking | **EU (Denmark)** — Visma e-conomic's data centres are in the EU | None needed — EU/EEA. Note: the customer is *also* Visma's own customer (their accounting agreement) — Visma processes the invoice data primarily as the customer's processor; DCA's role is limited to the transfer | *Accounting integration*, per company, only after the customer has saved their own AgreementGrantToken |
+| 13 | **Sendinblue SAS** (trading as **Brevo**, FR) | Email — both legs, when selected: (a) outbound transactional mail (invitations, password resets, parcel/asset notifications, the sales calculator e-mail); (b) inbound receiver for HR file ingestion (Flow 0 email route) | (a) same as row 3, **plus open/click tracking**: Brevo rewrites every link through its own redirect domain (`*.sendibt3.com`) and embeds a tracking pixel, so it also records whether a named recipient opened a message and which links they followed. This **cannot be switched off for transactional mail** — Brevo offers only *anonymisation* of the events (see §4 open item 7); (b) same as row 4 | **EU (France)** — Brevo is a French controller/processor and states EU-only hosting | None needed — EU/EEA. Note the group has US and Indian entities, so **support access** from outside the EU is possible: get this in writing in the DPA and record it here (§4 open item 6) | (a) *email notifications, user invitations* while `email_provider = 'brevo'`; (b) *Data Transfer → email ingest* while `email_inbound_provider = 'brevo'` |
+| 14 | **TakTek GmbH** (trading as **AhaSend**, AT) | Outbound transactional email — **only while AhaSend is the selected outbound provider** (Operia → Integrationer → E-mail) | Same as row 3: recipient name + email address, parcel barcode/reference, company name; for the calculator e-mail the visitor's details. **No open/click tracking**: it is off by default and Operia additionally sets `ahasend-track-opens`/`-track-clicks` to false on every message, so no behavioural data is generated | **EU (Austria)** — Austrian company, European infrastructure per the vendor (**verify and record the hosting region — §4 open item 8**) | None needed — EU/EEA, subject to confirming the hosting region and executing the DPA (ahasend.com/dpa; the vendor states it has an appointed DPO) | *Email notifications, user invitations* while `email_provider = 'ahasend'` |
 
 ### Listed but not engaged
 
@@ -96,6 +99,7 @@ If yes, this file and [ropa.md](ropa.md) change in the same commit.
 | 2026-08-14 | Google LLC | DPF-certified, covering Google LLC and its wholly-owned US subsidiaries; SCCs additionally incorporated for Cloud/business services | policies.google.com/privacy/frameworks |
 | 2026-08-14 | Anthropic PBC | **No DPF claim on Anthropic's own pages.** The privacy policy names Art. 45 adequacy and Art. 46 SCCs; the commercial DPA includes SCCs automatically. Third-party summaries claiming DPF listing were contradictory and are not evidence. | anthropic.com/legal/privacy |
 | 2026-08-14 | Supabase, Inc. | Not DPF-listed; relies on SCCs (EU + UK addendum) in its DPA | supabase.com/legal/dpa |
+| 2026-09-08 | Brevo (Sendinblue SAS) | French company, Paris; states EU-only hosting for customer data, so **no transfer basis is needed for the processing itself**. Group entities exist in the US and India — support/administrative access from outside the EU is the open question, not the storage. | brevo.com/legal/privacypolicy, brevo.com/legal/notice |
 
 **Open items — do these before the register is handed to a customer:**
 
@@ -108,6 +112,21 @@ If yes, this file and [ropa.md](ropa.md) change in the same commit.
    Mistral, Anthropic, Google, HeiGIT, **Salesforce/Slack**) and file a copy; note the date here.
 4. **Write one short TIA** per US vendor (rows 1–4, 7, 8, 10) — `docs/gdpr/tia/`.
 5. **Move the AI keys to paid plans** before any customer reads real labels (§2).
+6. **Brevo:** execute the DPA and get the **support-access** position in writing (which group
+   entities may access customer data, and from where). Until then row 13 says "EU processing,
+   access to be confirmed" — do not claim a fully EU-contained mail path to a customer.
+7. **Brevo open/click tracking** (found 2026-09-08): it is on and cannot be disabled for
+   transactional mail, so Brevo records open and click behaviour for *password reset and
+   invitation* mail — data neither the register nor the privacy text previously claimed. Decide
+   one of: (a) enable Brevo's **tracking anonymisation** so events cannot be tied to a person,
+   (b) keep account/security mail on Resend and use Brevo only for notifications (the provider is
+   resolved centrally in `_shared/send-email.ts`, so a per-message-type split is a small change),
+   or (c) document the tracking here and in the privacy text. Until then, treat (a) as the
+   minimum. **Update 2026-09-08:** option (b) got easier — AhaSend (row 14) is EU-hosted *and*
+   leaves links alone, so it covers both concerns without keeping a US vendor for auth mail.
+8. **AhaSend:** confirm the hosting region in writing and execute the DPA; record the date and
+   the sub-processor list here. Row 14 currently rests on the vendor's own "European
+   infrastructure" statement, not on a verified fact.
 
 ---
 
@@ -122,7 +141,8 @@ by configuring:
 | Maps provider | **OpenRouteService** (DE) — the default |
 | SMS | GatewayAPI (DK) — the only option |
 | Slack notifications | **Not compatible** — Slack (US) is the only implementation. Leave the channel off (it is off by default and additionally gated on the `slack_notifications` add-on). Microsoft Teams, when built, keeps the messages inside the customer's own tenant and is the EU-friendly alternative. |
-| Email | **Not yet possible** — Resend (US) and Postmark (US) have no EU alternative wired in. This is the remaining gap for a true "EU-only mode"; an EU sending provider is the fix. |
+| Email (outbound) | **AhaSend** (TakTek GmbH, AT) — the preferred EU option since 2026-09-08: EU-hosted *and* no link rewriting, so password-reset links stay intact. **Brevo** (FR) is the alternative but forces click tracking (§4 open item 7). Resend (US) remains as a fallback and must then be left unselected. |
+| Email (inbound) | **Brevo** (FR) — select it as `email_inbound_provider` and move the MX records. Postmark (US) remains as a fallback. |
 | Log drain | The customer's own EU destination |
 
 The core platform (database, storage, auth, functions) is already in `eu-north-1`.

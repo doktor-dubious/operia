@@ -17,10 +17,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   AssetFlowFields,
+  BookingFlowFields,
   ChannelToggles,
+  DEFAULT_BOOKING_REMINDER_HOURS,
   DEFAULT_STATUS_TIME,
   ParcelFlowFields,
   QuietHoursField,
+  type BookingFlowValue,
   type ChannelToggleValue,
   type ParcelFlowValue,
   type ParcelNotifyValue,
@@ -43,9 +46,11 @@ type Values = {
   quietEnd: string
   parcelEnabled: boolean
   assetEnabled: boolean
+  bookingEnabled: boolean
   channels: ChannelToggleValue
   parcel: ParcelNotifyValue
   asset: ParcelFlowValue
+  booking: BookingFlowValue
 }
 
 function NotificationsPage() {
@@ -61,6 +66,7 @@ function NotificationsPage() {
     quietEnd: row.quiet_hours_end?.slice(0, 5) ?? '',
     parcelEnabled: row.parcel_notifications_enabled,
     assetEnabled: row.asset_notifications_enabled,
+    bookingEnabled: row.booking_notifications_enabled,
     // Platformens standard er kilden — der er intet at arve fra.
     channels: Object.fromEntries(
       NOTIFY_CHANNELS.map((c) => [c, (row as Record<string, unknown>)[CHANNEL_TOGGLE[c]] === true]),
@@ -82,6 +88,15 @@ function NotificationsPage() {
       reminder2: row.asset_reminder_2_days,
       maxReminders: row.asset_reminder_max,
     },
+    booking: {
+      createdEnabled: row.booking_created_enabled,
+      updatedEnabled: row.booking_updated_enabled,
+      cancelledEnabled: row.booking_cancelled_enabled,
+      reminderEnabled: row.booking_reminder_enabled,
+      reminderHours: row.booking_reminder_hours,
+      invoicedEnabled: row.booking_invoiced_enabled,
+      notifyBooker: row.booking_notify_booker,
+    },
   })
 
   useEffect(() => {
@@ -97,6 +112,7 @@ function NotificationsPage() {
     // Påmindelse 2 skal ligge mindst én dag efter påmindelse 1.
     const p = values.parcel
     const a = values.asset
+    const b = values.booking
     const pr1 = Math.max(1, Math.round(p.reminder1))
     const pr2 = Math.max(pr1 + 1, Math.round(p.reminder2))
     const ar1 = Math.max(1, Math.round(a.reminder1))
@@ -109,6 +125,7 @@ function NotificationsPage() {
         quiet_hours_end: values.quietEnd || null,
         parcel_notifications_enabled: values.parcelEnabled,
         asset_notifications_enabled: values.assetEnabled,
+        booking_notifications_enabled: values.bookingEnabled,
         ...Object.fromEntries(
           NOTIFY_CHANNELS.map((c) => [CHANNEL_TOGGLE[c], values.channels[c]]),
         ),
@@ -125,6 +142,16 @@ function NotificationsPage() {
         asset_reminder_max: Math.max(0, Math.round(a.maxReminders)),
         asset_reminder_1_enabled: a.r1Enabled,
         asset_reminder_2_enabled: a.r1Enabled && a.r2Enabled,
+        booking_created_enabled: b.createdEnabled,
+        booking_updated_enabled: b.updatedEnabled,
+        booking_cancelled_enabled: b.cancelledEnabled,
+        booking_reminder_enabled: b.reminderEnabled,
+        booking_reminder_hours: Math.min(
+          336,
+          Math.max(1, Math.round(b.reminderHours) || DEFAULT_BOOKING_REMINDER_HOURS),
+        ),
+        booking_invoiced_enabled: b.invoicedEnabled,
+        booking_notify_booker: b.notifyBooker,
       })
       .eq('id', true)
       .select('id')
@@ -180,6 +207,14 @@ function NotificationsPage() {
                   />
                   {t('notificationsPage.enableAsset')}
                 </FieldLabel>
+                <FieldLabel htmlFor="enable-booking" className="px-2.5 py-1.5 font-normal">
+                  <Checkbox
+                    id="enable-booking"
+                    checked={values.bookingEnabled}
+                    onCheckedChange={(v) => setValues({ ...values, bookingEnabled: v === true })}
+                  />
+                  {t('notificationsPage.enableBooking')}
+                </FieldLabel>
               </div>
             </Field>
 
@@ -211,6 +246,9 @@ function NotificationsPage() {
                   <SelectItem value="asset_reminder">
                     {t('notificationsPage.typeAssetReminder')}
                   </SelectItem>
+                  <SelectItem value="booking_flow">
+                    {t('notificationsPage.typeBookingFlow')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -235,6 +273,14 @@ function NotificationsPage() {
                   }
                 />
               </>
+            )}
+            {notifType === 'booking_flow' && (
+              <BookingFlowFields
+                value={values.booking}
+                onChange={(patch) =>
+                  setValues({ ...values, booking: { ...values.booking, ...patch } })
+                }
+              />
             )}
           </section>
         </div>

@@ -23,6 +23,7 @@ import { useSession } from '@/hooks/use-session'
 import { configureNav, modernMenuNavGroups, operiaNav } from '@/lib/nav'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useHiddenSidebarModules } from '@/hooks/use-home-config'
 import { supabase } from '@/lib/supabase'
 
 // Brugermenu struktureret som Supabase Studios (uden "Feature previews" og
@@ -61,6 +62,9 @@ export function UserNavDropdownContent({
   const { session } = useSession()
   const { theme, setTheme } = useTheme()
   const { data: access } = useAccess()
+  // Fravalgte sidemenu-moduler: deres punkter står ikke i skinnen og skal
+  // derfor blive stående her i menutræet.
+  const hiddenModules = useHiddenSidebarModules()
   const { companyId } = useCompanyContext()
   // Konfiguration: managers for egen virksomhed; platform-admins når en kunde
   // er valgt. Operia: kun platform-admins. Samme gating som den klassiske menu.
@@ -94,7 +98,7 @@ export function UserNavDropdownContent({
           {/* Punkterne fra sidemenuens store knapper er allerede filtreret fra
               i modernMenuNavGroups — pakkegruppen står derfor tilbage med
               oversigt/rapporter/statistik. */}
-          {modernMenuNavGroups(access).map((group) => {
+          {modernMenuNavGroups(access, hiddenModules ?? undefined).map((group) => {
             const items = group.items.filter((item) => item.href !== '/')
             if (!items.length) return null
             return (

@@ -521,7 +521,17 @@ export type HomeDesign = {
   logoEnabled: boolean
   heroUrl: string
   heroEnabled: boolean
+  // Moduler der er slået FRA i den moderne sidemenu (se SIDEBAR_MODULES).
+  // Gemmes som fravalg — så et nyt modul dukker op af sig selv hos kunder,
+  // der har gemt deres design før modulet fandtes.
+  sidebarHidden: string[]
 }
+
+// Modulerne der kan slås til/fra i den moderne sidemenus store knapper
+// (Home-design → Sidemenu). Nøglerne er produktnøgler fra PRODUCT_TILES;
+// hvilke menupunkter hvert modul dækker afgøres i lib/nav.ts. Kun moduler
+// med egne knapper i skinnen står her — resten af produkterne har endnu ingen.
+export const SIDEBAR_MODULES = ['parcels', 'assets', 'booking', 'routes'] as const
 
 export const MIN_COLS = 2
 export const MAX_COLS = 8
@@ -551,6 +561,7 @@ export const DEFAULT_HOME_DESIGN: HomeDesign = {
   logoEnabled: false,
   heroUrl: '',
   heroEnabled: false,
+  sidebarHidden: [],
 }
 
 const clampInt = (n: unknown, min: number, max: number, fallback: number) => {
@@ -586,8 +597,29 @@ export function normalizeDesign(raw: unknown): HomeDesign {
     logoEnabled: bool(d.logoEnabled, DEFAULT_HOME_DESIGN.logoEnabled),
     heroUrl: str(d.heroUrl),
     heroEnabled: bool(d.heroEnabled, DEFAULT_HOME_DESIGN.heroEnabled),
+    sidebarHidden: normalizeSidebarHidden(d.sidebarHidden),
   }
 }
+
+// Fravalgte sidemenu-moduler: kun kendte nøgler, altid i SIDEBAR_MODULES'
+// rækkefølge (og uden gengangere), så to lister kan sammenlignes direkte.
+export function normalizeSidebarHidden(raw: unknown): string[] {
+  const list = Array.isArray(raw) ? raw : []
+  return SIDEBAR_MODULES.filter((m) => list.includes(m))
+}
+
+// Vises modulet i den moderne sidemenu? Alt er med, indtil det fravælges.
+export const sidebarModuleShown = (d: HomeDesign, product: string): boolean =>
+  !d.sidebarHidden.includes(product)
+
+// Slå ét modul til/fra og bevar den normaliserede rækkefølge.
+export const toggleSidebarModule = (hidden: string[], product: string, shown: boolean): string[] =>
+  SIDEBAR_MODULES.filter((m) => (m === product ? !shown : hidden.includes(m)))
+
+// Ugemt-vagten sammenligner designet felt for felt med === — det holder ikke
+// for listen, så den får sin egen sammenligning (rækkefølgen er normaliseret).
+export const sameSidebarHidden = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((m, i) => m === b[i])
 
 // Sidens baggrundsbillede, hvis det er slået til og udfyldt (ellers null).
 export const homeBackgroundUrl = (d: HomeDesign): string | null =>

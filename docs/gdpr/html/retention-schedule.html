@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Retention Schedule</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Retention Schedule</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#operia-retention-schedule" id="toc-operia-retention-schedule">Operia — retention schedule</a>
+<ul>
+<li><a href="#how-a-window-is-resolved" id="toc-how-a-window-is-resolved">How a window is resolved</a></li>
+<li><a href="#the-nine-categories" id="toc-the-nine-categories">The nine
+categories</a></li>
+<li><a href="#deliberately-without-a-window" id="toc-deliberately-without-a-window">Deliberately without a
+window</a></li>
+<li><a href="#suggested-starting-values" id="toc-suggested-starting-values">Suggested starting values</a></li>
+<li><a href="#open-items" id="toc-open-items">Open items</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="operia-retention-schedule">Operia — retention schedule</h1>
+<p>Data category → where it lives → who sets the window → what happens
+when it expires. This is Annex C.4 of the data processing agreement and
+the reference behind <strong>Konfigurér → Persondata →
+Opbevaring</strong>.</p>
+<p><strong>Last reviewed:</strong> 2026-08-14 · <strong>Owner:</strong>
+DCA Logic privacy owner. Mechanism:
+<code>20260814140000_retention_per_company.sql</code>
+(<code>run_retention_purge()</code>, daily 03:40 UTC) and the
+<code>parcel-files-cleanup</code> edge function.</p>
+<h2 id="how-a-window-is-resolved">How a window is resolved</h2>
+<pre><code>customer&#39;s own value  (company_retention.&lt;category&gt;_days)
+        ↓ if empty
+platform default      (platform_settings.&lt;category&gt;_retention_days)
+        ↓ if empty
+kept until further notice</code></pre>
+<p>The customer is the controller, so the customer’s value always wins.
+Both empty means nothing is deleted — the default state, so activating
+retention is always a deliberate act.</p>
+<p>Where each level is set: the customer’s own under <strong>Konfigurér
+→ Persondata → Opbevaring</strong>, DCA’s defaults under <strong>Operia
+→ Opbevaring</strong>. A change to a platform default reaches every
+customer who has not set that category themselves, at the next nightly
+run. Shortening a window deletes everything already older on the next
+nightly run, and deletion is irreversible.</p>
+<p>Every purge writes <code>retention.purged</code> (or
+<code>retention.anonymized</code>) to the audit log with the table, the
+row count and the window used. Every change to a window writes
+<code>retention.company_changed</code> with the before/after values.</p>
+<h2 id="the-nine-categories">The nine categories</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Covers</th>
+<th>Expiry action</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>parcels</strong></td>
+<td><code>parcels</code> + their <code>parcel_events</code></td>
+<td>Delete</td>
+<td><strong>Only closed parcels</strong> (delivered / rejected /
+returned / removed), measured from <code>delivered_at</code>,
+<code>removed_at</code> or last change. An open or disputed parcel is
+never deleted by a window. Deleting a parcel takes its event history
+with it — that is the <em>only</em> way events leave the system</td>
+</tr>
+<tr>
+<td><strong>parcel_files</strong></td>
+<td>Condition photos, handover signatures, parcel documents in the
+private buckets</td>
+<td>Delete the object</td>
+<td>Same “closed parcels only” rule. Orphaned files (parcel or company
+gone) are removed regardless of window</td>
+</tr>
+<tr>
+<td><strong>notifications</strong></td>
+<td><code>parcel_notifications</code>,
+<code>asset_loan_notifications</code></td>
+<td>Delete</td>
+<td>The recipient address is cleared much earlier — the moment the
+parcel closes or the asset is returned — so an expired window removes
+only the remaining metadata (channel, status, timestamp)</td>
+</tr>
+<tr>
+<td><strong>audit</strong></td>
+<td><code>audit_log</code> rows for the company</td>
+<td>Delete</td>
+<td>The table is UPDATE/DELETE-blocked for everyone; the age purge is
+the only way rows can ever leave. This is therefore the only lever
+against the pre-2026-07-20 rows that still contain names and unmasked
+recipients. Platform-level rows (<code>company_id is null</code>) follow
+the platform window only</td>
+</tr>
+<tr>
+<td><strong>imports</strong></td>
+<td><code>import_runs</code>, <code>inbound_files</code></td>
+<td>Delete</td>
+<td>The CSV itself is deleted right after a successful import, and the
+whole <code>imports</code> bucket is purged after 30 days
+regardless</td>
+</tr>
+<tr>
+<td><strong>asset_loans</strong></td>
+<td>Returned asset loans</td>
+<td>Delete</td>
+<td>Borrower name, address, e-mail and phone are already cleared on
+return; the window removes the remaining history. Active loans are
+untouched</td>
+</tr>
+<tr>
+<td><strong>employees</strong></td>
+<td>Inactive employees</td>
+<td><strong>Anonymize, never delete</strong></td>
+<td>The row must survive — parcel history references it. Only employees
+with no open parcels; already-anonymized rows are skipped. Measured from
+<code>retired_at</code>, else last change</td>
+</tr>
+<tr>
+<td><strong>routes</strong></td>
+<td>Saved route plans (addresses + coordinates)</td>
+<td>Delete</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>bookings</strong></td>
+<td>Terminal bookings (<code>bookings</code> + their
+<code>booking_events</code>)</td>
+<td>Delete</td>
+<td>Held bookings measured from <code>ends_at</code>, cancelled ones
+from <code>cancelled_at</code>. Future and active bookings are never
+deleted by a window</td>
+</tr>
+</tbody>
+</table>
+<h2 id="deliberately-without-a-window">Deliberately without a
+window</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>What</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>parcel_events</code> on its own</td>
+<td>It is the chain of custody. Its lifetime follows the parcel, and an
+erasure request is met by <strong>anonymizing the person</strong> the
+event references, not by rewriting history</td>
+</tr>
+<tr>
+<td><code>booking_events</code> on its own</td>
+<td>Same reasoning: the events follow the booking and leave the system
+only with it (the <code>bookings</code> purge deletes events first)</td>
+</tr>
+<tr>
+<td>Companies, locations, handling classes, carriers</td>
+<td>Configuration, not personal data</td>
+</tr>
+<tr>
+<td>The feedback inbox</td>
+<td>DCA is controller there; screenshots are deleted with the feedback
+row and orphans swept daily</td>
+</tr>
+<tr>
+<td>Sales leads (<code>sales_leads</code>, public savings
+calculator)</td>
+<td>DCA is controller there; a <strong>fixed 12-month window</strong>
+applies instead — the <code>sales-leads-purge</code> pg_cron job (02:20)
+deletes the whole row incl. IP/user agent. Not customer-configurable
+because no customer is involved</td>
+</tr>
+<tr>
+<td>Backups</td>
+<td>Expire with the platform’s backup cycle. A deletion in the live
+system reaches backup when that backup expires — disclosed to
+controllers in DPA Bilag C.4</td>
+</tr>
+<tr>
+<td>Copies already sent to a customer’s log drain</td>
+<td>Outside DCA’s reach by design, which is why <code>audit_log</code>
+is minimized at the point of writing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="suggested-starting-values">Suggested starting values</h2>
+<p>Not recommendations of law — the controller decides. These are
+defensible starting points for an internal parcel operation, to be
+adjusted to the customer’s own documentation needs:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Category</th>
+<th>Suggestion</th>
+<th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>parcels</td>
+<td>12–24 months</td>
+<td>Long enough to settle a dispute about a delivery; well short of
+“forever”</td>
+</tr>
+<tr>
+<td>parcel_files</td>
+<td>6–12 months</td>
+<td>Photos and signatures are the heaviest personal data; they age out
+faster than the parcel record</td>
+</tr>
+<tr>
+<td>notifications</td>
+<td>6–12 months</td>
+<td>Operational troubleshooting only, and the address is already
+gone</td>
+</tr>
+<tr>
+<td>audit</td>
+<td>12–24 months</td>
+<td>NIS2 traceability vs. minimization. <strong>Note:</strong> a window
+here is what finally removes the legacy rows containing names</td>
+</tr>
+<tr>
+<td>imports</td>
+<td>6–12 months</td>
+<td>Import evidence for HR reconciliation</td>
+</tr>
+<tr>
+<td>asset_loans</td>
+<td>12–24 months</td>
+<td>Matches the parcel record</td>
+</tr>
+<tr>
+<td>employees</td>
+<td>6–12 months after deactivation</td>
+<td>The retirement sweep already anonymizes automatically once the last
+parcel closes; this catches employees who never had one</td>
+</tr>
+<tr>
+<td>routes</td>
+<td>6–12 months</td>
+<td>Planning data, rarely needed once driven</td>
+</tr>
+<tr>
+<td>bookings</td>
+<td>12–24 months</td>
+<td>Room/vehicle usage history is occasionally needed for disputes and
+utilization questions; the free-text purpose ages out with it</td>
+</tr>
+</tbody>
+</table>
+<h2 id="open-items">Open items</h2>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Decide and set platform defaults
+(currently all empty = keep forever).</label></li>
+<li><label><input type="checkbox"></input>Decide <code>audit</code>
+specifically — it is the only route to the legacy rows with
+names.</label></li>
+<li><label><input type="checkbox"></input>Add the agreed values per customer
+as part of onboarding, and record them in the DPA annex.</label></li>
+</ul>
+</body>
+</html>

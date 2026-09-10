@@ -23,6 +23,33 @@ The calculation assumptions live in `var A = {…}` in `index.html` **and** in
 `supabase/functions/sales-lead/index.ts` — change both together.
 (225 effective workdays = 45 workweeks; loss factor 0.85 on lost parcels/assets.)
 
+## Juridiske sider (`legal/`)
+
+Faste URL'er, som integrationspartnere kan henvise til — e-conomic kræver alle tre
+ved registrering af en app:
+
+| Side | URL |
+|---|---|
+| Slutbrugervilkår (EULA) | `/legal/eula.html` |
+| Privatlivspolitik | `/legal/privacy.html` |
+| Databehandleraftale | `/legal/dpa.html` |
+
+`eula.html` og `privacy.html` skrives i hånden. **`dpa.html` genereres** fra
+`docs/gdpr/dpa/bilag-da.md`, så den offentlige aftale aldrig driver fra repoets tekst:
+
+```bash
+node sales-site/legal/build-dpa.mjs   # kør efter enhver ændring af bilag-da.md
+```
+
+Generatoren oversætter markdown uden afhængigheder og erstatter interne
+dokumenthenvisninger (`../ropa.md` m.fl.) med læsbare navne — nye dokumenter
+tilføjes i `DOC_NAMES`. Selve bestemmelserne (Datatilsynets standard) linkes
+til; kun bilagene gengives.
+
+Alle tre sider har gule pladsholdere (`class="fill"`) for DCA Logics
+stamdata — juridisk navn, CVR, adresse, e-mail, værneting. **De skal udfyldes
+før siderne bruges over for kunder.**
+
 ## Deploy
 
 ```bash

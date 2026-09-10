@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Incident Response</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Incident Response</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#operia-incident-response-and-breach-notification" id="toc-operia-incident-response-and-breach-notification">Operia —
+incident response and breach notification</a>
+<ul>
+<li><a href="#first-60-minutes-the-short-version" id="toc-first-60-minutes-the-short-version">1. First 60 minutes — the
+short version</a></li>
+<li><a href="#what-counts-as-an-incident" id="toc-what-counts-as-an-incident">2. What counts as an
+incident</a></li>
+<li><a href="#severity-ladder" id="toc-severity-ladder">3. Severity
+ladder</a></li>
+<li><a href="#roles" id="toc-roles">4. Roles</a></li>
+<li><a href="#the-clocks" id="toc-the-clocks">5. The clocks</a>
+<ul>
+<li><a href="#to-the-customer-always" id="toc-to-the-customer-always">5.1 To the customer (always)</a></li>
+<li><a href="#to-datatilsynet" id="toc-to-datatilsynet">5.2 To
+Datatilsynet</a></li>
+<li><a href="#nis2" id="toc-nis2">5.3 NIS2</a></li>
+</ul></li>
+<li><a href="#evidence" id="toc-evidence">6. Evidence</a></li>
+<li><a href="#detection-who-notices" id="toc-detection-who-notices">7.
+Detection — who notices</a></li>
+<li><a href="#recovery" id="toc-recovery">8. Recovery</a></li>
+<li><a href="#post-mortem" id="toc-post-mortem">9. Post-mortem</a></li>
+<li><a href="#testing-the-procedure" id="toc-testing-the-procedure">10.
+Testing the procedure</a></li>
+<li><a href="#contacts" id="toc-contacts">11. Contacts</a></li>
+<li><a href="#open-items" id="toc-open-items">12. Open items</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="operia-incident-response-and-breach-notification">Operia —
+incident response and breach notification</h1>
+<p>What DCA Logic does when something goes wrong with personal data or
+the security of the service. This procedure discharges GDPR Art. 33(2)
+(processor → controller) and Art. 33(5) (documentation), and carries the
+NIS2 timeline for the cases where it applies.</p>
+<p><strong>Last reviewed:</strong> 2026-08-14 · <strong>Owner:</strong>
+DCA Logic privacy owner ⟨<em>name to be filled in</em>⟩. Referenced by
+<a href="dpa/bilag-da.md"><code>dpa/bilag-da.md</code></a> D.2 (the
+24-hour commitment) and <a href="toms.md"><code>toms.md</code></a>
+§10.</p>
+<blockquote>
+<p><strong>Read this before you need it.</strong> Under a live incident
+nobody reads a document for the first time. The one-page version is §1
+and §2; the rest is detail.</p>
+</blockquote>
+<hr />
+<h2 id="first-60-minutes-the-short-version">1. First 60 minutes — the
+short version</h2>
+<ol type="1">
+<li><strong>Write down the time</strong> you became aware, and what made
+you aware. That timestamp starts every clock in this document.</li>
+<li><strong>Contain, don’t clean.</strong> Stop the bleeding (revoke a
+key, disable an account, take a function offline). Do
+<strong>not</strong> delete logs, rotate away evidence, or “tidy up” —
+see §6.</li>
+<li><strong>Declare.</strong> Tell the privacy owner. One person owns
+the incident from here (§4).</li>
+<li><strong>Classify</strong> (§3). If personal data may have been
+exposed, altered or lost, it is a <em>personal data breach</em> and §5’s
+clocks are running.</li>
+<li><strong>Open an entry</strong> in <a href="breach-register.md"><code>breach-register.md</code></a> — even if
+it later turns out to be nothing. Art. 33(5) requires the ones you
+<em>didn’t</em> report to be documented too.</li>
+<li><strong>Notify affected customers within 24 hours</strong> (§5). Do
+not wait for a complete picture; send what you know and supplement.</li>
+</ol>
+<hr />
+<h2 id="what-counts-as-an-incident">2. What counts as an incident</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Type</th>
+<th>Examples in Operia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Personal data breach</strong> (Art. 4(12)) — accidental or
+unlawful destruction, loss, alteration, unauthorised disclosure of, or
+access to personal data</td>
+<td>Tenant isolation failure (one customer’s data visible to another),
+leaked service-role key, stolen handheld with an active session, HR CSV
+delivered to the wrong company’s folder, notification sent to the wrong
+recipient, an employee export mailed externally, ransomware on the
+database</td>
+</tr>
+<tr>
+<td><strong>Security incident, no personal data</strong></td>
+<td>Denial of service, a vulnerability found in a dependency, a failed
+intrusion attempt, gateway compromise with nothing but public data</td>
+</tr>
+<tr>
+<td><strong>Availability incident</strong></td>
+<td>Supabase outage, expired certificate, failed deploy — becomes a
+<em>breach</em> if data was lost, not merely unreachable</td>
+</tr>
+<tr>
+<td><strong>Sub-processor incident</strong></td>
+<td>A vendor in <a href="subprocessors.md"><code>subprocessors.md</code></a> reports a
+breach affecting our data</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>near miss</strong> (an alert that turned out to be benign,
+a bug found before exploitation) is not a breach but is worth a register
+line — patterns show up over time.</p>
+<h2 id="severity-ladder">3. Severity ladder</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Level</th>
+<th>Definition</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S1 — Critical</strong></td>
+<td>Confirmed unauthorised access to, or loss of, personal data for one
+or more customers. Tenant isolation failure. Credential compromise with
+production reach.</td>
+<td>Immediate containment; customer notification within 24 h; privacy
+owner leads; post-mortem mandatory</td>
+</tr>
+<tr>
+<td><strong>S2 — High</strong></td>
+<td>Probable but unconfirmed exposure; a single data subject’s data
+disclosed to the wrong recipient; sub-processor reports a breach
+touching our data</td>
+<td>Same clocks as S1 until ruled out — you may downgrade <em>after</em>
+investigation, never before</td>
+</tr>
+<tr>
+<td><strong>S3 — Medium</strong></td>
+<td>Security weakness with no evidence of exposure (vulnerable
+dependency, misconfiguration found internally, permission too wide)</td>
+<td>Fix on a stated deadline; register entry; notify customers only if
+the DPA or their contract requires it</td>
+</tr>
+<tr>
+<td><strong>S4 — Low</strong></td>
+<td>Near miss, benign alert, availability blip with no data effect</td>
+<td>Register entry; no notification</td>
+</tr>
+</tbody>
+</table>
+<p><strong>When in doubt, treat it as one level higher.</strong>
+Downgrading after investigation is cheap; a late notification is
+not.</p>
+<h2 id="roles">4. Roles</h2>
+<p>At current scale one person holds several of these — say so
+explicitly rather than pretending there’s a team.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>Responsibility</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Incident lead</strong></td>
+<td>Owns the incident end to end, decides severity, decides when it is
+closed</td>
+<td>Privacy owner ⟨<em>name</em>⟩</td>
+</tr>
+<tr>
+<td><strong>Technical lead</strong></td>
+<td>Containment, forensics, fix, recovery</td>
+<td>⟨<em>name</em>⟩</td>
+</tr>
+<tr>
+<td><strong>Communications</strong></td>
+<td>Customer notifications, the register, authority contact</td>
+<td>Incident lead unless delegated</td>
+</tr>
+<tr>
+<td><strong>Deputy</strong></td>
+<td>Takes over when the lead is unavailable — a holiday must not stop
+the 24-hour clock</td>
+<td>⟨<em>name</em>⟩</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-clocks">5. The clocks</h2>
+<p>Three deadlines run from different starting points. Getting these
+confused is the classic failure.</p>
+<pre><code>   You become aware
+         │
+         ├──  24 h  ──▶  DCA notifies the affected CUSTOMER (contractual, DPA Bilag D.2)
+         │                └── their 72 h to Datatilsynet starts HERE, from our message
+         │
+         ├──  24 h  ──▶  NIS2 early warning to the CSIRT      (only if in scope, §5.3)
+         ├──  72 h  ──▶  NIS2 incident notification
+         └──  1 md  ──▶  NIS2 final report</code></pre>
+<h3 id="to-the-customer-always">5.1 To the customer (always)</h3>
+<p>DCA is a <strong>processor</strong>. The law says “without undue
+delay”; the DPA promises <strong>within 24 hours</strong> of becoming
+aware. Send to the customer’s registered <strong>security
+contact</strong> (<code>companies.security_contact_email</code>,
+maintained by the customer under Konfigurér → Databeskyttelse); if none
+is registered, use the company’s general contact <em>and</em> note in
+the register that the contact was missing.</p>
+<p>The first message does not need to be complete. It must contain what
+is known:</p>
+<blockquote>
+<p><strong>Subject: Security notification — Operia — [customer name] —
+[date]</strong></p>
+<ol type="1">
+<li><strong>What happened</strong>, in plain language, and when we
+became aware.</li>
+<li><strong>What data is involved</strong> — categories of personal data
+and categories of data subjects, and the approximate number if
+known.</li>
+<li><strong>Likely consequences</strong> for the data subjects.</li>
+<li><strong>What we have done</strong> — containment already
+applied.</li>
+<li><strong>What we recommend you do</strong>, including that your own
+72-hour deadline towards Datatilsynet runs from this message.</li>
+<li><strong>Contact</strong> for follow-up, and when the next update
+will come.</li>
+</ol>
+</blockquote>
+<p>Supplement as facts arrive. Never wait for a complete picture to send
+the first message.</p>
+<h3 id="to-datatilsynet">5.2 To Datatilsynet</h3>
+<p><strong>The controller notifies, not DCA</strong> — the customer
+files, within 72 hours. DCA assists with the technical description. DCA
+notifies Datatilsynet directly only for breaches of data where
+<strong>DCA itself is the controller</strong> (§ROPA 13–15:
+platform-admin accounts, the feedback inbox, support data).</p>
+<h3 id="nis2">5.3 NIS2</h3>
+<p>If DCA Logic falls in scope as a managed service provider — verify
+against the size thresholds rather than assuming — a significant
+incident carries an early warning within 24 hours, a full notification
+within 72 hours, and a final report within one month, to the national
+CSIRT. Many customers <em>are</em> in scope regardless of DCA’s own
+status, and their obligations reach DCA through the contract.
+<strong>Open item: confirm DCA’s own NIS2 status and record the answer
+here.</strong></p>
+<h2 id="evidence">6. Evidence</h2>
+<p>Containment and evidence pull in opposite directions; the rule is
+<em>contain, then preserve</em>.</p>
+<ul>
+<li><strong>Do not delete audit rows.</strong> You can’t anyway —
+<code>audit_log</code> and <code>parcel_events</code> are
+UPDATE/DELETE-blocked. That immutability is exactly why they are the
+primary evidence.</li>
+<li><strong>Export the relevant window</strong> of
+<code>audit_log</code> before it can age out of a retention purge, and
+attach it to the incident file.</li>
+<li><strong>Preserve</strong> edge-function logs (short-lived — pull
+them early), Supabase dashboard logs, gateway container logs, and any
+customer report verbatim.</li>
+<li><strong>Rotate credentials after capturing</strong> what the old
+ones did, not before.</li>
+<li>Record the <strong>timeline</strong> as you go: time, actor, action.
+Reconstructing it afterwards is how incidents get misreported.</li>
+</ul>
+<h2 id="detection-who-notices">7. Detection — who notices</h2>
+<p>An incident procedure with no detection duty is a document, not a
+capability. Current reality, stated plainly:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>audit_log</code> records everything, immutably, with severity
+levels (<code>audit_level()</code>)</td>
+<td><strong>Built</strong></td>
+</tr>
+<tr>
+<td>Log drains stream events to a customer’s SIEM</td>
+<td><strong>Built</strong> (per customer, opt-in)</td>
+</tr>
+<tr>
+<td>Error-level events (spoof rejections, impersonations, mass
+anonymization, parcel removals, AI rejections) are visible on Operia →
+Logs</td>
+<td><strong>Built</strong> — but nobody is alerted</td>
+</tr>
+<tr>
+<td>Supabase platform alerts</td>
+<td>Available on the project; recipients must be confirmed</td>
+</tr>
+<tr>
+<td>Customer reports</td>
+<td>The most likely first signal today</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The duty, until alerting exists:</strong> the privacy owner
+reviews Operia → Logs filtered to error and warning level
+<strong>weekly</strong>, and after every deploy that touches auth, RLS
+or storage policies. Reviews are noted in <a href="breach-register.md"><code>breach-register.md</code></a> even when
+nothing is found — an unbroken review record is itself the evidence.</p>
+<p><strong>Recommended next step (not yet built):</strong> dispatch
+error-level <code>audit_log</code> events to a DCA channel (e-mail or
+webhook) the same way log drains already dispatch to customers — the
+taxonomy and the delivery mechanism both exist, so this is a small job,
+not a new system.</p>
+<h2 id="recovery">8. Recovery</h2>
+<ul>
+<li>Data loss → <a href="../disaster-recovery.md"><code>../disaster-recovery.md</code></a>.
+Git is the source of truth for schema, functions and configuration; the
+gaps (secrets, storage objects, dashboard-only settings) are listed
+there and are the real recovery risk.</li>
+<li>After recovery, verify <strong>tenant isolation</strong> explicitly
+before reopening access — a restore is exactly when RLS policies get
+lost.</li>
+<li>Confirm the retention purges resumed and that nothing was
+resurrected that had been erased.</li>
+</ul>
+<h2 id="post-mortem">9. Post-mortem</h2>
+<p>Mandatory for S1 and S2, within <strong>10 working days</strong> of
+closure. Blameless, written, and filed next to the register entry:</p>
+<ol type="1">
+<li>Timeline — detection to closure.</li>
+<li>Root cause, and why existing controls didn’t prevent it.</li>
+<li>What was affected, and how that was established.</li>
+<li>What was done, and what was communicated to whom, when.</li>
+<li>Actions with owners and dates — and a line in the register when each
+is done.</li>
+<li>Whether this changes <code>toms.md</code>,
+<code>subprocessors.md</code> or the compliance map.</li>
+</ol>
+<h2 id="testing-the-procedure">10. Testing the procedure</h2>
+<p>A tabletop exercise <strong>once a year</strong>, and after any
+material change to the architecture: pick a scenario from §2, walk it
+through with the clock running, and record the date and the learnings in
+the register. An untested procedure is an assumption.</p>
+<p><strong>Scenario suggestions:</strong> (a) a manager reports seeing
+another company’s parcels; (b) the service-role key appears in a public
+paste; (c) Resend reports a breach affecting delivery logs; (d) a
+handheld is stolen from a reception desk with an active session.</p>
+<h2 id="contacts">11. Contacts</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Who</th>
+<th>Contact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DCA incident lead</td>
+<td>⟨<em>name, e-mail, phone</em>⟩</td>
+</tr>
+<tr>
+<td>DCA deputy</td>
+<td>⟨<em>name, e-mail, phone</em>⟩</td>
+</tr>
+<tr>
+<td>Customer security contacts</td>
+<td>In-product per customer
+(<code>companies.security_contact_*</code>)</td>
+</tr>
+<tr>
+<td>Datatilsynet</td>
+<td>dt@datatilsynet.dk · +45 33 19 32 00 · breach form at
+datatilsynet.dk</td>
+</tr>
+<tr>
+<td>National CSIRT (NIS2)</td>
+<td>⟨<em>confirm the right sector CSIRT and record it here</em>⟩</td>
+</tr>
+<tr>
+<td>Supabase support</td>
+<td>Project <code>rjlxmdfmktucunxehtqz</code> — dashboard support
+channel</td>
+</tr>
+<tr>
+<td>Sub-processor contacts</td>
+<td>Per vendor in <a href="subprocessors.md"><code>subprocessors.md</code></a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="open-items">12. Open items</h2>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Name the privacy owner, technical
+lead and deputy (§4, §11).</label></li>
+<li><label><input type="checkbox"></input>Confirm whether DCA Logic is itself
+in NIS2 scope, and which CSIRT applies (§5.3).</label></li>
+<li><label><input type="checkbox"></input>Confirm who receives Supabase
+platform alerts (§7).</label></li>
+<li><label><input type="checkbox"></input>Build error-level alerting to a DCA
+channel (§7).</label></li>
+<li><label><input type="checkbox"></input>Run the first tabletop exercise and
+record it (§10).</label></li>
+</ul>
+</body>
+</html>

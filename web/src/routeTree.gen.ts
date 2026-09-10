@@ -89,6 +89,7 @@ import { Route as AppConfigureDataTransferRouteImport } from './routes/_app/conf
 import { Route as AppConfigureBookingRouteImport } from './routes/_app/configure.booking'
 import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure.billing'
 import { Route as AppConfigureAssetDataRouteImport } from './routes/_app/configure.asset-data'
+import { Route as AppBookingServicesRouteImport } from './routes/_app/booking.services'
 import { Route as AppBookingResourcesRouteImport } from './routes/_app/booking.resources'
 import { Route as AppBookingCategoriesRouteImport } from './routes/_app/booking.categories'
 import { Route as AppBookingCalendarRouteImport } from './routes/_app/booking.calendar'
@@ -517,6 +518,11 @@ const AppConfigureAssetDataRoute = AppConfigureAssetDataRouteImport.update({
   path: '/asset-data',
   getParentRoute: () => AppConfigureRoute,
 } as any)
+const AppBookingServicesRoute = AppBookingServicesRouteImport.update({
+  id: '/booking/services',
+  path: '/booking/services',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBookingResourcesRoute = AppBookingResourcesRouteImport.update({
   id: '/booking/resources',
   path: '/booking/resources',
@@ -654,6 +660,7 @@ export interface FileRoutesByFullPath {
   '/booking/calendar': typeof AppBookingCalendarRoute
   '/booking/categories': typeof AppBookingCategoriesRoute
   '/booking/resources': typeof AppBookingResourcesRoute
+  '/booking/services': typeof AppBookingServicesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/booking': typeof AppConfigureBookingRoute
@@ -755,6 +762,7 @@ export interface FileRoutesByTo {
   '/booking/calendar': typeof AppBookingCalendarRoute
   '/booking/categories': typeof AppBookingCategoriesRoute
   '/booking/resources': typeof AppBookingResourcesRoute
+  '/booking/services': typeof AppBookingServicesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/configure/billing': typeof AppConfigureBillingRoute
   '/configure/booking': typeof AppConfigureBookingRoute
@@ -859,6 +867,7 @@ export interface FileRoutesById {
   '/_app/booking/calendar': typeof AppBookingCalendarRoute
   '/_app/booking/categories': typeof AppBookingCategoriesRoute
   '/_app/booking/resources': typeof AppBookingResourcesRoute
+  '/_app/booking/services': typeof AppBookingServicesRoute
   '/_app/configure/asset-data': typeof AppConfigureAssetDataRoute
   '/_app/configure/billing': typeof AppConfigureBillingRoute
   '/_app/configure/booking': typeof AppConfigureBookingRoute
@@ -963,6 +972,7 @@ export interface FileRouteTypes {
     | '/booking/calendar'
     | '/booking/categories'
     | '/booking/resources'
+    | '/booking/services'
     | '/configure/asset-data'
     | '/configure/billing'
     | '/configure/booking'
@@ -1064,6 +1074,7 @@ export interface FileRouteTypes {
     | '/booking/calendar'
     | '/booking/categories'
     | '/booking/resources'
+    | '/booking/services'
     | '/configure/asset-data'
     | '/configure/billing'
     | '/configure/booking'
@@ -1167,6 +1178,7 @@ export interface FileRouteTypes {
     | '/_app/booking/calendar'
     | '/_app/booking/categories'
     | '/_app/booking/resources'
+    | '/_app/booking/services'
     | '/_app/configure/asset-data'
     | '/_app/configure/billing'
     | '/_app/configure/booking'
@@ -1810,6 +1822,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppConfigureAssetDataRouteImport
       parentRoute: typeof AppConfigureRoute
     }
+    '/_app/booking/services': {
+      id: '/_app/booking/services'
+      path: '/booking/services'
+      fullPath: '/booking/services'
+      preLoaderRoute: typeof AppBookingServicesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/booking/resources': {
       id: '/_app/booking/resources'
       path: '/booking/resources'
@@ -2092,6 +2111,7 @@ interface AppRouteChildren {
   AppBookingCalendarRoute: typeof AppBookingCalendarRoute
   AppBookingCategoriesRoute: typeof AppBookingCategoriesRoute
   AppBookingResourcesRoute: typeof AppBookingResourcesRoute
+  AppBookingServicesRoute: typeof AppBookingServicesRoute
   AppImportConfigRoute: typeof AppImportConfigRoute
   AppImportExportRoute: typeof AppImportExportRoute
   AppImportLocalRoute: typeof AppImportLocalRoute
@@ -2149,6 +2169,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBookingCalendarRoute: AppBookingCalendarRoute,
   AppBookingCategoriesRoute: AppBookingCategoriesRoute,
   AppBookingResourcesRoute: AppBookingResourcesRoute,
+  AppBookingServicesRoute: AppBookingServicesRoute,
   AppImportConfigRoute: AppImportConfigRoute,
   AppImportExportRoute: AppImportExportRoute,
   AppImportLocalRoute: AppImportLocalRoute,

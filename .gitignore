@@ -3,6 +3,8 @@
 .env.*
 !.env.example
 docs/operia.txt
+# Sessionsnoter med en rigtig BREVO_WEBHOOK_SECRET indsat — må ikke i git
+docs/claude-booking-2.txt
 
 # Gammel prototype — kun lokal reference; indeholder en live CRON_SECRET i SQL
 # (se CLAUDE.md "Known gaps"). Må ikke ind i git-historikken.

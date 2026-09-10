@@ -114,6 +114,7 @@ function ConfigureHomeDesignPage() {
       saving={saving}
       onSave={save}
       companyId={companyId}
+      allowProduct={access ? makeAllowProduct(access) : undefined}
     />
   )
 }

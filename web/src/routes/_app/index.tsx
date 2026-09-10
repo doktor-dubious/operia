@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useHomeConfig } from '@/hooks/use-home-config'
 import {
   ALIGN_X_CLASS,
   ALIGN_Y_CLASS,
@@ -11,7 +11,6 @@ import {
   DEFAULT_GAP,
   homeBackgroundUrl,
   homeTileIcon,
-  normalizeDesign,
   ROW_START_CLASS,
   sizeToWH,
   splitPinnedTiles,
@@ -19,7 +18,6 @@ import {
   tilePlaceX,
   tilePlaceY,
   tilePlacement,
-  normalizeLayout,
   packTiles,
   tileBackground,
   tileIconShown,
@@ -33,7 +31,6 @@ import {
 } from '@/lib/home-tiles'
 import { cn } from '@/lib/utils'
 import { canSeeProductTile, productTileHref } from '@/lib/roles'
-import { supabase } from '@/lib/supabase'
 
 // Home — startsiden (landing page). Metro/Windows 8-agtig: flade, ensfarvede
 // firkanter i ét rutenet. Hver flise er et produkt, virksomheden har adgang
@@ -47,39 +44,9 @@ export const Route = createFileRoute('/_app/')({
 
 const CELL = 120
 
-// Home-layoutet: kundens egen overstyring (company_home_config) hvis den findes,
-// ellers platformens standard (platform_settings). Uanset kilde filtreres
-// produktfliserne stadig efter virksomhedens aktuelle adgang (se `visible`).
-//
-// `enabled` må først være sand når virksomhedskonteksten er afgjort: mens den
-// hentes er companyId endnu null, og en forespørgsel dér ville hente — og vise —
-// platformens standardbranding et øjeblik, før den aktive virksomheds eget
-// design overtager. Uden gaten blinker forkert titel/undertitel ved hver
-// indlæsning af startsiden.
-function useHomeConfig(companyId: string | null, enabled: boolean) {
-  return useQuery({
-    queryKey: ['home-config', companyId],
-    enabled,
-    staleTime: 60 * 1000,
-    queryFn: async () => {
-      if (companyId) {
-        const { data: own } = await supabase
-          .from('company_home_config')
-          .select('home_tiles, home_design')
-          .eq('company_id', companyId)
-          .maybeSingle()
-        if (own)
-          return { tiles: normalizeLayout(own.home_tiles), design: normalizeDesign(own.home_design) }
-      }
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('home_tiles, home_design')
-        .single()
-      if (error) throw error
-      return { tiles: normalizeLayout(data.home_tiles), design: normalizeDesign(data.home_design) }
-    },
-  })
-}
+// Layoutet hentes af den delte useHomeConfig (hooks/use-home-config) — samme
+// kilde og cache som sidemenuen. Uanset kilde filtreres produktfliserne stadig
+// efter virksomhedens aktuelle adgang (se `visible`).
 
 // Afstand fra indholdsområdets kant til en løsrevet flise.
 const PIN_PAD = 24

@@ -40,6 +40,7 @@ import { ImpersonationBanner } from '@/components/impersonation-banner'
 import { UserNavDropdownContent } from '@/components/user-nav-dropdown'
 import { useUiSettings } from '@/components/ui-settings-provider'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useHiddenSidebarModules } from '@/hooks/use-home-config'
 import { useRefreshInterval } from '@/hooks/use-platform-settings'
 import { useTextOverrides } from '@/hooks/use-text-overrides'
 import { useParcelsRealtime } from '@/hooks/use-parcels-realtime'
@@ -477,7 +478,11 @@ function ModernRail() {
   const { name, initial } = useUserProfile()
   const { data: access } = useAccess()
   const { navCollapsed, setNavCollapsed, toggleNavCollapsed } = useUiSettings()
-  const groups = simpleNavGroups(access)
+  // Modulerne kunden har valgt til/fra i Home-design → Sidemenu. Null = endnu
+  // ikke hentet; så vises ingen modulknapper, frem for at et fravalgt modul
+  // blinker frem og forsvinder igen.
+  const hiddenModules = useHiddenSidebarModules()
+  const groups = hiddenModules ? simpleNavGroups(access, hiddenModules) : []
 
   // Foldede modulgrupper — samme mønster som ConfigSideNav: nøglerne på de
   // FOLDEDE grupper gemmes, så en ny gruppe (nyt modul) altid starter udfoldet.

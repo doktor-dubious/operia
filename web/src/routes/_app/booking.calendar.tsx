@@ -1,32 +1,26 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { BookingCalendar } from '@/components/booking-calendar'
 import { TaskPageColumn } from '@/components/task-page-column'
-import { mergeCalendarSearch, validateCalendarSearch } from '@/lib/calendar'
+import { mergeBookingSearch, validateBookingCalendarSearch } from '@/lib/booking-view'
 
-// Bookingkalenderen. Visning + dato lever i URL'en; selve tilstandshåndteringen
-// deles med aktivkalenderen (lib/calendar.ts). Filtrene er lokal
-// arbejdstilstand i komponenten.
+// Bookingsiden. Visning, periode, dato OG filtre lever i URL'en, så en
+// indsnævret tidslinje kan deles og overleve en genindlæsning; selve
+// sammenfletningen (og oprydningen i standardværdier) bor i lib/booking-view.
 
 export const Route = createFileRoute('/_app/booking/calendar')({
-  validateSearch: validateCalendarSearch,
+  validateSearch: validateBookingCalendarSearch,
   component: CalendarPage,
 })
 
 function CalendarPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
-  const view = search.view ?? 'week'
 
   return (
     <TaskPageColumn>
       <BookingCalendar
-        view={view}
-        dateISO={search.date}
-        fromISO={search.from}
-        toISO={search.to}
-        onNavigate={(next) =>
-          navigate({ search: mergeCalendarSearch(view, next), replace: true })
-        }
+        search={search}
+        onChange={(next) => navigate({ search: mergeBookingSearch(next), replace: true })}
       />
     </TaskPageColumn>
   )

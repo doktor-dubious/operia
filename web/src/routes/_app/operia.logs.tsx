@@ -63,6 +63,8 @@ const CATEGORIES = [
   'config',
   'assets',
   'booking',
+  'accounting',
+  'email',
   'inventory',
   'lockers',
   'shipping',
@@ -241,7 +243,16 @@ function categoryOf(action: string): string {
     case 'booking':
     case 'booking_category':
     case 'booking_resource':
+    case 'booking_level':
+    case 'booking_service':
       return 'booking'
+    case 'accounting':
+      return 'accounting'
+    // E-mail-udbyderen (nøgle gemt/ryddet, test): sin egen kategori, så et
+    // fejlet udbydertest ikke gemmer sig under 'Andet'. Spejler
+    // public.audit_category (20260910090000).
+    case 'email':
+      return 'email'
     case 'inventory_item':
       return 'inventory'
     case 'locker':
@@ -306,6 +317,13 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
     return AI_READ_BLOCKED.has(outcome) ? 'warning' : 'error'
   }
   if (a === 'ai.disclosure_withdrawn') return 'warning'
+  // Nulstillingsmail der ikke kunne sendes: fejl, selv om anmodningen i sig
+  // selv gik igennem. Spejler public.audit_level (20260905120000).
+  if (
+    a === 'auth.password_reset_requested' &&
+    String((r.detail as Record<string, unknown> | null)?.email_sent ?? '') === 'false'
+  )
+    return 'error'
   // '*_failed'/'*_bounced' = teknisk fejl (import.failed, asset.reminder_bounced,
   // …). Spejler public.audit_level.
   // 'parcel.removed' = en registrering trukket tilbage: fejl-niveau, i modsætning
@@ -325,6 +343,9 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
     a === 'user.impersonated' ||
     /[._]complained$/.test(a) ||
     /[._]overridden$/.test(a) ||
+    // '*_cleared' (accounting.app_secret_cleared, email.api_key_cleared, …) =
+    // en tilbagerulning, ikke en succes. Spejler public.audit_level (20260908090000).
+    /[._]cleared$/.test(a) ||
     // '_deleted' (parcel.document_deleted, asset.document_deleted) klassificeres
     // også som sletning — samme escaped tvilling som i SQL (20260814200000).
     /[._]deleted$/.test(a) ||
@@ -391,7 +412,7 @@ function message(r: LogRow, t: TFn) {
   // detail.reason (classifySendError); et bounce lægger providerens tekst der.
   // 'notifications_deferred' er dispatcherens spor efter et forbigående udfald
   // hos udbyderen (rate limit, 5xx): samme form, summary = antal udskudte.
-  if (/[._](reminder_failed|reminder_bounced|reminder_complained|notification_bounced|notification_complained|notifications_deferred)$/.test(r.action)) {
+  if (/[._](reminder_failed|reminder_bounced|reminder_complained|notification_failed|notification_bounced|notification_complained|notifications_deferred)$/.test(r.action)) {
     // Koderne oversættes af notifyReasonLabel (delt med status-testdialogen),
     // så en fejl hedder det samme begge steder. Et bounce lægger providerens
     // fritekst i detail.error i stedet for en kode.
