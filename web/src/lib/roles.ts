@@ -193,6 +193,7 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/booking/resources', roles: ['booking_manager'] },
   { prefix: '/booking/categories', roles: ['booking_manager'] },
   { prefix: '/booking/services', roles: ['booking_manager'] },
+  { prefix: '/booking/history', roles: ['booking_manager'] },
   { prefix: '/booking', roles: ['booking_handler', 'booking_manager'] },
   { prefix: '/products/routes', roles: ['route_planner_manager'] },
   { prefix: '/products', roles: [] },

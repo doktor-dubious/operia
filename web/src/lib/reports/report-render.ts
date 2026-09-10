@@ -3,6 +3,8 @@
 // begge formater. Bibliotekerne er tunge og importeres derfor først ved
 // generering (dynamic import), så route-chunken forbliver lille.
 
+import { escapeCsvCell } from '@/lib/csv-export'
+
 export type ReportBlock =
   | { kind: 'kpis'; items: { label: string; value: string }[] }
   | { kind: 'table'; columns: string[]; rows: string[][] }
@@ -128,10 +130,8 @@ export async function renderPdf(report: ReportDoc, filename: string): Promise<vo
 // æ/ø/å, felter citeres efter RFC 4180.
 export async function renderCsv(report: ReportDoc, filename: string): Promise<void> {
   const SEP = ','
-  const esc = (v: string) => {
-    const s = v ?? ''
-    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
+  // Samme regler som alle andre CSV-filer (citering + formel-neutralisering).
+  const esc = (v: string) => escapeCsvCell(v ?? '', SEP)
 
   const rows: string[][] = [[report.title], [report.company]]
   for (const line of report.metaLines) rows.push([line])

@@ -181,7 +181,13 @@ const BOOKING_COLUMNS =
    resource:booking_resources (name),
    employee:employees (id, full_name, language, email, phone, external_id, slack_user_id, user_id)`
 
-/** Flyttede ændringen noget en modtager skal vide? (Se hovedkommentaren.) */
+/**
+ * Flyttede ændringen noget en modtager skal vide? (Se hovedkommentaren.)
+ *
+ * Siden 2026-09-10 skriver rækketriggeren `audit_bookings_row` kun de par, der
+ * FAKTISK ændrede sig — før kom alle fire med hver gang. Begge former virker
+ * her: mangler et par, er begge sider `undefined` og tæller som uændret.
+ */
 function movesSomething(detail: Record<string, unknown>): boolean {
   const pairs = [
     ['from_resource_id', 'to_resource_id'],

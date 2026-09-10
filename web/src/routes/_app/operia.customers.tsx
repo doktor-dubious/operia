@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -30,6 +30,7 @@ import { CopyButton } from '@/components/copy-button'
 import { CompanyDataTransferFields } from '@/components/company-data-transfer-fields'
 import { CompanyUsage } from '@/components/company-usage'
 import { CompanyPrivacyFields } from '@/components/company-privacy-fields'
+import { CompanyExportDialog } from '@/components/company-export-dialog'
 import { LogDrainsManager } from '@/components/log-drains/log-drains-manager'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
@@ -342,6 +343,7 @@ function CustomerDetailPane({
   }, [platformSettings, row])
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   const setKey = (s: Iterable<string>) => [...s].sort().join(',')
   // Tildelinger inkl. udløb — "key:udløb" pr. aktiv nøgle.
@@ -661,6 +663,21 @@ function CustomerDetailPane({
         {tab === 'usage' && <CompanyUsage companyId={row.id} />}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
+            {/* Udleveringen står FØR deaktivér og slet med vilje: ved ophør er
+                rækkefølgen udtræk → luk ned, og en knap, man skal scrolle forbi
+                sletteknappen for at finde, bliver fundet for sent. */}
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div>
+                <p className="text-[13px] font-[450]">{t('companyExport.action')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('companyExport.actionDescription')}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setExportOpen(true)}>
+                <Download className="size-4" />
+                {t('companyExport.export')}
+              </Button>
+            </div>
             <div className="flex items-center justify-between rounded-md border p-4">
               <div>
                 <p className="text-[13px] font-[450]">
@@ -701,6 +718,14 @@ function CustomerDetailPane({
           </Button>
         </div>
       )}
+
+      <CompanyExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        companyId={row.id}
+        companyName={row.name}
+        entitledProducts={products}
+      />
 
       <ConfirmDeleteDialog
         open={deleteOpen}

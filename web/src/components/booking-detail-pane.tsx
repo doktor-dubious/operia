@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input'
 import { CopyButton } from '@/components/copy-button'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
+import { Download } from 'lucide-react'
 import { BookingCancelDialog, useCanCancelBookings } from '@/components/booking-cancel-dialog'
+import { BookingExportDialog } from '@/components/booking-export-dialog'
 import { useCanManageBookings } from '@/components/booking-calendar'
 import {
   BookingEmployeeField,
@@ -16,6 +18,7 @@ import {
   BookingTimeFields,
   useBookingForm,
 } from '@/components/booking-form'
+import { BookingHistoryTab } from '@/components/booking-history-view'
 import { BookingServicesTab } from '@/components/booking-services-tab'
 import {
   BOOKING_LIFECYCLE_KEYS,
@@ -61,6 +64,7 @@ export function BookingDetailPane({
   const canManage = useCanManageBookings()
   const [tab, setTab] = useState('details')
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [invoiceBusy, setInvoiceBusy] = useState(false)
 
   const form = useBookingForm({ companyId, booking, onSaved: refresh })
@@ -97,6 +101,10 @@ export function BookingDetailPane({
     { key: 'calendar', label: t('bookingPage.tabCalendar') },
     { key: 'config', label: t('detail.tabConfiguration') },
     { key: 'services', label: t('bookingPage.tabServices') },
+    // Historikken læses fra booking_events, som RLS (20260910220000) kun åbner
+    // for manager/booking_manager. For andre ville fanen vise en tom tabel —
+    // "intet er sket" — hvilket er værre end ingen fane.
+    ...(canManage ? [{ key: 'history', label: t('bookingPage.tabHistory') }] : []),
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -182,8 +190,28 @@ export function BookingDetailPane({
           <BookingServicesTab booking={booking} companyId={companyId} locked={locked} />
         )}
 
+        {tab === 'history' && canManage && (
+          <BookingHistoryTab bookingId={booking.id} companyId={companyId} />
+        )}
+
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">
+            {/* Eksport (B-01) står øverst blandt handlingerne: den ændrer
+                intet, og den gælder også en annulleret eller faktureret
+                booking — netop dem, man skal kunne dokumentere. */}
+            {canManage && (
+              <div className="flex items-center justify-between rounded-md border p-4">
+                <div>
+                  <p className="text-[13px] font-[450]">{t('bookingExport.export')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('bookingExport.singleHint')}
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setExportOpen(true)}>
+                  <Download className="size-4" /> {t('bookingExport.export')}
+                </Button>
+              </div>
+            )}
             {stage === 'completed' && canManage && (
               <div className="flex items-center justify-between rounded-md border p-4">
                 <div>
@@ -261,6 +289,16 @@ export function BookingDetailPane({
           </Button>
         </div>
       )}
+
+      <BookingExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        companyId={companyId}
+        scope="booking"
+        entityId={booking.id}
+        scopeLabel={`${booking.resource?.name ?? ''} · ${bookingTimeLabel(booking)}`}
+        load={async () => [booking]}
+      />
 
       <BookingCancelDialog
         booking={booking}

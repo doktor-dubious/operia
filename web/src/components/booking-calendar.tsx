@@ -9,12 +9,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
   Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -23,14 +25,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { BookingDialog } from '@/components/booking-dialog'
 import { useBookingResources } from '@/components/booking-form'
 import { BookingDateFilter, BookingFilterBar } from '@/components/booking-filter-bar'
+import { BookingMonthGrid } from '@/components/booking-month-grid'
+import { BookingExportDialog } from '@/components/booking-export-dialog'
 import { BookingTimeline, StatusLegend, type BookingColorFn } from '@/components/booking-timeline'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import {
-  addDays,
   capFirst,
   dayFormat,
-  diffDays,
   endOfDay,
   isoWeek,
   longDayFormat,
@@ -40,7 +42,9 @@ import {
   toISODate,
 } from '@/lib/calendar'
 import {
+  BOOKING_EMBED,
   BOOKING_LIFECYCLE_KEYS,
+  CALENDAR_MAX_ROWS,
   bookingCategoryColorMap,
   bookingParticipantsLabel,
   bookingCategoryColors,
@@ -82,7 +86,6 @@ import { cn } from '@/lib/utils'
 // Perioden, filtrene og fritekstsøgningen bor i URL'en, så en indsnævret
 // tidslinje kan deles og overleve en genindlæsning.
 
-const MAX_TIMELINE_ROWS = 100
 /** Fritekst skrives i URL'en, men først når fingrene falder til ro. */
 const QUERY_DEBOUNCE_MS = 300
 
@@ -185,65 +188,6 @@ function DayBookingList({
   )
 }
 
-/**
- * Kalendervisningen indtil videre: perioden dag for dag. Kun døgn med
- * bookinger tegnes — et tomt månedsgitter ville fylde en skærm med ingenting.
- * Det rigtige kalendergitter kommer i næste omgang.
- */
-function BookingAgenda({
-  horizon,
-  bookings,
-  colorFor,
-  today,
-  onSelect,
-}: {
-  horizon: { start: Date; end: Date }
-  bookings: BookingHit[]
-  colorFor: BookingColorFn
-  today: Date
-  onSelect: (b: BookingHit) => void
-}) {
-  const { t } = useTranslation()
-  const days = useMemo(() => {
-    const count = diffDays(horizon.start, horizon.end) + 1
-    return Array.from({ length: count }, (_, i) => addDays(horizon.start, i))
-      .map((day) => ({
-        day,
-        items: bookings
-          .filter(
-            (b) => new Date(b.starts_at) <= endOfDay(day) && new Date(b.ends_at) > startOfDay(day),
-          )
-          .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
-      }))
-      .filter((d) => d.items.length > 0)
-  }, [horizon.start, horizon.end, bookings])
-
-  if (days.length === 0)
-    return (
-      <p className="py-12 text-center text-[13px] text-muted-foreground">
-        {t('bookingCalendar.empty')}
-      </p>
-    )
-
-  return (
-    <div className="flex flex-col gap-4">
-      {days.map(({ day, items }) => (
-        <div key={day.getTime()} className="flex flex-col gap-1.5">
-          <p
-            className={cn(
-              'text-[13px] font-medium',
-              toISODate(day) === toISODate(today) && 'text-status-good',
-            )}
-          >
-            {capFirst(longDayFormat.format(day))}
-          </p>
-          <DayBookingList bookings={items} colorFor={colorFor} onSelect={onSelect} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // Bookingens detaljer + redigér/annullér.
 /**
  * Faktureringsmarkeringen er en økonomihandling — manager/booking_manager,
@@ -280,6 +224,7 @@ export function BookingDetailDialog({
   const { t } = useTranslation()
   const canManage = useCanManageBookings()
   const [confirm, setConfirm] = useState<'invoice' | 'clearInvoice' | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const stage = booking ? bookingLifecycle(booking) : null
@@ -367,30 +312,51 @@ export function BookingDetailDialog({
                 </p>
               )}
             </div>
-            {!confirm && stage !== 'cancelled' && (
-              <DialogFooter>
-                {stage === 'invoiced'
-                  ? canManage && (
-                      <Button variant="outline" size="sm" onClick={() => setConfirm('clearInvoice')}>
-                        {t('bookingFlow.clearInvoiced')}
-                      </Button>
-                    )
-                  : (
-                      <>
-                        {stage === 'completed' && canManage && (
-                          <Button variant="outline" size="sm" onClick={() => setConfirm('invoice')}>
-                            {t('bookingFlow.markInvoiced')}
+            {!confirm && (
+              <DialogFooter className="sm:justify-between">
+                {/* Eksport (B-01) står til venstre for de handlinger, der
+                    ÆNDRER bookingen — og gælder også en annulleret eller
+                    faktureret booking, som netop er dem, man skal kunne
+                    dokumentere bagefter. */}
+                {canManage ? (
+                  <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                    <Download className="size-4" /> {t('bookingExport.export')}
+                  </Button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex gap-2">
+                  {stage !== 'cancelled' &&
+                    (stage === 'invoiced'
+                      ? canManage && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setConfirm('clearInvoice')}
+                          >
+                            {t('bookingFlow.clearInvoiced')}
                           </Button>
-                        )}
-                        {/* Annullering bor i redigeringsdialogen (A-07): den
-                            kræver en årsag, og et felt hører hjemme dér hvor
-                            bookingen i forvejen redigeres — ikke bag en knap i
-                            en popup der ellers kun viser. */}
-                        <Button size="sm" onClick={() => onEdit(booking)}>
-                          {t('common.edit')}
-                        </Button>
-                      </>
-                    )}
+                        )
+                      : (
+                          <>
+                            {stage === 'completed' && canManage && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setConfirm('invoice')}
+                              >
+                                {t('bookingFlow.markInvoiced')}
+                              </Button>
+                            )}
+                            {/* Annullering bor i redigeringsdialogen (A-07):
+                                den kræver en årsag, og et felt hører hjemme
+                                dér hvor bookingen i forvejen redigeres. */}
+                            <Button size="sm" onClick={() => onEdit(booking)}>
+                              {t('common.edit')}
+                            </Button>
+                          </>
+                        ))}
+                </div>
               </DialogFooter>
             )}
             {confirm && (
@@ -409,6 +375,18 @@ export function BookingDetailDialog({
           </>
         )}
       </DialogContent>
+
+      {booking && (
+        <BookingExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          companyId={booking.company_id}
+          scope="booking"
+          entityId={booking.id}
+          scopeLabel={`${booking.resource?.name ?? ''} · ${bookingTimeLabel(booking)}`}
+          load={async () => [booking]}
+        />
+      )}
     </Dialog>
   )
 }
@@ -422,10 +400,12 @@ function CategoryLegend({
   bookings,
   categories,
   byId,
+  className,
 }: {
   bookings: BookingHit[]
   categories: { id: string; name: string }[]
   byId: Map<string, number>
+  className?: string
 }) {
   const { t } = useTranslation()
 
@@ -442,7 +422,12 @@ function CategoryLegend({
   if (items.length === 0) return null
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground',
+        className,
+      )}
+    >
       {items.map((it) => (
         <span key={it.key} className="flex items-center gap-1.5">
           <span
@@ -551,8 +536,11 @@ export function BookingCalendar({
   const { data: resources } = useBookingResources(companyId)
   const { categories, byId: categoryColorById, colorFor } = useBookingCategoryColors(companyId)
 
+  const canManage = useCanManageBookings()
   const [selected, setSelected] = useState<BookingHit | null>(null)
   const [dayDialog, setDayDialog] = useState<Date | null>(null)
+  const [rangeExport, setRangeExport] = useState(false)
+  const [infoResource, setInfoResource] = useState<{ id: string; name: string; location: string | null } | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [createResourceId, setCreateResourceId] = useState<string | undefined>()
   const [createDateISO, setCreateDateISO] = useState<string | undefined>()
@@ -694,9 +682,19 @@ export function BookingCalendar({
         onChange={onChange}
         onQueryChange={setTerm}
         actions={
-          <Button size="sm" onClick={() => openCreate()}>
-            <Plus className="size-4" /> {t('bookingFlow.newTitle')}
-          </Button>
+          <>
+            {/* Eksport af HELE det viste tidsrum (B-01). Følger de samme
+                filtre som tidslinjen — ressource, status og søgning — så
+                udtrækket er det, brugeren kigger på. */}
+            {canManage && (
+              <Button size="sm" variant="outline" onClick={() => setRangeExport(true)}>
+                <Download className="size-4" /> {t('bookingExport.export')}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => openCreate()}>
+              <Plus className="size-4" /> {t('bookingFlow.newTitle')}
+            </Button>
+          </>
         }
       />
 
@@ -755,27 +753,17 @@ export function BookingCalendar({
         <p className="text-xs text-status-neutral-to-bad">{t('bookingCalendar.capped')}</p>
       )}
 
-      {/* Forklaringerne: farven er kategoriens, formen er status'. */}
-      {!isPending && (
-        <div className="flex flex-col gap-1.5">
-          <CategoryLegend
-            bookings={visibleBookings}
-            categories={categories}
-            byId={categoryColorById}
-          />
-          <StatusLegend stages={presentStages} />
-        </div>
-      )}
-
       {isPending ? (
         <Skeleton className="h-64 w-full" />
       ) : view === 'calendar' ? (
-        <BookingAgenda
+        <BookingMonthGrid
           horizon={horizon}
           bookings={agendaBookings}
           colorFor={colorFor}
           today={today}
-          onSelect={setSelected}
+          onSelectBooking={setSelected}
+          onSelectDay={setDayDialog}
+          onCreate={(day) => openCreate(undefined, day)}
         />
       ) : (
         <BookingTimeline
@@ -788,11 +776,27 @@ export function BookingCalendar({
           query={query}
           colorFor={colorFor}
           today={today}
-          maxRows={MAX_TIMELINE_ROWS}
+          resetKey={`${resource}|${status}|${query}`}
           onSelectBooking={setSelected}
           onSelectDay={setDayDialog}
           onCreate={(resourceId, day) => openCreate(resourceId, day)}
+          onResourceInfo={canManage ? (r) => setInfoResource(r) : undefined}
         />
+      )}
+
+      {/* Forklaringerne står under gitteret, højrestillet: farven er
+          kategoriens, formen er status'. De læses, når man er i tvivl om en
+          bjælke — og skal ikke skubbe selve tidslinjen ned imens. */}
+      {!isPending && (
+        <div className="-mt-1 flex flex-col items-end gap-1.5">
+          <CategoryLegend
+            className="justify-end"
+            bookings={visibleBookings}
+            categories={categories}
+            byId={categoryColorById}
+          />
+          <StatusLegend className="justify-end" stages={presentStages} />
+        </div>
       )}
 
       {/* Dagens liste (klik på en dato i tidslinjen) */}
@@ -846,6 +850,136 @@ export function BookingCalendar({
         booking={editBooking}
         onSaved={refresh}
       />
+
+      {/* Eksport af det viste tidsrum. Rækkerne er dem tidslinjen viser, så
+          "følger de anvendte filtre" betyder det samme på skærmen og i filen. */}
+      <BookingExportDialog
+        open={rangeExport}
+        onOpenChange={setRangeExport}
+        companyId={companyId}
+        scope="timeframe"
+        scopeLabel={t('bookingExport.scopeTimeframe', {
+          range: rangeLabel,
+          count: visibleBookings.length,
+        })}
+        load={async () => visibleBookings}
+      />
+
+      <BookingResourceInfoDialog
+        resource={infoResource}
+        companyId={companyId}
+        onOpenChange={(open) => !open && setInfoResource(null)}
+      />
     </div>
+  )
+}
+
+/**
+ * Nøgletal for en ressource, åbnet fra info-ikonet i tidslinjen — og
+ * indgangen til at eksportere ALLE bookinger på den, uanset hvilket tidsrum
+ * kalenderen står på.
+ *
+ * Bevidst kun læsning: ressourcens stamdata (navn, kategori, kapacitet,
+ * tidsgranularitet) rettes på Booking → Ressourcer, og to steder at rette det
+ * samme er én for mange. Derfor et info-ikon og ikke en blyant.
+ */
+function BookingResourceInfoDialog({
+  resource,
+  companyId,
+  onOpenChange,
+}: {
+  resource: { id: string; name: string; location: string | null } | null
+  companyId: string | null
+  onOpenChange: (open: boolean) => void
+}) {
+  const { t } = useTranslation()
+  const [exportOpen, setExportOpen] = useState(false)
+
+  const { data: stats } = useQuery({
+    queryKey: ['booking-resource-stats', resource?.id],
+    enabled: !!resource,
+    queryFn: async () => {
+      const nowISO = new Date().toISOString()
+      // Tre tællinger frem for at hente rækkerne: head + count er ét opslag
+      // uden data, og tallene er alt, dialogen viser.
+      const base = () =>
+        supabase
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('resource_id', resource!.id)
+      const [total, upcoming, cancelled] = await Promise.all([
+        base(),
+        base().eq('status', 'booked').gte('ends_at', nowISO),
+        base().eq('status', 'cancelled'),
+      ])
+      if (total.error) throw total.error
+      return {
+        total: total.count ?? 0,
+        upcoming: upcoming.count ?? 0,
+        cancelled: cancelled.count ?? 0,
+      }
+    },
+  })
+
+  const loadAll = async (): Promise<BookingHit[]> => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(BOOKING_EMBED)
+      .eq('resource_id', resource!.id)
+      .order('starts_at')
+      .limit(CALENDAR_MAX_ROWS)
+    if (error) throw error
+    return (data ?? []) as unknown as BookingHit[]
+  }
+
+  return (
+    <Dialog open={!!resource} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        {resource && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-base">{resource.name}</DialogTitle>
+              {resource.location && <DialogDescription>{resource.location}</DialogDescription>}
+            </DialogHeader>
+
+            <div className="flex flex-col gap-2 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('bookingCalendar.statTotal')}</span>
+                <span className="tabular-nums">{stats?.total ?? '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('bookingCalendar.statUpcoming')}</span>
+                <span className="tabular-nums">{stats?.upcoming ?? '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('bookingCalendar.statCancelled')}</span>
+                <span className="tabular-nums">{stats?.cancelled ?? '—'}</span>
+              </div>
+            </div>
+
+            <DialogFooter className="sm:justify-between">
+              <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                <Download className="size-4" /> {t('bookingExport.export')}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
+                {t('common.close')}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+
+      {resource && (
+        <BookingExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          companyId={companyId}
+          scope="resource"
+          entityId={resource.id}
+          scopeLabel={t('bookingExport.scopeResource', { name: resource.name })}
+          load={loadAll}
+        />
+      )}
+    </Dialog>
   )
 }

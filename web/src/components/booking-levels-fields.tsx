@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Coins, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Field } from '@/components/detail-field'
+import { BookingTariffFields } from '@/components/booking-tariff-fields'
 import { describeError } from '@/lib/errors'
 import { invalidateBookingQueries } from '@/lib/booking'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +28,9 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [newName, setNewName] = useState('')
+  // Ét niveau ad gangen har sin prisliste foldet ud — listen skal stadig kunne
+  // læses som en liste.
+  const [priceFor, setPriceFor] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const { data: rows } = useQuery({
@@ -107,7 +111,8 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
     <Field label={t('bookingLevels.title')} info={t('bookingLevels.hint')}>
       <div className="flex flex-col gap-2">
         {(rows ?? []).map((row) => (
-          <div key={row.id} className="flex items-center gap-2">
+          <div key={row.id} className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <Input
               defaultValue={row.name}
               maxLength={80}
@@ -128,12 +133,31 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
             <Button
               size="icon"
               variant="ghost"
+              className={
+                priceFor === row.id
+                  ? 'size-8 text-foreground'
+                  : 'size-8 text-muted-foreground hover:text-foreground'
+              }
+              aria-label={t('bookingTariffs.tab')}
+              onClick={() => setPriceFor(priceFor === row.id ? null : row.id)}
+            >
+              <Coins className="size-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
               className="size-8 text-muted-foreground hover:text-destructive"
               aria-label={t('common.delete')}
               onClick={() => void remove(row)}
             >
               <Trash2 className="size-4" />
             </Button>
+          </div>
+          {priceFor === row.id && (
+            <div className="ml-1 border-l pl-4">
+              <BookingTariffFields companyId={companyId} scope="level" targetId={row.id} />
+            </div>
+          )}
           </div>
         ))}
 

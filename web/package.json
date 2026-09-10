@@ -29,6 +29,7 @@
     "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "jszip": "^3.10.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.24.0",
     "motion": "^12.42.2",

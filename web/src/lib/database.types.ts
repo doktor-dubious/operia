@@ -971,6 +971,58 @@ export type Database = {
           },
         ]
       }
+      booking_tariffs: {
+        Row: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          level_id: string | null
+          note: string | null
+          resource_id: string | null
+          scope: string
+          service_id: string | null
+          target_id: string | null
+          unit: string
+          valid_from: string
+          valid_to: string | null
+          vat_code: string | null
+        }
+        Insert: {
+          amount: number
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level_id?: string | null
+          note?: string | null
+          resource_id?: string | null
+          scope: string
+          service_id?: string | null
+          unit: string
+          valid_from?: string
+          valid_to?: string | null
+          vat_code?: string | null
+        }
+        Update: {
+          amount?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          level_id?: string | null
+          note?: string | null
+          resource_id?: string | null
+          scope?: string
+          service_id?: string | null
+          unit?: string
+          valid_from?: string
+          valid_to?: string | null
+          vat_code?: string | null
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           all_day: boolean
@@ -3858,10 +3910,22 @@ export type Database = {
         Args: { p_text: string }
         Returns: Database["public"]["Enums"]["asset_status"]
       }
+      audit_actor_names: {
+        Args: { p_company_id: string }
+        Returns: {
+          display_name: string | null
+          platform: boolean
+          user_id: string
+        }[]
+      }
       audit_category: { Args: { p_action: string }; Returns: string }
       audit_level: {
         Args: { p_action: string; p_detail?: Json }
         Returns: string
+      }
+      booking_tariffs_on: {
+        Args: { p_company_id: string; p_on?: string; p_target_id: string }
+        Returns: Database["public"]["Tables"]["booking_tariffs"]["Row"][]
       }
       can_cancel_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_manage_bookings: { Args: { p_company_id: string }; Returns: boolean }
@@ -3871,6 +3935,40 @@ export type Database = {
       cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
+      }
+      company_export_allowed: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
+      company_export_begin: {
+        Args: { p_company_id: string; p_groups: string[] }
+        Returns: Json
+      }
+      company_export_catalog: {
+        Args: never
+        Returns: { grp: string; ord: number; tbl: string }[]
+      }
+      company_export_excluded: {
+        Args: never
+        Returns: { reason: string; tbl: string }[]
+      }
+      company_export_manifest: {
+        Args: { p_company_id: string; p_groups: string[] }
+        Returns: Json
+      }
+      company_export_rows: {
+        Args: {
+          p_after?: string
+          p_company_id: string
+          p_export_id: string
+          p_limit?: number
+          p_table: string
+        }
+        Returns: Json[]
+      }
+      company_export_ticket_ok: {
+        Args: { p_company_id: string; p_export_id: string; p_table?: string }
+        Returns: boolean
       }
       checkin_asset: {
         Args: {
@@ -3976,6 +4074,25 @@ export type Database = {
           p_ttl_hours?: number
         }
         Returns: string
+      }
+      log_booking_export: {
+        Args: {
+          p_company_id: string
+          p_detail?: Json
+          p_rows: number
+          p_scope: string
+        }
+        Returns: undefined
+      }
+      log_company_export: {
+        Args: {
+          p_company_id: string
+          p_export_id: string
+          p_files?: number
+          p_rows: number
+          p_tables: number
+        }
+        Returns: undefined
       }
       log_failed_login_attempt: {
         Args: { p_email: string }

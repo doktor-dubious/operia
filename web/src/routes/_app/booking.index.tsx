@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BookingDetailPane } from '@/components/booking-detail-pane'
+import { BookingExportDialog } from '@/components/booking-export-dialog'
+import { useCanManageBookings } from '@/components/booking-calendar'
 import { BookingDialog } from '@/components/booking-dialog'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -84,6 +86,15 @@ function BookingListPage() {
   const [paneDirty, setPaneDirty] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
   const [newOpen, setNewOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  // Rækkerne DataTable faktisk viser efter søgning, kolonnefiltre og
+  // markering — det er dem, eksporten skal følge (B-01: "følger de anvendte
+  // filtre"). Tabellen melder dem tilbage, så filen og skærmen er enige.
+  const [exportRows, setExportRows] = useState<{ filtered: BookingHit[]; selected: BookingHit[] }>({
+    filtered: [],
+    selected: [],
+  })
+  const canManage = useCanManageBookings()
 
   const refresh = () => invalidateBookingQueries(queryClient)
 
@@ -169,6 +180,11 @@ function BookingListPage() {
                 <SelectItem value="all">{t('bookingPage.scopeAll')}</SelectItem>
               </SelectContent>
             </Select>
+            {canManage && (
+              <Button size="sm" variant="outline" onClick={() => setExportOpen(true)}>
+                <Download className="size-4" /> {t('bookingExport.export')}
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
               <Plus className="size-4" /> {t('common.new')}
             </Button>
@@ -176,6 +192,7 @@ function BookingListPage() {
         }
         onRowClick={(b) => guarded(() => setActiveId(b.id === activeId ? null : b.id))}
         activeRowId={activeId}
+        onVisibleRowsChange={setExportRows}
       />
 
       {activeRow && (
@@ -195,6 +212,29 @@ function BookingListPage() {
         onOpenChange={setNewOpen}
         companyId={companyId}
         onSaved={refresh}
+      />
+
+      {/* Har brugeren krydset rækker af, er DE udtrækket; ellers alt hvad
+          søgning og kolonnefiltre har ladet stå. */}
+      <BookingExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        companyId={companyId}
+        scope={exportRows.selected.length > 0 ? 'selected' : 'filtered'}
+        scopeLabel={t(
+          exportRows.selected.length > 0
+            ? 'bookingExport.scopeSelected'
+            : 'bookingExport.scopeFiltered',
+          {
+            count:
+              exportRows.selected.length > 0
+                ? exportRows.selected.length
+                : exportRows.filtered.length,
+          },
+        )}
+        load={async () =>
+          exportRows.selected.length > 0 ? exportRows.selected : exportRows.filtered
+        }
       />
 
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>

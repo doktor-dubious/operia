@@ -341,6 +341,10 @@ function levelOf(r: LogRow): 'success' | 'warning' | 'error' {
   if (
     a === 'import.rejected' ||
     a === 'user.impersonated' ||
+    // Et helt kundeudtræk (F-08) skal springe i øjnene. Spejler
+    // public.audit_level (20260911120000); kvitteringen
+    // 'privacy.full_export_delivered' er almindelig succes.
+    a === 'privacy.full_export' ||
     /[._]complained$/.test(a) ||
     /[._]overridden$/.test(a) ||
     // '*_cleared' (accounting.app_secret_cleared, email.api_key_cleared, …) =

@@ -12,6 +12,7 @@ import {
   ConciergeBell,
   FileText,
   Handshake,
+  History,
   LayoutGrid,
   Layers,
   Lock,
@@ -157,6 +158,7 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'bookingResources', href: '/booking/resources', icon: Boxes, productKey: 'booking' },
       { labelKey: 'bookingCategories', href: '/booking/categories', icon: Tag, productKey: 'booking' },
       { labelKey: 'bookingServices', href: '/booking/services', icon: ConciergeBell, productKey: 'booking' },
+      { labelKey: 'bookingHistory', href: '/booking/history', icon: History, productKey: 'booking' },
     ],
   },
   {

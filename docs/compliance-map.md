@@ -183,6 +183,62 @@ personal data is removed instead.
   `parcels.receiver_employee_id` / `assets.assigned_to_employee_id`. No
   open-booking gate on anonymization is needed: bookings are time-bounded,
   unlike parcels.
+- `20260910220000_log_read_roles.sql` — log **reads** narrowed from the tenant
+  boundary alone to the responsible roles. The select policies said only
+  `company_id = current_company_id()`, so any authenticated user of the company
+  — a parcel handler, say — could pull the whole change log through the API,
+  even though the pages were role-gated. Two different role sets, because the
+  two logs have two different readerships: `booking_events` requires
+  manager/booking_manager, matching exactly who may open the history page;
+  `audit_log` requires any *manager* role, because several pages read it under
+  their own role (the asset and inventory import logs read `import_config` rows
+  as asset_manager / inventory_manager, and `ai_label_usage` is SECURITY INVOKER).
+  Narrowing that one to `manager` alone would have broken those pages for
+  precisely the users they exist for; the meaningful cut is to exclude the
+  handlers. Platform admins keep access to both.
+  Verified from both sides by `supabase/tests/log_read_roles.sql`.
+- `20260910180000_log_tables_readonly.sql` — the log tables are now read-only
+  for the client roles in the grants too, not only through RLS. Supabase's
+  default `grant all` on new tables in `public` had never been trimmed: `anon`
+  and `authenticated` still held **TRUNCATE** on all seven log tables, INSERT on
+  the event tables, and full DML on the three message logs. TRUNCATE is the one
+  that mattered — RLS does not apply to it, and `block_mutation` is a *row*
+  trigger, so neither guard fires; on paper the `authenticated` role could empty
+  `audit_log`. Not reachable through PostgREST, which has no TRUNCATE verb, but
+  a privilege you cannot reach today is still a privilege. Nothing used them:
+  every writer is either SECURITY DEFINER or runs as `service_role`.
+  Deliberately no immutability trigger on the three message logs — they are
+  legitimately updated after insert when a provider reports a bounce
+  (`_shared/mail-events.ts` sets `bounced_at` / `bounce_reason`), and
+  `block_mutation` would reject exactly that and lose delivery status.
+  Verified by `supabase/tests/log_readonly.sql`, which sets the role and tries.
+- `20260910160000_booking_audit_trigger.sql` — the booking change log moved
+  from the RPCs to an `after insert or update or delete ... for each row`
+  trigger on `bookings` (EVU D-01/D-02), which is now the only writer. Any path
+  into the table is captured — raw SQL, service role, a migration, an edge
+  function — not just the client paths, and a change with no signed-in user is
+  logged with an empty actor, which is itself the finding. Two deliberate
+  shapes: free-text columns (`title`, `cancellation_reason`) record only
+  `title_changed` / `reason_changed`, never the value, because `booking_events`
+  mirrors into the immutable `audit_log` that is forwarded to customer log
+  drains — a value there could never be withdrawn, and both fields can name
+  someone other than the booking's employee. And deletions go to `audit_log`
+  directly rather than `booking_events`, whose FK to `bookings` is `restrict`
+  and would refuse an event about a row that no longer exists; the retention
+  purge sets `operia.retention_purge` and logs its own count, so the trigger
+  stays silent there instead of writing one audit row per purged booking.
+- `20260910120000` + `20260910130000_booking_export_audit*.sql` — booking CSV
+  export (B-01) is a **bulk extraction of personal data** (employee names, the
+  free-text purpose, cancellation reasons) leaving the system, so every export
+  writes `booking.exported` via `log_booking_export`: who, when, which slice,
+  how many rows, which columns — never the content. Gated on
+  `can_manage_bookings`, so a `booking_handler` cannot take the logged path and
+  does not see the button. Worth remembering *why* the second migration exists:
+  the first version only **truncated** the free-form fields (`left(…, 40)`)
+  instead of filtering them, so a scope string like "Møde med Anna om
+  fratrædelse" landed verbatim in the immutable log. `supabase/tests/
+  booking_export.sql` caught it; values are now whitelisted to known machine
+  codes and anything else becomes `other`. A length cap is not a filter.
 - `20260909090000_booking_cancellation_reason.sql` — cancelling a booking now
   requires a reason (EVU A-07). The free text lives **only** on
   `bookings.cancellation_reason`, never in `booking_events` or `audit_log`: the
@@ -739,6 +795,57 @@ invoice data flows yet — that lands with the booking invoicing work (EVU C-01/
   schema, so it is only in database backups / the password manager — noted in
   [`disaster-recovery.md`](disaster-recovery.md).
 
+## 19. Full customer export on termination — Art. 20 / EVU F-08 (G)
+
+Built 2026-09-11 (`20260911120000_company_full_export.sql`, `web/src/lib/company-export.ts`,
+`web/src/components/company-export-dialog.tsx`). Where §16 answers "everything about one
+person", this answers "everything about one customer" — the handover a controller is owed
+when the contract ends. Entry point: Kunder → the customer → Handlinger → Fuldt dataudtræk.
+
+- **The selection is a server-side whitelist**, `company_export_catalog()`: 52 tables in a
+  `core` group plus one group per product. Its counterpart `company_export_excluded()` names
+  the `company_id` tables deliberately left out (secrets, counters), and the fixture
+  `supabase/tests/company_full_export.sql` fails if any `company_id` table is on neither list
+  (20260912090000). The client names a table only to ask for it; a
+  name that is not on the list is rejected (`table_not_exportable`). A table added to the
+  schema is therefore *not* exported until someone deliberately adds it — the failure mode is
+  a missing file, never an unintended disclosure.
+- **Secrets are not customer data.** `company_accounting_secret`, `company_data_transfer_secret`,
+  `company_entra_secret`, `company_slack_secret` and `slack_oauth_state` are absent from the
+  catalogue; the two key fields that live in ordinary tables — `carrier_agreements.api_key`
+  and `log_drains.secret` — are replaced with `***` by `company_export_mask()`. The marker,
+  rather than a dropped column, so the recipient can see the field existed.
+- **Authorization is server-side** (`company_export_allowed`): platform admin, or
+  manager/data_manager in exactly that company. The customer can take its own copy without
+  asking DCA — Art. 20 is the customer's right, not DCA's favour.
+- **Files are packaged too, since 2026-09-11** (`20260911150000_company_export_files.sql` for the
+  audit half; the fetching is client-side). Condition photos, handover signatures, asset
+  attachments and the customer's design images are downloaded from Storage into `filer/<bucket>/…`
+  — no new access path: the Storage read policies are already folder-scoped per company
+  (`(storage.foldername(name))[1] = current_company_id() or is_platform_admin()`). Paths are
+  **harvested from the exported rows**, not listed out of the buckets, so the package matches the
+  CSVs and orphaned objects (the purge job's business) stay out. `filer.csv` lists every file with
+  size and status: `included`, `missing` (a row points at a file that no longer exists — said
+  out loud rather than silently dropped) or `skipped_budget`. The budget is 150 MB, because the
+  ZIP is built in browser memory and a tab that dies mid-handover is worse than a package that
+  states what it lacks. Not included: the `imports` bucket (raw HR files, purged after 30 days,
+  and their content is already in `employees`) and the `feedback` bucket (DCA-internal, keyed on
+  user rather than company).
+- **The package documents itself**: `manifest.json` carries generated-at, the groups, and row
+  count *and column list* per table. The columns are also why an empty table still gets a file
+  with headers — a header-less file cannot be told apart from a failure — and why columns
+  appear in the table's own order rather than jsonb's arbitrary one.
+- **The export logs itself, server-side** (20260912090000): `company_export_begin()` writes
+  `privacy.full_export` at level **warning** — groups, table count, row count and an
+  `export_id` — *before* the first row is handed out, and `company_export_rows()` refuses to
+  return anything without a fresh ticket (same actor, same company, listed group, < 12 h). A
+  direct RPC call therefore cannot read a tenant without leaving the row. The browser's
+  `log_company_export()` afterwards adds the receipt `privacy.full_export_delivered` (tables,
+  rows, files actually packed). Never content. Group names are whitelisted before they reach
+  the log, because `audit_log` is immutable and forwarded to customer log drains.
+- Rows are fetched one keyset page at a time (`company_export_rows`, 2000/page, 5000 cap), so
+  a tenant with 200k parcel events does not have to pass through PostgREST in one piece.
+
 ## Known gaps / roadmap
 
 | Gap | Status |
@@ -756,6 +863,7 @@ invoice data flows yet — that lands with the booking invoicing work (EVU C-01/
 | Personal data in `audit_log` | **Partly by design since 2026-07-30** — `parcel.receiver_overridden` and `parcel.removed` now copy the manager's free-text reason into `detail` (`20260730140000_audit_parcel_reason.sql`), because the reason *is* the audit trail for an exception; it may name a person. Every other event type stays minimized. |
 | Personal data already in `audit_log` | **Open** — new writes are otherwise minimized (§6), but rows written before 2026-07-20 still contain employee names, `EX-<name>` retirement entries, invitee emails and unmasked recipients. The table is UPDATE/DELETE-blocked, so only the global age-based purge can remove them — and `audit_retention_days` defaults to NULL. Copies already delivered to log drains are beyond reach. |
 | Notification recipient logs | **Fixed 2026-08-14** (§15) — `parcel_notifications.recipient` is cleared when the parcel closes, mirroring the asset-loan twin, and the backfill cleared every already-closed parcel. Both tables now fall under the `notifications` retention category. |
+| Right to portability / handover on termination (Art. 20) | **Largely fixed 2026-09-11** (§19) — `company_export_catalog/manifest/rows` + the dialog on Kunder → Handlinger produce a ZIP of one CSV per table with a manifest, whitelisted server-side, secrets masked, logged as `privacy.full_export`. Remaining: the Storage files (photos, documentation) are exported as path and metadata, not as bytes. |
 | Right of access (Art. 15) | **Largely fixed 2026-08-14** (§16) — `sar_export()` + the screen on `/configure/personal-data` answer a request for employees *and*, via folded free-text search, for people with no row (proxy collectors, private senders). Remaining: image files are listed rather than packaged, sections cap at 500 rows, and there is no PDF rendering — the export is JSON. |
 | Consent / legal basis / opt-out | **Open** — no consent column, no legal-basis record, no per-employee notification preference or opt-out. Notification toggles exist only at platform and company level; the data subject has no control. |
 | Per-company retention | **Fixed 2026-08-14** (§15) — `company_retention` gives the controller its own window per category, resolved customer → platform → keep forever. `parcel_events` remains deliberately without one (it follows the parcel). Remaining: agree actual values with each customer; see [`docs/gdpr/retention-schedule.md`](gdpr/retention-schedule.md). |

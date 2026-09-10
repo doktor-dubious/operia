@@ -26,6 +26,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
+import { BookingTariffFields } from '@/components/booking-tariff-fields'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
@@ -59,7 +60,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_resources')
-        .select('id, name, category_id, location, capacity, time_mode, description, is_active, category:booking_categories (name)')
+        .select('id, company_id, name, category_id, location, capacity, time_mode, description, is_active, category:booking_categories (name)')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -303,6 +304,7 @@ function ResourceDetailPane({
 
   const tabs = [
     { key: 'details', label: t('detail.tabDetails') },
+    { key: 'prices', label: t('bookingTariffs.tab') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -326,6 +328,9 @@ function ResourceDetailPane({
               idPrefix={`res-${row.id}`}
             />
           </div>
+        )}
+        {tab === 'prices' && (
+          <BookingTariffFields companyId={row.company_id} scope="resource" targetId={row.id} />
         )}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">

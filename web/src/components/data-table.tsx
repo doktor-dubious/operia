@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { describeError } from '@/lib/errors'
 import { toast } from 'sonner'
@@ -257,6 +257,7 @@ export function DataTable<Row extends { id: string }>({
   selectionActions,
   onRowClick,
   activeRowId,
+  onVisibleRowsChange,
   toolbar,
   selectionMenuItems,
 }: {
@@ -270,6 +271,13 @@ export function DataTable<Row extends { id: string }>({
   selectionActions?: (ctx: { ids: string[]; clear: () => void }) => React.ReactNode
   onRowClick?: (row: Row) => void
   activeRowId?: string | null
+  /**
+   * Meld hvilke rækker der aktuelt er i spil: `filtered` er dem søgning og
+   * kolonnefiltre har ladet stå, `selected` er dem der er krydset af. Bruges
+   * af eksport-knapper, der skal følge det brugeren rent faktisk kigger på —
+   * tabellen ejer filtrene, så den er det eneste sted, svaret findes.
+   */
+  onVisibleRowsChange?: (rows: { filtered: Row[]; selected: Row[] }) => void
   toolbar?: React.ReactNode
   selectionMenuItems?: SelectionMenuItem<Row>[]
 }) {
@@ -342,6 +350,26 @@ export function DataTable<Row extends { id: string }>({
     return result
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, query, activeFilters, onlySelected, selected])
+
+  // Rapportér udsnittet opad — men kun når INDHOLDET er et andet. Kalderen
+  // gemmer udsnittet i state, og hver render hos den kan give os nye
+  // referencer (`data ?? []` ved en fejlet forespørgsel, et ikke-memoiseret
+  // `columns`), som gør `filtered` til et nyt array uden nye rækker. Meldte vi
+  // pr. reference, ville setState → render → ny reference → setState køre i
+  // ring, til React gav op ("Maximum update depth exceeded"). Nøglen er
+  // rækkernes id'er; en genhentning med samme id'er men nye rækkeobjekter
+  // meldes også, så eksporten ikke arbejder på forældede rækker.
+  const lastReported = useRef<{ key: string; rows: Row[] } | null>(null)
+  useEffect(() => {
+    if (!onVisibleRowsChange) return
+    const selectedRows = filtered.filter((row) => selected.has(row.id))
+    const key = `${filtered.map((r) => r.id).join('\u0000')}\u0001${selectedRows.map((r) => r.id).join('\u0000')}`
+    const prev = lastReported.current
+    if (prev && prev.key === key && (prev.rows === rows || rows.length === 0)) return
+    lastReported.current = { key, rows }
+    onVisibleRowsChange({ filtered, selected: selectedRows })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, selected])
 
   const toggleFilter = (colKey: string, value: string) => {
     setFilters((prev) => {

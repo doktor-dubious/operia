@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { CopyButton } from '@/components/copy-button'
+import { BookingTariffFields } from '@/components/booking-tariff-fields'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
@@ -58,7 +59,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_services')
-        .select('id, name, description, has_quantity, price_mode, unit_price, is_active')
+        .select('id, company_id, name, description, has_quantity, price_mode, unit_price, is_active')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -280,6 +281,7 @@ function ServiceDetailPane({
   const tabs = [
     { key: 'details', label: t('detail.tabDetails') },
     { key: 'config', label: t('detail.tabConfiguration') },
+    { key: 'prices', label: t('bookingTariffs.tab') },
     { key: 'actions', label: t('detail.tabActions') },
   ]
 
@@ -328,6 +330,14 @@ function ServiceDetailPane({
               currency={currency}
             />
           </div>
+        )}
+        {tab === 'prices' && (
+          <BookingTariffFields
+            companyId={row.company_id}
+            scope="service"
+            targetId={row.id}
+            basePriceHint={t('bookingTariffs.serviceBaseHint')}
+          />
         )}
         {tab === 'actions' && (
           <div className="flex max-w-2xl flex-col gap-4">

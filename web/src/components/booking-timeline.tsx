@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReceiptText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Info, ReceiptText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { BookingHoverDetails } from '@/components/booking-hover-details'
+import { bookingBarLook } from '@/lib/booking-look'
 import {
   bookingLifecycle,
-  bookingParticipantsLabel,
-  bookingTimeLabel,
   BOOKING_LIFECYCLE_KEYS,
   type BookingHit,
   type BookingLifecycle,
@@ -45,6 +46,10 @@ import { cn } from '@/lib/utils'
 // behandling — fyldt, grøn kant, falmet, skraveret — så et blik giver begge
 // dele uden at kategorifarverne mister deres betydning.
 
+/** Ti rækker pr. side og højst ti sideknapper — samme takt som tabellerne. */
+const PAGE_SIZE = 10
+const MAX_PAGE_BUTTONS = 10
+
 const LABEL_WIDTH = 190
 const MIN_COL_WIDTH = 26
 const LANE_HEIGHT = 30
@@ -59,59 +64,6 @@ export type TimelineResource = {
   id: string
   name: string
   location: string | null
-}
-
-/** Bjælkens udseende pr. trin i statusmodellen (A-02). */
-function barLook(
-  stage: BookingLifecycle,
-  c: { background: string; color: string },
-): { style: React.CSSProperties; solid: boolean; strike: boolean } {
-  const hatch = (color: string) =>
-    `repeating-linear-gradient(135deg, color-mix(in oklab, ${color} 40%, transparent) 0 5px, transparent 5px 10px)`
-  switch (stage) {
-    case 'in_use':
-      return {
-        style: {
-          background: c.background,
-          color: c.color,
-          boxShadow: 'inset 3px 0 0 0 var(--status-good), 0 0 0 1px var(--status-good)',
-        },
-        solid: true,
-        strike: false,
-      }
-    case 'completed':
-      return {
-        style: {
-          background: `color-mix(in oklab, ${c.background} 30%, transparent)`,
-          color: 'var(--foreground)',
-          boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${c.background} 45%, transparent)`,
-        },
-        solid: false,
-        strike: false,
-      }
-    case 'invoiced':
-      return {
-        style: {
-          backgroundImage: hatch(c.background),
-          color: 'var(--foreground)',
-          boxShadow: `inset 0 0 0 1px color-mix(in oklab, ${c.background} 60%, transparent)`,
-        },
-        solid: false,
-        strike: false,
-      }
-    case 'cancelled':
-      return {
-        style: {
-          backgroundImage: hatch('var(--status-bad)'),
-          color: 'var(--muted-foreground)',
-          boxShadow: 'inset 0 0 0 1px color-mix(in oklab, var(--status-bad) 55%, transparent)',
-        },
-        solid: false,
-        strike: true,
-      }
-    default:
-      return { style: { background: c.background, color: c.color }, solid: true, strike: false }
-  }
 }
 
 /** Bredden af selve gitteret — bjælkerne kender kun procenter, badgen kræver px. */
@@ -194,12 +146,11 @@ function BookingBar({
   dimmed: boolean
   onSelect: (b: BookingHit) => void
 }) {
-  const { t } = useTranslation()
   const geo = barGeometry(booking, bounds)
   if (!geo) return null
 
   const stage = bookingLifecycle(booking)
-  const look = barLook(stage, colorFor(booking))
+  const look = bookingBarLook(stage, colorFor(booking))
   const widthPx = (geo.width / 100) * gridWidth
   const who = booking.employee?.initials || booking.employee?.full_name || ''
   const purpose = booking.title || ''
@@ -242,65 +193,10 @@ function BookingBar({
         </button>
       </HoverCardTrigger>
       <HoverCardContent align="start" className="w-72">
-        <div className="flex flex-col gap-1.5 text-[12px]">
-          <div className="flex items-start gap-2">
-            <span
-              className="mt-1 size-2.5 shrink-0 rounded-[2px]"
-              style={{ backgroundColor: colorFor(booking).background }}
-            />
-            <span className="min-w-0 flex-1 text-[13px] font-medium">
-              {booking.resource?.name ?? '—'}
-            </span>
-            <span className={cn('shrink-0 text-[11px]', stageTextClass(stage))}>
-              {t(BOOKING_LIFECYCLE_KEYS[stage])}
-            </span>
-          </div>
-          <p>{bookingTimeLabel(booking)}</p>
-          {purpose && <p className="text-muted-foreground">{purpose}</p>}
-          <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-muted-foreground">
-            <dt>{t('bookingFlow.employee')}</dt>
-            <dd className="truncate text-foreground">
-              {booking.employee?.full_name ?? t('bookingFlow.unknownEmployee')}
-            </dd>
-            {bookingParticipantsLabel(booking) && (
-              <>
-                <dt>{t('bookingFlow.participants')}</dt>
-                <dd className="truncate text-foreground">{bookingParticipantsLabel(booking)}</dd>
-              </>
-            )}
-            {booking.resource?.location && (
-              <>
-                <dt>{t('bookingResourcesPage.location')}</dt>
-                <dd className="truncate text-foreground">{booking.resource.location}</dd>
-              </>
-            )}
-            {booking.invoiced_at && (
-              <>
-                <dt>{t('bookingFlow.invoicedAt')}</dt>
-                <dd className="truncate text-foreground">
-                  {dayFormat.format(new Date(booking.invoiced_at))}
-                </dd>
-              </>
-            )}
-          </dl>
-          {booking.cancellation_reason && (
-            <p className="text-status-bad">
-              {t('bookingFlow.cancelReason')}: {booking.cancellation_reason}
-            </p>
-          )}
-          <p className="pt-0.5 text-[11px] text-muted-foreground">
-            {t('bookingCalendar.clickForDetails')}
-          </p>
-        </div>
+        <BookingHoverDetails booking={booking} color={colorFor(booking).background} />
       </HoverCardContent>
     </HoverCard>
   )
-}
-
-function stageTextClass(stage: BookingLifecycle): string {
-  if (stage === 'cancelled') return 'text-status-bad'
-  if (stage === 'in_use') return 'text-status-good'
-  return 'text-muted-foreground'
 }
 
 export function BookingTimeline({
@@ -313,10 +209,11 @@ export function BookingTimeline({
   query,
   colorFor,
   today,
-  maxRows,
+  resetKey,
   onSelectBooking,
   onSelectDay,
   onCreate,
+  onResourceInfo,
 }: {
   period: BookingPeriod
   horizon: Horizon
@@ -328,14 +225,23 @@ export function BookingTimeline({
   query: string
   colorFor: BookingColorFn
   today: Date
-  maxRows: number
+  /** Skifter når filtrene gør — så sætter vi tilbage til første side. */
+  resetKey: string
   onSelectBooking: (b: BookingHit) => void
   onSelectDay: (day: Date) => void
   onCreate: (resourceId: string, day: Date) => void
+  /** Sat = ressourcenavnet får et info-ikon til højre (nøgletal + eksport). */
+  onResourceInfo?: (resource: TimelineResource) => void
 }) {
   const { t } = useTranslation()
   const gridRef = useRef<HTMLDivElement>(null)
   const gridWidth = useElementWidth(gridRef)
+  const [page, setPage] = useState(1)
+
+  // Et nyt filter giver en ny liste; side 4 af den gamle betyder intet i den
+  // nye. Perioden nulstiller derimod IKKE — man vil se de samme ressourcer,
+  // når man bladrer en uge frem.
+  useEffect(() => setPage(1), [resetKey])
 
   const columns = useMemo(
     () => timelineColumns(period, horizon, hours, today),
@@ -356,7 +262,21 @@ export function BookingTimeline({
     })
   }, [resources, bookings])
 
-  const visibleRows = rows.slice(0, maxRows)
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const visibleRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  // Sidevindue: højst MAX_PAGE_BUTTONS knapper, centreret om aktuel side.
+  const pageButtons = Array.from(
+    {
+      length: Math.min(MAX_PAGE_BUTTONS, pageCount),
+    },
+    (_, i) =>
+      Math.max(
+        1,
+        Math.min(safePage - Math.floor(MAX_PAGE_BUTTONS / 2), pageCount - MAX_PAGE_BUTTONS + 1),
+      ) + i,
+  )
   const gridCols = `repeat(${columns.length}, minmax(0, 1fr))`
   const rowCols = `${LABEL_WIDTH}px 1fr`
   const showWeekday = period !== 'day'
@@ -407,8 +327,10 @@ export function BookingTimeline({
     )
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="overflow-x-auto rounded-md border border-border bg-panel">
+    // Rammen ligger UDEN OM den vandrette rulning, så sidebjælken bliver
+    // stående, mens gitteret ruller ind under den.
+    <div className="overflow-hidden rounded-md border border-border bg-panel">
+      <div className="overflow-x-auto">
         <div style={{ minWidth: LABEL_WIDTH + columns.length * MIN_COL_WIDTH }}>
           {bands.map((band, bandIndex) => (
             <div
@@ -489,12 +411,30 @@ export function BookingTimeline({
               className="grid border-b border-border/60 last:border-b-0"
               style={{ gridTemplateColumns: rowCols }}
             >
-              <div className="sticky left-0 z-20 flex min-w-0 flex-col justify-center border-r border-border bg-panel px-2 py-1">
-                <span className="truncate text-[12px] font-medium">{resource.name}</span>
-                {resource.location && (
-                  <span className="truncate text-[11px] text-muted-foreground">
-                    {resource.location}
-                  </span>
+              <div className="sticky left-0 z-20 flex min-w-0 items-center gap-1 border-r border-border bg-panel px-2 py-1">
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <span className="truncate text-[12px] font-medium">{resource.name}</span>
+                  {resource.location && (
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      {resource.location}
+                    </span>
+                  )}
+                </div>
+                {onResourceInfo && (
+                  <button
+                    type="button"
+                    // Info, ikke redigering: ressourcens stamdata rettes på
+                    // /booking/resources. Her er det nøgletal og eksport.
+                    aria-label={t('bookingCalendar.resourceInfo')}
+                    title={t('bookingCalendar.resourceInfo')}
+                    className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onResourceInfo(resource)
+                    }}
+                  >
+                    <Info className="size-3.5" />
+                  </button>
                 )}
               </div>
               <div className="relative" style={{ height: lanes * LANE_HEIGHT }}>
@@ -540,24 +480,75 @@ export function BookingTimeline({
           ))}
         </div>
       </div>
-      {rows.length > maxRows && (
-        <p className="text-xs text-status-neutral-to-bad">
-          {t('bookingCalendar.rowsCapped', { count: maxRows })}
-        </p>
-      )}
+
+      {/* Sidebjælke som i tabellerne: ti rækker ad gangen. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2">
+        <span className="text-xs text-muted-foreground">
+          {t('dataTable.showing', {
+            from: rows.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1,
+            to: Math.min(safePage * PAGE_SIZE, rows.length),
+            total: rows.length,
+            entity: t('nav.bookingResources').toLowerCase(),
+          })}
+        </span>
+        {pageCount > 1 && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={safePage <= 1}
+              onClick={() => setPage(safePage - 1)}
+            >
+              <ChevronLeft className="size-3.5" /> {t('dataTable.previous')}
+            </Button>
+            {pageButtons.map((n) => (
+              <Button
+                key={n}
+                variant={n === safePage ? 'outline' : 'ghost'}
+                size="sm"
+                className="h-7 w-7 p-0 text-xs"
+                onClick={() => setPage(n)}
+              >
+                {n}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={safePage >= pageCount}
+              onClick={() => setPage(safePage + 1)}
+            >
+              {t('dataTable.next')} <ChevronRight className="size-3.5" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 /** Forklaring til statusbehandlingen — farven er kategoriens, formen er status'. */
-export function StatusLegend({ stages }: { stages: BookingLifecycle[] }) {
+export function StatusLegend({
+  stages,
+  className,
+}: {
+  stages: BookingLifecycle[]
+  className?: string
+}) {
   const { t } = useTranslation()
   if (stages.length === 0) return null
   const neutral = { background: 'var(--booking-category-none)', color: 'var(--foreground)' }
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground',
+        className,
+      )}
+    >
       {stages.map((s) => {
-        const look = barLook(s, neutral)
+        const look = bookingBarLook(s, neutral)
         return (
           <span key={s} className="flex items-center gap-1.5">
             <span
