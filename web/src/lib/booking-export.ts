@@ -41,7 +41,7 @@ export type ExportOptions = {
 }
 
 /** Hvilket udsnit blev eksporteret? Går med i revisionssporet. */
-export type ExportScope = 'booking' | 'resource' | 'timeframe' | 'filtered' | 'selected'
+export type ExportScope = 'booking' | 'resource' | 'timeframe' | 'filtered' | 'selected' | 'report'
 
 type ColumnDef = { key: string; labelKey: string }
 
@@ -137,10 +137,20 @@ function fmtAmount(value: number, decimal: '.' | ','): string {
 }
 
 /** Antal påbegyndte døgn — grundlaget for "lokale × antal dage × pris" (C-01). */
+// Kalenderdage i dansk tid, halvåbent (slut eksklusiv) — samme tælling som
+// basens booking_day_count med 'calendar': 00:00 → 00:00 næste dag er én dag,
+// 22:00 → 02:00 er to. (Hverdagsreglen kender kun basen; kladden er facit.)
+function dayKey(ms: number): number {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Copenhagen', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date(ms))
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? ''
+  return Date.UTC(Number(g('year')), Number(g('month')) - 1, Number(g('day')))
+}
 export function bookingDays(b: { starts_at: string; ends_at: string }): number {
-  const ms = Date.parse(b.ends_at) - Date.parse(b.starts_at)
-  if (!Number.isFinite(ms) || ms <= 0) return 0
-  return Math.max(1, Math.ceil(ms / 86_400_000))
+  const s = Date.parse(b.starts_at)
+  const e = Date.parse(b.ends_at)
+  if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s) return 0
+  return Math.max(1, Math.round((dayKey(e - 1) - dayKey(s)) / 86_400_000) + 1)
 }
 
 export type ExportRow = Record<string, string | number | null | undefined>

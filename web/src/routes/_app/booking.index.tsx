@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Download, Plus } from 'lucide-react'
+import { Download, FileText, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -20,9 +20,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { InvoiceDraftGenerateDialog } from '@/components/invoice-draft-generate-dialog'
 import { BookingDetailPane } from '@/components/booking-detail-pane'
 import { BookingExportDialog } from '@/components/booking-export-dialog'
-import { useCanManageBookings } from '@/components/booking-calendar'
+import { useCanManageBookings, useCanOperateBookings } from '@/components/booking-calendar'
 import { BookingDialog } from '@/components/booking-dialog'
 import { DataTable, type ColumnDef } from '@/components/data-table'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -95,6 +96,8 @@ function BookingListPage() {
     selected: [],
   })
   const canManage = useCanManageBookings()
+  const canOperate = useCanOperateBookings()
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
 
   const refresh = () => invalidateBookingQueries(queryClient)
 
@@ -185,9 +188,19 @@ function BookingListPage() {
                 <Download className="size-4" /> {t('bookingExport.export')}
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
-              <Plus className="size-4" /> {t('common.new')}
-            </Button>
+            {/* Kladden dannes for det, listen VISER — markerede rækker hvis der er
+                nogen, ellers hele det filtrerede udvalg. Det er C-03's "en periode
+                i én arbejdsgang": filtret er arbejdsgangen. */}
+            {canManage && (
+              <Button size="sm" variant="outline" onClick={() => setInvoiceOpen(true)}>
+                <FileText className="size-4" /> {t('invoiceDrafts.generate')}
+              </Button>
+            )}
+            {canOperate && (
+              <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+                <Plus className="size-4" /> {t('common.new')}
+              </Button>
+            )}
           </div>
         }
         onRowClick={(b) => guarded(() => setActiveId(b.id === activeId ? null : b.id))}
@@ -216,6 +229,14 @@ function BookingListPage() {
 
       {/* Har brugeren krydset rækker af, er DE udtrækket; ellers alt hvad
           søgning og kolonnefiltre har ladet stå. */}
+      <InvoiceDraftGenerateDialog
+        open={invoiceOpen}
+        onOpenChange={setInvoiceOpen}
+        companyId={companyId!}
+        bookingIds={(exportRows.selected.length > 0 ? exportRows.selected : exportRows.filtered).map(
+          (b) => b.id,
+        )}
+      />
       <BookingExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}

@@ -19,7 +19,6 @@ export type TariffRow = {
   scope: TariffScope
   unit: TariffUnit
   amount: number
-  vat_code: string | null
   valid_from: string
   valid_to: string | null
   note: string | null

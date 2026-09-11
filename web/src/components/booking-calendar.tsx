@@ -201,6 +201,22 @@ export function useCanManageBookings(): boolean {
 }
 
 /**
+ * Må brugeren oprette og rette bookinger? Spejler can_operate_bookings i
+ * databasen: handlers og managers, ikke økonomirollen — den ser listen for at
+ * fakturere, og en "Ny"-knap, basen afviser, hører ikke hjemme der.
+ */
+export function useCanOperateBookings(): boolean {
+  const { data: access } = useAccess()
+  if (!access) return false
+  return (
+    access.isPlatformAdmin ||
+    access.isManager ||
+    access.roles.has('booking_manager') ||
+    access.roles.has('booking_handler')
+  )
+}
+
+/**
  * Bookingens detaljer og handlinger.
  *
  * Handlingerne følger statusmodellen (A-02): frem til fakturering kan

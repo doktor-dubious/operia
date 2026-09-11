@@ -245,6 +245,9 @@ function categoryOf(action: string): string {
     case 'booking_resource':
     case 'booking_level':
     case 'booking_service':
+    // Fakturakladder og kreditnotaer hører til booking-produktet (spejler
+    // basens 'invoice%'-gren).
+    case 'invoice_draft':
       return 'booking'
     case 'accounting':
       return 'accounting'
@@ -277,6 +280,7 @@ function categoryOf(action: string): string {
     case 'import':
     case 'import_config':
     case 'data_transfer':
+    case 'dalux':
       return 'imports'
     case 'log_drain':
     case 'retention':

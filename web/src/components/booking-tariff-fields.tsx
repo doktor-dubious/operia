@@ -56,7 +56,6 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
   const [unit, setUnit] = useState<string>(scope === 'level' ? 'person' : 'day')
   const [amount, setAmount] = useState('')
   const [from, setFrom] = useState(today())
-  const [vat, setVat] = useState('')
   const [busy, setBusy] = useState(false)
 
   const key = ['booking-tariffs', companyId, targetId]
@@ -65,7 +64,7 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_tariffs')
-        .select('id, scope, unit, amount, vat_code, valid_from, valid_to, note')
+        .select('id, scope, unit, amount, valid_from, valid_to, note')
         .eq('company_id', companyId)
         .eq('target_id', targetId)
         .order('valid_from', { ascending: false })
@@ -110,7 +109,6 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
       level_id: scope === 'level' ? targetId : null,
       unit,
       amount: value,
-      vat_code: vat.trim() || null,
       valid_from: from,
     })
     setBusy(false)
@@ -121,7 +119,6 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
       return
     }
     setAmount('')
-    setVat('')
     refresh()
   }
 
@@ -170,9 +167,6 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
                   {r.valid_from} – {r.valid_to ?? t('bookingTariffs.open')}
                   {current ? ` · ${t('bookingTariffs.current')}` : ''}
                 </span>
-                {r.vat_code && (
-                  <span className="text-xs text-muted-foreground">{r.vat_code}</span>
-                )}
                 <Button
                   size="icon"
                   variant="ghost"
@@ -221,15 +215,6 @@ export function BookingTariffFields({ companyId, scope, targetId, basePriceHint 
             className="w-40"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-label">{t('bookingTariffs.vat')}</Label>
-          <Input
-            className="w-28"
-            value={vat}
-            placeholder={t('bookingTariffs.vatPlaceholder')}
-            onChange={(e) => setVat(e.target.value)}
           />
         </div>
         <Button size="sm" disabled={busy || !amount.trim()} onClick={() => void add()}>

@@ -144,6 +144,13 @@ export const ROLE_GROUPS: RoleGroup[] = [
         labelKey: 'usersPage.roleBookingManager',
         descKey: 'userDetail.roleBookingManagerDescription',
       },
+      {
+        // Økonomirollen (EVU F-01/C-08): godkender og overfører fakturakladder,
+        // opretter kreditnotaer, læser rapport og afstemning — men booker ikke.
+        value: 'finance_manager',
+        labelKey: 'usersPage.roleFinanceManager',
+        descKey: 'userDetail.roleFinanceManagerDescription',
+      },
     ],
   },
 ]
@@ -193,8 +200,12 @@ const PAGE_ACCESS: { prefix: string; roles: AppRole[] }[] = [
   { prefix: '/booking/resources', roles: ['booking_manager'] },
   { prefix: '/booking/categories', roles: ['booking_manager'] },
   { prefix: '/booking/services', roles: ['booking_manager'] },
+  { prefix: '/booking/invoices', roles: ['booking_manager', 'finance_manager'] },
+  { prefix: '/booking/report', roles: ['booking_manager', 'finance_manager'] },
+  { prefix: '/booking/reconciliation', roles: ['booking_manager', 'finance_manager'] },
+  { prefix: '/booking/import', roles: ['booking_manager'] },
   { prefix: '/booking/history', roles: ['booking_manager'] },
-  { prefix: '/booking', roles: ['booking_handler', 'booking_manager'] },
+  { prefix: '/booking', roles: ['booking_handler', 'booking_manager', 'finance_manager'] },
   { prefix: '/products/routes', roles: ['route_planner_manager'] },
   { prefix: '/products', roles: [] },
   // Persondata-siden rummer indsigtsudtrækket, som sar_export i databasen
@@ -236,7 +247,7 @@ const SECTION_ROLES: Record<string, AppRole[]> = {
   assets: ['asset_handler', 'asset_manager', 'handheld_asset_handler'],
   lager: ['inventory_handler', 'inventory_manager', 'handheld_inventory_handler'],
   routes: ['route_planner_handler', 'route_planner_manager', 'handheld_route_planner'],
-  booking: ['booking_handler', 'booking_manager'],
+  booking: ['booking_handler', 'booking_manager', 'finance_manager'],
 }
 
 // Bedste destination for en produktflise ud fra brugerens adgang: produktets

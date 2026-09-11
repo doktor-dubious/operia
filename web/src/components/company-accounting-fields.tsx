@@ -19,6 +19,7 @@ import {
 import { usePlatformSettings } from '@/hooks/use-platform-settings'
 import { ACCOUNTING_PROVIDERS, accountingProvider } from '@/lib/accounting'
 import { supabase } from '@/lib/supabase'
+import { EconomicMappingFields } from '@/components/economic-mapping-fields'
 
 // Pr. virksomhed: kundens forbindelse til sit regnskabssystem (e-conomic i dag).
 //
@@ -279,6 +280,9 @@ export function CompanyAccountingFields({ companyId }: { companyId: string }) {
           </div>
         )}
       </div>
+
+      {/* Mapningen (C-02) giver først mening, når forbindelsen er verificeret. */}
+      {data?.verified_at && form.provider === 'economic' && <EconomicMappingFields companyId={companyId} />}
 
       {dirty && (
         <div className="sticky bottom-0 z-10 -mb-6 -ml-[16.5rem] -mr-6 mt-auto flex justify-end gap-3 border-t border-border bg-background px-6 py-3">

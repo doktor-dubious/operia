@@ -181,14 +181,27 @@ export function describeChanges(row: HistoryRow, lk: Lookups, t: TFunction, lang
 /**
  * Hvad ændringen betød for fakturagrundlaget (D-04's beløbshalvdel).
  *
- * Kun tilkøbsydelser kan gøres op i kroner i dag — de er det eneste med en pris
- * på sig. Lokale × dage × pris er krav C-01/C-05 og findes ikke endnu, så en
- * flyttet booking returnerer null frem for 0: "ingen beløbskonsekvens" og
- * "kan ikke gøres op endnu" er ikke det samme, og en 0-krone i kolonnen ville
- * påstå det første.
+ * Tilkøb gøres op af deres egne, prissatte hændelser; lokale og kursister af
+ * beløbet, triggeren skrev på hændelsen. Mangler begge dele (fx en ændring før
+ * 2026-09-13, eller en booking uden takst), returneres null frem for 0: "ingen
+ * beløbskonsekvens" og "kan ikke gøres op" er ikke det samme, og en 0-krone i
+ * kolonnen ville påstå det første.
  */
 export function amountDelta(row: HistoryRow): number | null {
   const d = row.detail ?? {}
+  // Siden 2026-09-13 bærer bookinghændelserne selv, hvad ændringen betød for
+  // lokale- og kursistlinjerne (amount_from/amount_to, regnet af triggeren på
+  // taksterne som de gjaldt) — så en flyttet booking, et ændret kursistantal
+  // eller en afbestilling kan gøres op i kroner, ikke kun tilkøbene.
+  // Triggeren stripper null (jsonb_strip_nulls): en manglende side betyder
+  // "kunne ikke prissættes", ikke 0 kroner. Så mangler én side, kan
+  // ændringen ikke gøres op — og et ± på hele beløbet ville være forkert.
+  if (d.amount_from !== undefined || d.amount_to !== undefined) {
+    if (d.amount_from == null || d.amount_to == null) return null
+    const from = Number(d.amount_from)
+    const to = Number(d.amount_to)
+    if (Number.isFinite(from) && Number.isFinite(to)) return to - from
+  }
   const price = Number(d.unit_price ?? NaN)
   const mode = typeof d.price_mode === 'string' ? d.price_mode : null
   if (!Number.isFinite(price) || !mode) return null

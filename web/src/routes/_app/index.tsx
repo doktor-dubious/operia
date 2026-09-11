@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAccess } from '@/hooks/use-access'
+import { useTileBadges } from '@/hooks/use-tile-badges'
 import { useCompanyContext } from '@/hooks/use-company-context'
 import { useHomeConfig } from '@/hooks/use-home-config'
 import {
@@ -93,6 +94,9 @@ function HomePage() {
   const { data: access } = useAccess()
   const { companyId, isPending: companyPending } = useCompanyContext()
   const { data: config } = useHomeConfig(companyId, !companyPending)
+  // Tal på fliserne, der kalder på handling (fx booking: afsluttet, ikke
+  // faktureret — EVU C-04). Kun for de roller, der kan gøre noget ved det.
+  const badges = useTileBadges(companyId, access)
 
   const design = config?.design
   // Kun fliser for produkter virksomheden har adgang til, og som brugerens
@@ -217,8 +221,17 @@ function HomePage() {
       )
     }
 
+    const badge = linkTile ? badges[linkTile.product] : undefined
     const content = (
       <>
+        {badge && badge.count > 0 && (
+          <span
+            title={badge.title}
+            className="absolute left-3 top-3 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium tabular-nums text-black shadow-sm"
+          >
+            {badge.count}
+          </span>
+        )}
         {showIcon && IconComp && (
           <IconComp
             className={cn(

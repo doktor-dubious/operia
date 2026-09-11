@@ -91,6 +91,10 @@ import { Route as AppConfigureBillingRouteImport } from './routes/_app/configure
 import { Route as AppConfigureAssetDataRouteImport } from './routes/_app/configure.asset-data'
 import { Route as AppBookingServicesRouteImport } from './routes/_app/booking.services'
 import { Route as AppBookingResourcesRouteImport } from './routes/_app/booking.resources'
+import { Route as AppBookingReportRouteImport } from './routes/_app/booking.report'
+import { Route as AppBookingReconciliationRouteImport } from './routes/_app/booking.reconciliation'
+import { Route as AppBookingInvoicesRouteImport } from './routes/_app/booking.invoices'
+import { Route as AppBookingImportRouteImport } from './routes/_app/booking.import'
 import { Route as AppBookingHistoryRouteImport } from './routes/_app/booking.history'
 import { Route as AppBookingCategoriesRouteImport } from './routes/_app/booking.categories'
 import { Route as AppBookingCalendarRouteImport } from './routes/_app/booking.calendar'
@@ -529,6 +533,27 @@ const AppBookingResourcesRoute = AppBookingResourcesRouteImport.update({
   path: '/booking/resources',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBookingReportRoute = AppBookingReportRouteImport.update({
+  id: '/booking/report',
+  path: '/booking/report',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBookingReconciliationRoute =
+  AppBookingReconciliationRouteImport.update({
+    id: '/booking/reconciliation',
+    path: '/booking/reconciliation',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppBookingInvoicesRoute = AppBookingInvoicesRouteImport.update({
+  id: '/booking/invoices',
+  path: '/booking/invoices',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBookingImportRoute = AppBookingImportRouteImport.update({
+  id: '/booking/import',
+  path: '/booking/import',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBookingHistoryRoute = AppBookingHistoryRouteImport.update({
   id: '/booking/history',
   path: '/booking/history',
@@ -666,6 +691,10 @@ export interface FileRoutesByFullPath {
   '/booking/calendar': typeof AppBookingCalendarRoute
   '/booking/categories': typeof AppBookingCategoriesRoute
   '/booking/history': typeof AppBookingHistoryRoute
+  '/booking/import': typeof AppBookingImportRoute
+  '/booking/invoices': typeof AppBookingInvoicesRoute
+  '/booking/reconciliation': typeof AppBookingReconciliationRoute
+  '/booking/report': typeof AppBookingReportRoute
   '/booking/resources': typeof AppBookingResourcesRoute
   '/booking/services': typeof AppBookingServicesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
@@ -769,6 +798,10 @@ export interface FileRoutesByTo {
   '/booking/calendar': typeof AppBookingCalendarRoute
   '/booking/categories': typeof AppBookingCategoriesRoute
   '/booking/history': typeof AppBookingHistoryRoute
+  '/booking/import': typeof AppBookingImportRoute
+  '/booking/invoices': typeof AppBookingInvoicesRoute
+  '/booking/reconciliation': typeof AppBookingReconciliationRoute
+  '/booking/report': typeof AppBookingReportRoute
   '/booking/resources': typeof AppBookingResourcesRoute
   '/booking/services': typeof AppBookingServicesRoute
   '/configure/asset-data': typeof AppConfigureAssetDataRoute
@@ -875,6 +908,10 @@ export interface FileRoutesById {
   '/_app/booking/calendar': typeof AppBookingCalendarRoute
   '/_app/booking/categories': typeof AppBookingCategoriesRoute
   '/_app/booking/history': typeof AppBookingHistoryRoute
+  '/_app/booking/import': typeof AppBookingImportRoute
+  '/_app/booking/invoices': typeof AppBookingInvoicesRoute
+  '/_app/booking/reconciliation': typeof AppBookingReconciliationRoute
+  '/_app/booking/report': typeof AppBookingReportRoute
   '/_app/booking/resources': typeof AppBookingResourcesRoute
   '/_app/booking/services': typeof AppBookingServicesRoute
   '/_app/configure/asset-data': typeof AppConfigureAssetDataRoute
@@ -981,6 +1018,10 @@ export interface FileRouteTypes {
     | '/booking/calendar'
     | '/booking/categories'
     | '/booking/history'
+    | '/booking/import'
+    | '/booking/invoices'
+    | '/booking/reconciliation'
+    | '/booking/report'
     | '/booking/resources'
     | '/booking/services'
     | '/configure/asset-data'
@@ -1084,6 +1125,10 @@ export interface FileRouteTypes {
     | '/booking/calendar'
     | '/booking/categories'
     | '/booking/history'
+    | '/booking/import'
+    | '/booking/invoices'
+    | '/booking/reconciliation'
+    | '/booking/report'
     | '/booking/resources'
     | '/booking/services'
     | '/configure/asset-data'
@@ -1189,6 +1234,10 @@ export interface FileRouteTypes {
     | '/_app/booking/calendar'
     | '/_app/booking/categories'
     | '/_app/booking/history'
+    | '/_app/booking/import'
+    | '/_app/booking/invoices'
+    | '/_app/booking/reconciliation'
+    | '/_app/booking/report'
     | '/_app/booking/resources'
     | '/_app/booking/services'
     | '/_app/configure/asset-data'
@@ -1848,6 +1897,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBookingResourcesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/booking/report': {
+      id: '/_app/booking/report'
+      path: '/booking/report'
+      fullPath: '/booking/report'
+      preLoaderRoute: typeof AppBookingReportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/booking/reconciliation': {
+      id: '/_app/booking/reconciliation'
+      path: '/booking/reconciliation'
+      fullPath: '/booking/reconciliation'
+      preLoaderRoute: typeof AppBookingReconciliationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/booking/invoices': {
+      id: '/_app/booking/invoices'
+      path: '/booking/invoices'
+      fullPath: '/booking/invoices'
+      preLoaderRoute: typeof AppBookingInvoicesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/booking/import': {
+      id: '/_app/booking/import'
+      path: '/booking/import'
+      fullPath: '/booking/import'
+      preLoaderRoute: typeof AppBookingImportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/booking/history': {
       id: '/_app/booking/history'
       path: '/booking/history'
@@ -2130,6 +2207,10 @@ interface AppRouteChildren {
   AppBookingCalendarRoute: typeof AppBookingCalendarRoute
   AppBookingCategoriesRoute: typeof AppBookingCategoriesRoute
   AppBookingHistoryRoute: typeof AppBookingHistoryRoute
+  AppBookingImportRoute: typeof AppBookingImportRoute
+  AppBookingInvoicesRoute: typeof AppBookingInvoicesRoute
+  AppBookingReconciliationRoute: typeof AppBookingReconciliationRoute
+  AppBookingReportRoute: typeof AppBookingReportRoute
   AppBookingResourcesRoute: typeof AppBookingResourcesRoute
   AppBookingServicesRoute: typeof AppBookingServicesRoute
   AppImportConfigRoute: typeof AppImportConfigRoute
@@ -2189,6 +2270,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppBookingCalendarRoute: AppBookingCalendarRoute,
   AppBookingCategoriesRoute: AppBookingCategoriesRoute,
   AppBookingHistoryRoute: AppBookingHistoryRoute,
+  AppBookingImportRoute: AppBookingImportRoute,
+  AppBookingInvoicesRoute: AppBookingInvoicesRoute,
+  AppBookingReconciliationRoute: AppBookingReconciliationRoute,
+  AppBookingReportRoute: AppBookingReportRoute,
   AppBookingResourcesRoute: AppBookingResourcesRoute,
   AppBookingServicesRoute: AppBookingServicesRoute,
   AppImportConfigRoute: AppImportConfigRoute,

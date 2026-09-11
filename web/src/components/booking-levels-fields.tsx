@@ -22,7 +22,7 @@ import { supabase } from '@/lib/supabase'
 // tilbage — og at man skulle huske at gemme efter at have trykket på et
 // skraldespandsikon, som tydeligvis allerede har gjort noget.
 
-type LevelRow = { id: string; name: string; is_active: boolean; sort_order: number }
+type LevelRow = { id: string; name: string; is_active: boolean; sort_order: number; vat_code: string | null }
 
 export function BookingLevelsFields({ companyId }: { companyId: string }) {
   const { t } = useTranslation()
@@ -38,7 +38,7 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_participant_levels')
-        .select('id, name, is_active, sort_order')
+        .select('id, name, is_active, sort_order, vat_code')
         .eq('company_id', companyId)
         .order('sort_order')
         .order('name')
@@ -88,6 +88,17 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
     refresh()
   }
 
+  const setVat = async (row: LevelRow, raw: string) => {
+    const value = raw.trim() || null
+    if (value === (row.vat_code ?? null)) return
+    const { error } = await supabase
+      .from('booking_participant_levels')
+      .update({ vat_code: value })
+      .eq('id', row.id)
+    if (error) return fail(error)
+    refresh()
+  }
+
   const setActive = async (row: LevelRow, is_active: boolean) => {
     const { error } = await supabase
       .from('booking_participant_levels')
@@ -119,6 +130,18 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
               className="flex-1"
               // Omdøbning gemmes ved blur eller Enter — ikke ved hvert tastetryk.
               onBlur={(e) => void rename(row, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
+            />
+            {/* Momskoden pr. niveau (A-06/C-07): kursistlinjen arver den. */}
+            <Input
+              defaultValue={row.vat_code ?? ''}
+              maxLength={16}
+              className="w-24"
+              placeholder={t('bookingVat.placeholder')}
+              aria-label={t('bookingVat.label')}
+              onBlur={(e) => void setVat(row, e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur()
               }}

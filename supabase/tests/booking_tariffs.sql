@@ -5,7 +5,10 @@
 \set ON_ERROR_STOP on
 begin;
 
-select id as cid from public.companies order by created_at limit 1 \gset
+-- Virksomheden er den, der har en manager — flere kan dele created_at.
+select a.company_id as cid from public.app_users a
+ where exists (select 1 from public.user_roles r where r.user_id = a.user_id and r.role = 'manager')
+ order by a.created_at limit 1 \gset
 select id as rid from public.booking_resources where company_id = :'cid' limit 1 \gset
 select set_config('operia.t_cid', :'cid', true) as _;
 select set_config('operia.t_rid', :'rid', true) as _;

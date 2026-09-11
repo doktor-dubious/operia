@@ -17,27 +17,43 @@ import type { BookingTimeMode } from '@/lib/booking'
 //  - Tillad bookinger i fortiden (standard TIL): fra = RPC'erne afviser med
 //    booking_in_past; til = klienten viser en blød advarsel.
 
+export type BookingDayBasis = 'calendar' | 'weekday'
+
 export type BookingConfigValue = {
   timeMode: BookingTimeMode
   retroAllowed: boolean
+  /**
+   * Hvordan "antal dage" tælles i fakturakladden (EVU C-01). Kun på
+   * virksomheden — platformen har ingen standard for det, fordi det er et
+   * spørgsmål om kundens prisliste, ikke om systemet. Udeladt = feltet vises ikke.
+   */
+  dayBasis?: BookingDayBasis
 }
 
 export function toBookingConfigValue(row: {
   booking_time_mode: string
   booking_retro_allowed: boolean
+  booking_day_basis?: string
 }): BookingConfigValue {
   return {
     timeMode: row.booking_time_mode === 'day' ? 'day' : 'timed',
     retroAllowed: row.booking_retro_allowed !== false,
+    ...(row.booking_day_basis !== undefined
+      ? { dayBasis: row.booking_day_basis === 'weekday' ? 'weekday' : 'calendar' }
+      : {}),
   }
 }
 
 export function fromBookingConfigValue(v: BookingConfigValue) {
-  return { booking_time_mode: v.timeMode, booking_retro_allowed: v.retroAllowed }
+  return {
+    booking_time_mode: v.timeMode,
+    booking_retro_allowed: v.retroAllowed,
+    ...(v.dayBasis ? { booking_day_basis: v.dayBasis } : {}),
+  }
 }
 
 export function bookingConfigKey(v: BookingConfigValue): string {
-  return `${v.timeMode}|${v.retroAllowed}`
+  return `${v.timeMode}|${v.retroAllowed}|${v.dayBasis ?? ''}`
 }
 
 export function BookingConfigFields({
@@ -70,6 +86,26 @@ export function BookingConfigFields({
         </Select>
         <p className="text-xs text-muted-foreground">{t('bookingConfig.timeModeHelp')}</p>
       </div>
+      {value.dayBasis && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${idPrefix}-daybasis`} className="text-label">
+            {t('bookingConfig.dayBasis')}
+          </Label>
+          <Select
+            value={value.dayBasis}
+            onValueChange={(v) => onChange({ ...value, dayBasis: v as BookingDayBasis })}
+          >
+            <SelectTrigger id={`${idPrefix}-daybasis`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="calendar">{t('bookingConfig.dayBasisCalendar')}</SelectItem>
+              <SelectItem value="weekday">{t('bookingConfig.dayBasisWeekday')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t('bookingConfig.dayBasisHelp')}</p>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <Label htmlFor={`${idPrefix}-retro`} className="text-label">

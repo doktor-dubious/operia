@@ -40,6 +40,7 @@ const INTEGRATIONS = [
   { key: 'slack', labelKey: 'integrationsPage.slack' },
   { key: 'email', labelKey: 'integrationsPage.email' },
   { key: 'accounting', labelKey: 'integrationsPage.accounting' },
+  { key: 'dalux', labelKey: 'integrationsPage.dalux' },
 ]
 
 type Form = {
@@ -56,6 +57,7 @@ type Form = {
   // (e-conomic AppSecretToken) er IKKE en del af formularen — den skrives
   // separat via edge-funktionen economic-config og kan aldrig læses igen.
   accountingEnabled: boolean
+  daluxEnabled: boolean
   accountingProviders: string[]
   // E-mail: hvilken udbyder de to ender kører på, og hvem mailen kommer fra.
   // Nøglen til Brevo er IKKE en del af formularen — den skrives separat via
@@ -101,6 +103,7 @@ function IntegrationsPage() {
     aiModels: [],
     slackEnabled: false,
     accountingEnabled: false,
+    daluxEnabled: false,
     accountingProviders: [],
     emailProvider: 'resend',
     emailInboundProvider: 'postmark',
@@ -124,6 +127,7 @@ function IntegrationsPage() {
         aiModels: data.ai_models ?? [],
         slackEnabled: data.slack_enabled,
         accountingEnabled: data.accounting_enabled,
+        daluxEnabled: data.dalux_enabled,
         accountingProviders: data.accounting_providers ?? [],
         emailProvider: data.email_provider,
         emailInboundProvider: data.email_inbound_provider,
@@ -153,6 +157,7 @@ function IntegrationsPage() {
         ai_models: form.aiModels,
         slack_enabled: form.slackEnabled,
         accounting_enabled: form.accountingEnabled,
+        dalux_enabled: form.daluxEnabled,
         accounting_providers: form.accountingProviders,
         email_provider: form.emailProvider,
         email_inbound_provider: form.emailInboundProvider,
@@ -392,6 +397,31 @@ function IntegrationsPage() {
                   </span>
                 </label>
               </div>
+            </div>
+          )}
+
+          {selected === 'dalux' && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md border p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={form.daluxEnabled}
+                    onCheckedChange={(v) => set({ daluxEnabled: v === true })}
+                  />
+                  <span>
+                    <span className="text-[13px] font-[450]">
+                      {t('integrationsPage.daluxEnable')}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {t('integrationsPage.daluxEnableDesc')}
+                    </span>
+                  </span>
+                </label>
+              </div>
+              <p className="max-w-2xl text-xs text-muted-foreground">
+                {t('integrationsPage.daluxExplainer')}
+              </p>
             </div>
           )}
 

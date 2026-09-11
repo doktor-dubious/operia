@@ -50,6 +50,7 @@ type ServiceValue = {
   has_quantity: boolean
   price_mode: 'unit' | 'total'
   unit_price: string
+  vat_code: string
 }
 
 function useRows(companyId: string | null) {
@@ -59,7 +60,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_services')
-        .select('id, company_id, name, description, has_quantity, price_mode, unit_price, is_active')
+        .select('id, company_id, name, description, has_quantity, price_mode, unit_price, vat_code, is_active')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -91,6 +92,7 @@ function toValue(row: Row): ServiceValue {
     has_quantity: row.has_quantity,
     price_mode: row.price_mode === 'total' ? 'total' : 'unit',
     unit_price: String(row.unit_price ?? 0),
+    vat_code: row.vat_code ?? '',
   }
 }
 
@@ -102,6 +104,7 @@ function toPatch(v: ServiceValue) {
     // Uden antal findes kun ét samlet beløb — databasen håndhæver det samme.
     price_mode: v.has_quantity ? v.price_mode : 'total',
     unit_price: Number(v.unit_price.replace(',', '.')),
+    vat_code: v.vat_code.trim() || null,
   }
 }
 
@@ -190,6 +193,22 @@ function ServiceConfigFields({
           />
           <span className="text-[13px] text-muted-foreground">{currency}</span>
         </div>
+      </div>
+
+      {/* Momskoden bor på ydelsen (A-06/C-06): forplejning og overnatning er
+          momspligtige, kursusmateriale følger ofte undervisningen. Koden er
+          den, kundens regnskabssystem forventer — Operia regner ikke moms. */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`${idPrefix}-vat`} className="text-label">{t('bookingVat.label')}</Label>
+        <Input
+          id={`${idPrefix}-vat`}
+          value={value.vat_code}
+          maxLength={16}
+          className="w-44"
+          placeholder={t('bookingVat.placeholder')}
+          onChange={(e) => set({ vat_code: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">{t('bookingVat.serviceHint')}</p>
       </div>
     </>
   )
@@ -415,6 +434,7 @@ const EMPTY_VALUE: ServiceValue = {
   has_quantity: true,
   price_mode: 'unit',
   unit_price: '0',
+    vat_code: '',
 }
 
 function NewServiceDialog({

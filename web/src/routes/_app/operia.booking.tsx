@@ -8,7 +8,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   BookingConfigFields,
   bookingConfigKey,
-  fromBookingConfigValue,
   toBookingConfigValue,
   type BookingConfigValue,
 } from '@/components/booking-config-fields'
@@ -56,7 +55,8 @@ function OperiaBookingPage() {
     setSaving(true)
     const { data: saved, error } = await supabase
       .from('platform_settings')
-      .update(fromBookingConfigValue(value))
+      // Dagtællingen findes kun pr. virksomhed; platformens række har ikke kolonnen.
+      .update({ booking_time_mode: value.timeMode, booking_retro_allowed: value.retroAllowed })
       .eq('id', true)
       .select('id')
     setSaving(false)

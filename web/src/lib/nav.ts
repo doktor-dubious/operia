@@ -1,5 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BarChart3,
+  FileUp,
+  Scale,
   Archive,
   ArrowLeftToLine,
   ArrowRightFromLine,
@@ -158,6 +161,10 @@ export const navGroups: NavGroup[] = [
       { labelKey: 'bookingResources', href: '/booking/resources', icon: Boxes, productKey: 'booking' },
       { labelKey: 'bookingCategories', href: '/booking/categories', icon: Tag, productKey: 'booking' },
       { labelKey: 'bookingServices', href: '/booking/services', icon: ConciergeBell, productKey: 'booking' },
+      { labelKey: 'bookingInvoices', href: '/booking/invoices', icon: FileText, productKey: 'booking' },
+      { labelKey: 'bookingReport', href: '/booking/report', icon: BarChart3, productKey: 'booking' },
+      { labelKey: 'bookingReconciliation', href: '/booking/reconciliation', icon: Scale, productKey: 'booking' },
+      { labelKey: 'bookingImport', href: '/booking/import', icon: FileUp, productKey: 'booking' },
       { labelKey: 'bookingHistory', href: '/booking/history', icon: History, productKey: 'booking' },
     ],
   },

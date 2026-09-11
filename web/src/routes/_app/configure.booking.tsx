@@ -13,6 +13,7 @@ import {
   type BookingConfigValue,
 } from '@/components/booking-config-fields'
 import { BookingLevelsFields } from '@/components/booking-levels-fields'
+import { BookingExportScheduleFields } from '@/components/booking-export-schedule-fields'
 import { OperiaPage } from '@/components/operia-config-page'
 import { useAccess } from '@/hooks/use-access'
 import { useCompanyContext } from '@/hooks/use-company-context'
@@ -32,7 +33,7 @@ function useCompanyBookingConfigRow(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('companies')
-        .select('booking_time_mode, booking_retro_allowed')
+        .select('booking_time_mode, booking_retro_allowed, booking_day_basis')
         .eq('id', companyId!)
         .single()
       if (error) throw error
@@ -92,6 +93,8 @@ function BookingConfigPage() {
           {/* Kursistniveauer (A-05) gemmer selv, række for række — se
               komponentens hovedkommentar. */}
           {companyId && <BookingLevelsFields companyId={companyId} />}
+          {/* Planlagt fileksport (B-02) gemmer selv, som niveauerne. */}
+          {companyId && <BookingExportScheduleFields companyId={companyId} />}
         </div>
       </OperiaPage>
 

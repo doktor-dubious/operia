@@ -494,6 +494,7 @@ export type Database = {
           company_id: string
           condition: string | null
           created_at: string
+          dalux_asset_id: string | null
           id: string
           is_active: boolean
           location_id: string | null
@@ -518,6 +519,7 @@ export type Database = {
           company_id: string
           condition?: string | null
           created_at?: string
+          dalux_asset_id?: string | null
           id?: string
           is_active?: boolean
           location_id?: string | null
@@ -542,6 +544,7 @@ export type Database = {
           company_id?: string
           condition?: string | null
           created_at?: string
+          dalux_asset_id?: string | null
           id?: string
           is_active?: boolean
           location_id?: string | null
@@ -638,6 +641,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          vat_code: string | null
         }
         Insert: {
           color_index?: number | null
@@ -646,6 +650,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          vat_code?: string | null
         }
         Update: {
           color_index?: number | null
@@ -654,6 +659,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          vat_code?: string | null
         }
         Relationships: [
           {
@@ -703,6 +709,65 @@ export type Database = {
           },
           {
             foreignKeyName: "booking_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_export_files: {
+        Row: {
+          bytes: number | null
+          company_id: string
+          created_at: string
+          delivered_to: string | null
+          error: string | null
+          id: string
+          period_from: string
+          period_to: string
+          profile: string
+          rows: number
+          shape: string
+          status: string
+          storage_path: string | null
+          trigger: string
+        }
+        Insert: {
+          bytes?: number | null
+          company_id: string
+          created_at?: string
+          delivered_to?: string | null
+          error?: string | null
+          id?: string
+          period_from: string
+          period_to: string
+          profile: string
+          rows?: number
+          shape: string
+          status: string
+          storage_path?: string | null
+          trigger: string
+        }
+        Update: {
+          bytes?: number | null
+          company_id?: string
+          created_at?: string
+          delivered_to?: string | null
+          error?: string | null
+          id?: string
+          period_from?: string
+          period_to?: string
+          profile?: string
+          rows?: number
+          shape?: string
+          status?: string
+          storage_path?: string | null
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_export_files_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -781,6 +846,7 @@ export type Database = {
           is_active: boolean
           name: string
           sort_order: number
+          vat_code: string | null
         }
         Insert: {
           company_id: string
@@ -789,6 +855,7 @@ export type Database = {
           is_active?: boolean
           name: string
           sort_order?: number
+          vat_code?: string | null
         }
         Update: {
           company_id?: string
@@ -797,6 +864,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           sort_order?: number
+          vat_code?: string | null
         }
         Relationships: [
           {
@@ -815,6 +883,7 @@ export type Database = {
           category_id: string | null
           company_id: string
           created_at: string
+          dalux_room_id: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -828,6 +897,7 @@ export type Database = {
           category_id?: string | null
           company_id: string
           created_at?: string
+          dalux_room_id?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -841,6 +911,7 @@ export type Database = {
           category_id?: string | null
           company_id?: string
           created_at?: string
+          dalux_room_id?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -938,6 +1009,7 @@ export type Database = {
           name: string
           price_mode: string
           unit_price: number
+          vat_code: string | null
         }
         Insert: {
           company_id: string
@@ -949,6 +1021,7 @@ export type Database = {
           name: string
           price_mode?: string
           unit_price?: number
+          vat_code?: string | null
         }
         Update: {
           company_id?: string
@@ -960,6 +1033,7 @@ export type Database = {
           name?: string
           price_mode?: string
           unit_price?: number
+          vat_code?: string | null
         }
         Relationships: [
           {
@@ -987,7 +1061,6 @@ export type Database = {
           unit: string
           valid_from: string
           valid_to: string | null
-          vat_code: string | null
         }
         Insert: {
           amount: number
@@ -1000,10 +1073,10 @@ export type Database = {
           resource_id?: string | null
           scope: string
           service_id?: string | null
+          target_id?: string | null
           unit: string
           valid_from?: string
           valid_to?: string | null
-          vat_code?: string | null
         }
         Update: {
           amount?: number
@@ -1016,12 +1089,41 @@ export type Database = {
           resource_id?: string | null
           scope?: string
           service_id?: string | null
+          target_id?: string | null
           unit?: string
           valid_from?: string
           valid_to?: string | null
-          vat_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "booking_tariffs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_tariffs_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "booking_participant_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_tariffs_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "booking_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_tariffs_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "booking_services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookings: {
         Row: {
@@ -1034,7 +1136,9 @@ export type Database = {
           created_at: string
           employee_id: string | null
           ends_at: string
+          external_ref: string | null
           id: string
+          invoice_draft_id: string | null
           invoiced_at: string | null
           invoiced_by: string | null
           participant_count: number | null
@@ -1054,7 +1158,9 @@ export type Database = {
           created_at?: string
           employee_id?: string | null
           ends_at: string
+          external_ref?: string | null
           id?: string
+          invoice_draft_id?: string | null
           invoiced_at?: string | null
           invoiced_by?: string | null
           participant_count?: number | null
@@ -1074,7 +1180,9 @@ export type Database = {
           created_at?: string
           employee_id?: string | null
           ends_at?: string
+          external_ref?: string | null
           id?: string
+          invoice_draft_id?: string | null
           invoiced_at?: string | null
           invoiced_by?: string | null
           participant_count?: number | null
@@ -1097,6 +1205,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_invoice_draft_id_fkey"
+            columns: ["invoice_draft_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_drafts"
             referencedColumns: ["id"]
           },
           {
@@ -1216,6 +1331,7 @@ export type Database = {
           booking_cancelled_enabled: boolean | null
           booking_copy_email: string | null
           booking_created_enabled: boolean | null
+          booking_day_basis: string
           booking_invoice_email: string | null
           booking_invoiced_enabled: boolean | null
           booking_notify_booker: boolean | null
@@ -1282,6 +1398,7 @@ export type Database = {
           booking_cancelled_enabled?: boolean | null
           booking_copy_email?: string | null
           booking_created_enabled?: boolean | null
+          booking_day_basis?: string
           booking_invoice_email?: string | null
           booking_invoiced_enabled?: boolean | null
           booking_notify_booker?: boolean | null
@@ -1348,6 +1465,7 @@ export type Database = {
           booking_cancelled_enabled?: boolean | null
           booking_copy_email?: string | null
           booking_created_enabled?: boolean | null
+          booking_day_basis?: string
           booking_invoice_email?: string | null
           booking_invoiced_enabled?: boolean | null
           booking_notify_booker?: boolean | null
@@ -1410,6 +1528,11 @@ export type Database = {
           agreement_number: number | null
           company_id: string
           created_at: string
+          economic_auto_book: boolean
+          economic_customer_number: number | null
+          economic_product_participants: string | null
+          economic_product_room: string | null
+          economic_product_service: string | null
           enabled: boolean
           provider: string
           token_set: boolean
@@ -1421,6 +1544,11 @@ export type Database = {
           agreement_number?: number | null
           company_id: string
           created_at?: string
+          economic_auto_book?: boolean
+          economic_customer_number?: number | null
+          economic_product_participants?: string | null
+          economic_product_room?: string | null
+          economic_product_service?: string | null
           enabled?: boolean
           provider?: string
           token_set?: boolean
@@ -1432,6 +1560,11 @@ export type Database = {
           agreement_number?: number | null
           company_id?: string
           created_at?: string
+          economic_auto_book?: boolean
+          economic_customer_number?: number | null
+          economic_product_participants?: string | null
+          economic_product_room?: string | null
+          economic_product_service?: string | null
           enabled?: boolean
           provider?: string
           token_set?: boolean
@@ -1520,6 +1653,183 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_ai_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_booking_export_schedule: {
+        Row: {
+          company_id: string
+          created_at: string
+          enabled: boolean
+          frequency: string
+          last_run_at: string | null
+          last_run_error: string | null
+          last_run_status: string | null
+          period: string
+          profile: string
+          recipient_email: string | null
+          run_monthday: number | null
+          run_time: string
+          run_weekday: number | null
+          shape: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          frequency?: string
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          period?: string
+          profile?: string
+          recipient_email?: string | null
+          run_monthday?: number | null
+          run_time?: string
+          run_weekday?: number | null
+          shape?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          frequency?: string
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          period?: string
+          profile?: string
+          recipient_email?: string | null
+          run_monthday?: number | null
+          run_time?: string
+          run_weekday?: number | null
+          shape?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_booking_export_schedule_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_dalux_config: {
+        Row: {
+          api_key_expires_at: string | null
+          api_key_set: boolean
+          booking_target: string | null
+          company_id: string
+          created_at: string
+          enabled: boolean
+          environment: string
+          interval_minutes: number | null
+          last_run_at: string | null
+          last_run_error: string | null
+          last_run_status: string | null
+          room_name_field: string | null
+          run_monthday: number | null
+          run_time: string | null
+          run_weekday: number | null
+          schedule_mode: string
+          sync_assets_in: boolean
+          sync_bookings_out: boolean
+          sync_invoices_out: boolean
+          sync_rooms_in: boolean
+          updated_at: string
+          verified_at: string | null
+          verified_detail: Json | null
+        }
+        Insert: {
+          api_key_expires_at?: string | null
+          api_key_set?: boolean
+          booking_target?: string | null
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          environment?: string
+          interval_minutes?: number | null
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          room_name_field?: string | null
+          run_monthday?: number | null
+          run_time?: string | null
+          run_weekday?: number | null
+          schedule_mode?: string
+          sync_assets_in?: boolean
+          sync_bookings_out?: boolean
+          sync_invoices_out?: boolean
+          sync_rooms_in?: boolean
+          updated_at?: string
+          verified_at?: string | null
+          verified_detail?: Json | null
+        }
+        Update: {
+          api_key_expires_at?: string | null
+          api_key_set?: boolean
+          booking_target?: string | null
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          environment?: string
+          interval_minutes?: number | null
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          room_name_field?: string | null
+          run_monthday?: number | null
+          run_time?: string | null
+          run_weekday?: number | null
+          schedule_mode?: string
+          sync_assets_in?: boolean
+          sync_bookings_out?: boolean
+          sync_invoices_out?: boolean
+          sync_rooms_in?: boolean
+          updated_at?: string
+          verified_at?: string | null
+          verified_detail?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_dalux_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_dalux_secret: {
+        Row: {
+          api_key: string | null
+          company_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          company_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          company_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_dalux_secret_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
@@ -1993,6 +2303,119 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "company_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dalux_sync_items: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          id: string
+          idempotency_key: string
+          last_attempt_at: string | null
+          last_error: string | null
+          local_id: string | null
+          object_type: string
+          payload: Json | null
+          run_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          id?: string
+          idempotency_key: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          local_id?: string | null
+          object_type: string
+          payload?: Json | null
+          run_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+          idempotency_key?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          local_id?: string | null
+          object_type?: string
+          payload?: Json | null
+          run_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dalux_sync_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dalux_sync_items_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "dalux_sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dalux_sync_runs: {
+        Row: {
+          actor_user_id: string | null
+          company_id: string
+          counts: Json
+          error: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          trigger: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          company_id: string
+          counts?: Json
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          company_id?: string
+          counts?: Json
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dalux_sync_runs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2530,6 +2953,202 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "asset_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_draft_lines: {
+        Row: {
+          amount: number | null
+          booking_id: string | null
+          company_id: string
+          created_at: string
+          description: string
+          draft_id: string
+          id: string
+          quantity: number
+          sort_order: number
+          source: string
+          unit: string | null
+          unit_price: number
+          vat_code: string | null
+        }
+        Insert: {
+          amount?: number | null
+          booking_id?: string | null
+          company_id: string
+          created_at?: string
+          description: string
+          draft_id: string
+          id?: string
+          quantity: number
+          sort_order?: number
+          source: string
+          unit?: string | null
+          unit_price: number
+          vat_code?: string | null
+        }
+        Update: {
+          amount?: number | null
+          booking_id?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          draft_id?: string
+          id?: string
+          quantity?: number
+          sort_order?: number
+          source?: string
+          unit?: string | null
+          unit_price?: number
+          vat_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_draft_lines_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_draft_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_draft_lines_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_draft_seq: {
+        Row: {
+          company_id: string
+          last_value: number
+        }
+        Insert: {
+          company_id: string
+          last_value?: number
+        }
+        Update: {
+          company_id?: string
+          last_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_draft_seq_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_drafts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bill_to_name: string | null
+          bill_to_ref: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          credited_by_draft_id: string | null
+          credits_draft_id: string | null
+          currency: string
+          external_id: string | null
+          external_system: string | null
+          id: string
+          invoice_no: string | null
+          kind: string
+          note: string | null
+          number: string
+          period_from: string | null
+          period_to: string | null
+          stale_at: string | null
+          stale_reason: string | null
+          status: string
+          transferred_at: string | null
+          transferred_by: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_to_name?: string | null
+          bill_to_ref?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          credited_by_draft_id?: string | null
+          credits_draft_id?: string | null
+          currency: string
+          external_id?: string | null
+          external_system?: string | null
+          id?: string
+          invoice_no?: string | null
+          kind?: string
+          note?: string | null
+          number: string
+          period_from?: string | null
+          period_to?: string | null
+          stale_at?: string | null
+          stale_reason?: string | null
+          status?: string
+          transferred_at?: string | null
+          transferred_by?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_to_name?: string | null
+          bill_to_ref?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          credited_by_draft_id?: string | null
+          credits_draft_id?: string | null
+          currency?: string
+          external_id?: string | null
+          external_system?: string | null
+          id?: string
+          invoice_no?: string | null
+          kind?: string
+          note?: string | null
+          number?: string
+          period_from?: string | null
+          period_to?: string | null
+          stale_at?: string | null
+          stale_reason?: string | null
+          status?: string
+          transferred_at?: string | null
+          transferred_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_drafts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_drafts_credited_by_draft_id_fkey"
+            columns: ["credited_by_draft_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_drafts_credits_draft_id_fkey"
+            columns: ["credits_draft_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_drafts"
             referencedColumns: ["id"]
           },
         ]
@@ -3169,6 +3788,7 @@ export type Database = {
           brevo_api_key_set: boolean
           cost_per_email: number
           cost_per_sms: number
+          dalux_enabled: boolean
           default_currency: string
           default_language: string
           economic_app_secret_set: boolean
@@ -3264,6 +3884,7 @@ export type Database = {
           brevo_api_key_set?: boolean
           cost_per_email?: number
           cost_per_sms?: number
+          dalux_enabled?: boolean
           default_currency?: string
           default_language?: string
           economic_app_secret_set?: boolean
@@ -3359,6 +3980,7 @@ export type Database = {
           brevo_api_key_set?: boolean
           cost_per_email?: number
           cost_per_sms?: number
+          dalux_enabled?: boolean
           default_currency?: string
           default_language?: string
           economic_app_secret_set?: boolean
@@ -3789,6 +4411,16 @@ export type Database = {
         }
         Returns: string
       }
+      add_invoice_draft_line: {
+        Args: {
+          p_description: string
+          p_draft_id: string
+          p_quantity: number
+          p_unit_price: number
+          p_vat_code?: string
+        }
+        Returns: string
+      }
       admin_platform_admins: {
         Args: never
         Returns: {
@@ -3852,6 +4484,10 @@ export type Database = {
         Args: { p_ids: string[]; p_label?: string }
         Returns: number
       }
+      approve_invoice_draft: {
+        Args: { p_approve?: boolean; p_draft_id: string }
+        Returns: undefined
+      }
       assert_booking_level: {
         Args: {
           p_company_id: string
@@ -3881,7 +4517,9 @@ export type Database = {
           created_at: string
           employee_id: string | null
           ends_at: string
+          external_ref: string | null
           id: string
+          invoice_draft_id: string | null
           invoiced_at: string | null
           invoiced_by: string | null
           participant_count: number | null
@@ -3913,7 +4551,7 @@ export type Database = {
       audit_actor_names: {
         Args: { p_company_id: string }
         Returns: {
-          display_name: string | null
+          display_name: string
           platform: boolean
           user_id: string
         }[]
@@ -3923,17 +4561,87 @@ export type Database = {
         Args: { p_action: string; p_detail?: Json }
         Returns: string
       }
+      booking_basis_amount: {
+        Args: {
+          p_company_id: string
+          p_ends_at: string
+          p_level_id: string
+          p_participant_count: number
+          p_resource_id: string
+          p_starts_at: string
+        }
+        Returns: number
+      }
+      booking_day_count: {
+        Args: {
+          p_basis?: string
+          p_ends_at: string
+          p_starts_at: string
+          p_tz?: string
+        }
+        Returns: number
+      }
+      booking_export_due_companies: { Args: never; Returns: string[] }
+      booking_export_period: {
+        Args: { p_at?: string; p_period: string }
+        Returns: {
+          from_ts: string
+          period_from: string
+          period_to: string
+          to_ts: string
+        }[]
+      }
       booking_tariffs_on: {
         Args: { p_company_id: string; p_on?: string; p_target_id: string }
-        Returns: Database["public"]["Tables"]["booking_tariffs"]["Row"][]
+        Returns: {
+          amount: number
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          level_id: string | null
+          note: string | null
+          resource_id: string | null
+          scope: string
+          service_id: string | null
+          target_id: string | null
+          unit: string
+          valid_from: string
+          valid_to: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "booking_tariffs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       can_cancel_bookings: { Args: { p_company_id: string }; Returns: boolean }
+      can_edit_invoice_drafts: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
+      can_invoice_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_manage_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_operate_assets: { Args: { p_company_id: string }; Returns: boolean }
       can_operate_bookings: { Args: { p_company_id: string }; Returns: boolean }
       can_write_assets: { Args: { p_company_id: string }; Returns: boolean }
       cancel_booking: {
         Args: { p_booking_id: string; p_reason: string }
+        Returns: undefined
+      }
+      cancel_invoice_draft: { Args: { p_draft_id: string }; Returns: undefined }
+      checkin_asset: {
+        Args: {
+          p_asset_id: string
+          p_condition?: string
+          p_location_id?: string
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      checkout_asset: {
+        Args: { p_asset_id: string; p_employee_id: string; p_note?: string }
         Returns: undefined
       }
       company_export_allowed: {
@@ -3946,14 +4654,25 @@ export type Database = {
       }
       company_export_catalog: {
         Args: never
-        Returns: { grp: string; ord: number; tbl: string }[]
+        Returns: {
+          grp: string
+          ord: number
+          tbl: string
+        }[]
       }
       company_export_excluded: {
         Args: never
-        Returns: { reason: string; tbl: string }[]
+        Returns: {
+          reason: string
+          tbl: string
+        }[]
       }
       company_export_manifest: {
         Args: { p_company_id: string; p_groups: string[] }
+        Returns: Json
+      }
+      company_export_mask: {
+        Args: { p_row: Json; p_table: string }
         Returns: Json
       }
       company_export_rows: {
@@ -3969,19 +4688,6 @@ export type Database = {
       company_export_ticket_ok: {
         Args: { p_company_id: string; p_export_id: string; p_table?: string }
         Returns: boolean
-      }
-      checkin_asset: {
-        Args: {
-          p_asset_id: string
-          p_condition?: string
-          p_location_id?: string
-          p_note?: string
-        }
-        Returns: undefined
-      }
-      checkout_asset: {
-        Args: { p_asset_id: string; p_employee_id: string; p_note?: string }
-        Returns: undefined
       }
       create_asset_handheld: {
         Args: {
@@ -4023,7 +4729,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_credit_note: {
+        Args: { p_draft_id: string; p_lines?: Json }
+        Returns: Json
+      }
       current_company_id: { Args: never; Returns: string }
+      dalux_due_companies: { Args: never; Returns: string[] }
+      dalux_next_run: {
+        Args: { c: Database["public"]["Tables"]["company_dalux_config"]["Row"] }
+        Returns: string
+      }
+      dalux_retry_item: { Args: { p_item_id: string }; Returns: undefined }
       employee_has_open_parcels: {
         Args: { p_employee_id: string }
         Returns: boolean
@@ -4034,6 +4750,10 @@ export type Database = {
       }
       fold_name: { Args: { p_text: string }; Returns: string }
       generate_batch_code: { Args: { p_company_id: string }; Returns: string }
+      generate_invoice_draft: {
+        Args: { p_booking_ids: string[]; p_company_id: string; p_note?: string }
+        Returns: Json
+      }
       generate_parcel_barcode: {
         Args: { p_company_id: string }
         Returns: string
@@ -4059,6 +4779,19 @@ export type Database = {
           p_last_sign_in_at: string
           p_user_id: string
         }
+        Returns: undefined
+      }
+      import_bookings: {
+        Args: {
+          p_apply?: boolean
+          p_company_id: string
+          p_file_name?: string
+          p_rows: Json
+        }
+        Returns: Json
+      }
+      invoice_draft_mark_stale: {
+        Args: { p_booking_id: string; p_reason: string }
         Returns: undefined
       }
       is_platform_admin: { Args: never; Returns: boolean }
@@ -4201,6 +4934,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_invoice_booked: {
+        Args: { p_draft_id: string; p_invoice_no: string }
+        Returns: undefined
+      }
+      regenerate_invoice_draft: { Args: { p_draft_id: string }; Returns: Json }
       reinstate_asset: { Args: { p_asset_id: string }; Returns: undefined }
       release_import_lock: {
         Args: { p_company_id: string }
@@ -4211,6 +4949,10 @@ export type Database = {
         Returns: undefined
       }
       remove_booking_service: {
+        Args: { p_line_id: string }
+        Returns: undefined
+      }
+      remove_invoice_draft_line: {
         Args: { p_line_id: string }
         Returns: undefined
       }
@@ -4238,6 +4980,16 @@ export type Database = {
         Returns: Json
       }
       sar_section_limit: { Args: never; Returns: number }
+      schedule_next_run: {
+        Args: {
+          p_frequency: string
+          p_last: string
+          p_monthday: number
+          p_run_time: string
+          p_weekday: number
+        }
+        Returns: string
+      }
       send_asset_to_service: {
         Args: {
           p_asset_id: string
@@ -4270,6 +5022,15 @@ export type Database = {
         Returns: number
       }
       sweep_returned_loans: { Args: { p_company_id?: string }; Returns: number }
+      transfer_invoice_draft: {
+        Args: {
+          p_draft_id: string
+          p_external_id?: string
+          p_invoice_no: string
+          p_system?: string
+        }
+        Returns: undefined
+      }
       try_import_lock: { Args: { p_company_id: string }; Returns: boolean }
       try_import_lock_self: { Args: { p_company_id: string }; Returns: boolean }
       unretire_employee: { Args: { p_employee_id: string }; Returns: undefined }
@@ -4327,6 +5088,7 @@ export type Database = {
         | "handheld_route_planner"
         | "booking_manager"
         | "booking_handler"
+        | "finance_manager"
       asset_status:
         | "in_stock"
         | "assigned"
@@ -4510,6 +5272,7 @@ export const Constants = {
         "handheld_route_planner",
         "booking_manager",
         "booking_handler",
+        "finance_manager",
       ],
       asset_status: [
         "in_stock",

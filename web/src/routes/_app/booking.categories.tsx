@@ -43,7 +43,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_categories')
-        .select('id, name, is_active, color_index')
+        .select('id, name, is_active, color_index, vat_code')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -69,10 +69,11 @@ function CategoryDetailPane({
   const [tab, setTab] = useState('details')
   const [name, setName] = useState(row.name)
   const [colorIndex, setColorIndex] = useState<number | null>(row.color_index)
+  const [vat, setVat] = useState(row.vat_code ?? '')
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const dirty = name !== row.name || colorIndex !== row.color_index
+  const dirty = name !== row.name || colorIndex !== row.color_index || vat !== (row.vat_code ?? '')
 
   useEffect(() => {
     onDirtyChange(dirty)
@@ -85,7 +86,7 @@ function CategoryDetailPane({
     setSaving(true)
     const { data, error } = await supabase
       .from('booking_categories')
-      .update({ name: name.trim(), color_index: colorIndex })
+      .update({ name: name.trim(), color_index: colorIndex, vat_code: vat.trim() || null })
       .eq('id', row.id)
       .select('id')
     setSaving(false)
@@ -154,6 +155,16 @@ function CategoryDetailPane({
             >
               <BookingColorPicker value={colorIndex} onChange={setColorIndex} />
             </Field>
+            {/* Momskoden bor på kategorien (A-06): et lokales momsbehandling
+                følger, hvad slags ting det er — ikke prisen eller perioden. */}
+            <Field label={t('bookingVat.label')} info={t('bookingVat.categoryHint')}>
+              <Input
+                value={vat}
+                maxLength={16}
+                placeholder={t('bookingVat.placeholder')}
+                onChange={(e) => setVat(e.target.value)}
+              />
+            </Field>
           </div>
         )}
         {tab === 'actions' && (
@@ -201,6 +212,7 @@ function CategoryDetailPane({
             onClick={() => {
               setName(row.name)
               setColorIndex(row.color_index)
+              setVat(row.vat_code ?? '')
             }}
           >
             {t('common.cancel')}
