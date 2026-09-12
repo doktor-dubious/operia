@@ -60,6 +60,53 @@ ikke af arbejdet: 100 % = acceptkriteriet kan demonstreres i dag.
   (`companies.booking_day_basis`: kalenderdage eller hverdage), så kundens svar på spørgsmål 4
   bliver et valg og ikke en migration. Migration `20260912120000_invoice_drafts.sql`, fixtures
   `supabase/tests/invoice_drafts.sql`.
+- **2026-09-14 — fakturanummeret kommer hjem af sig selv (C-02)**: e-conomic siger ikke til, når
+  bogholderen bogfører, og nummeret kom kun, når nogen trykkede "Hent fakturanummer". Nu (1)
+  henter skærmen selv, når en økonomibruger åbner en overført e-conomic-kladde uden nummer
+  (stille — ingen toast for "ikke bogført endnu"), og (2) cron-jobbet `operia-economic-sync`
+  spørger hver time (7 min over) for alle virksomheder med overførte kladder uden nummer, via
+  ny edge-funktion `economic-sync-run` (service-rollen; `record_invoice_booked` tillader den,
+  revisionsrækken siger `source: scheduled`). Opslaget i e-conomic er gjort robust: først
+  filter på referencen, ellers gennemgang af de bogførte fakturaer fra overførselsdatoen med
+  sammenligning her — et tomt filtersvar må ikke blive til "ikke bogført". Bemærk: e-conomics
+  "Bogfør og send" kræver en modtager (e-mail/EAN) på debitoren; uden den bogføres der ikke, og
+  fakturaen bliver stående under kladder. Migration `20260914180000`, fixture
+  `supabase/tests/economic_sync_schedule.sql`. Skal deployes: `economic-sync-run`,
+  `economic-transfer`, web.
+- **2026-09-14 — momsen følger produktet (A-06, C-02)**: Operias momskode på ydelse/kategori/niveau
+  var ren dokumentation — e-conomic bogfører efter produktets varegruppe → salgskonto for
+  debitorens momszone → kontoens momskode (U25, tomt = momsfrit). Nu slår `economic-transfer`
+  den kæde op (`products`-handlingen giver `vatCode` pr. produkt + mapningens typeprodukter), så
+  vælgeren viser "2010 · Forplejning · U25", "standard" siger, hvad typeproduktet giver, og
+  Operias momskode **udfyldes fra produktet**, når man vælger. Afviger koden alligevel (rettet i
+  hånden, eller produktet ændret i e-conomic), siges det under feltet — og overførslen standser
+  FØR noget oprettes i e-conomic (`vat_mismatch` med linje, Operia-kode, e-conomic-kode, produkt)
+  med "Overfør alligevel" som bevidst valg. Momskoden vises nu som kolonne på kladdens linjer og
+  i linje-eksporten (CSV, web + planlagt). Eksemplet "I25" var e-conomics KØBSmoms — rettet til
+  U25. Prøvet mod e-conomics demo-aftale lokalt: produktliste med koder, afvisning på en linje
+  med forkert kode, og gennemløb til oprettelsen med "alligevel". Skal deployes:
+  `economic-transfer`, `booking-export-run`, web.
+- **2026-09-14 — produktnummeret vælges fra regnskabssystemets liste**: feltet "Produktnr. i
+  Visma e-conomic" på ydelse, kategori og niveau var fritekst, så et nummer, der ikke findes,
+  først faldt ved overførslen — på en kladde, langt fra den ydelse, det kom af. Nu en dropdown
+  fra samme produktliste som mapningen (én hentning, delt), "standard" = mapningens typeprodukt;
+  et gemt nummer, listen ikke længere kender, vises markeret "findes ikke", så det kan rettes.
+  Kan listen ikke hentes (regnskabssystemet nede, funktionen ikke deployet), falder feltet
+  tilbage på fritekst og siger det. Hjælpeteksten præciseret: et valgt produkt *erstatter*
+  typeproduktet for linjen (konto og moms følger produktet i e-conomic; tekst, antal og pris
+  kommer altid fra Operia). Kursistniveauerne (Konfigurér → Booking) fik en kolonneoverskrift:
+  feltet sidder på hver niveau-række, og uden niveauer er der ingen rækker — det var derfor, det
+  ikke kunne ses. Kun web: `hooks/use-accounting-items.ts`, `components/accounting-item-field.tsx`.
+- **2026-09-14 — regnskabsfelterne gjort systemuafhængige**: `economic_*` → `accounting_item_ref`
+  (ydelse/kategori/niveau), `accounting_debtor_ref` (tekst, fordi Business Central bruger koder) og
+  `accounting_item_room/participants/service` + `accounting_auto_book` på opsætningen. Mønstret
+  "typestandard pr. linjetype + undtagelse på tingen selv" gælder ethvert regnskabssystem; kun
+  etiketten i skærmen følger systemet ("Produktnr. i Visma e-conomic"). Migration `20260914150000`.
+- **2026-09-14 — produktnummer i e-conomic pr. ydelse/kategori/niveau (C-02, C-06)**: mapningen
+  havde ét produkt pr. linjetype; det holder ikke for tilkøb, der bogføres forskelligt
+  (forplejning 25 %, kursusmateriale momsfrit). Valgfrit produktnummer dér, hvor momskoden bor —
+  typeproduktet er fallback. Kladdelinjen husker `ref_id`; overførslen slår produktet op ved
+  overførslen. Migration `20260914120000`, fixtures `supabase/tests/economic_product_per_item.sql`.
 - **2026-09-13 — første rigtige overførsel til e-conomic**: FK-00003 → e-conomic-kladde nr. 1 på
   prøveaftale 2459977. Fejl fundet og rettet undervejs (undefined vs. null til PostgREST), plus
   genbrug af eksisterende e-conomic-kladde via referencefeltet. Tilbage: bogfør + hent fakturanr.
@@ -158,11 +205,11 @@ er ikke medregnet. "Afklares" = kan ikke prissættes endeligt, før kunden har s
 |---|---|---|---|
 | A. Booking og ressourcestyring | 7 | 98 % | ≈ 0 d (A-04's debitor følger spørgsmål 3) |
 | B. Integration til Dalux/FM | 10 | 72 % | ≈ 11 d (≈ 9 d afventer kundens objektvalg + stage-nøgle + Dalux-ark) |
-| C. Dataflow booking → afregning | 10 | 96 % | ≈ 1 d (bogfør + hent fakturanr. mod den rigtige aftale; debitor-rest følger spørgsmål 3) |
+| C. Dataflow booking → afregning | 10 | 97 % | ≈ 0 d (debitor-rest følger spørgsmål 3) |
 | D. Sporbarhed og ændringslog | 7 | 91 % | ≈ 1 d |
 | E. Rapportering og afstemning | 4 | 92 % | ≈ 0,5 d (debitorfilter/-kolonne, når begrebet findes) |
 | F. Drift, sikkerhed og support | 8 | 68 % | ≈ 7 d (heraf ≈ 3 d DCA's beslutninger/jurist, ikke udvikling; 3,5 d SSO [Kan]) |
-| **I alt** | **46** | **85 %** | **≈ 24 d** — ≈ 6 d kode kan startes nu (SSO [Kan], SFTP-push, tælleflise-mail), ≈ 7 d er DCA's beslutninger/dokumenter, ≈ 11 d afventer kunden (debitor, Dalux-objekt, momskoder) |
+| **I alt** | **46** | **86 %** | **≈ 23 d** — ≈ 6 d kode kan startes nu (SSO [Kan], SFTP-push, tælleflise-mail), ≈ 7 d er DCA's beslutninger/dokumenter, ≈ 11 d afventer kunden (debitor, Dalux-objekt, momskoder) |
 
 Fordeling: 34 opfyldt (≥ 90 %), 10 delvist (25–89 %), 2 påbegyndt (5–24 %), 0 mangler (0–4 %). Ved førstevurderingen 5. september: 3 / 13 / 13 / 17.
 
@@ -189,7 +236,7 @@ momskoder. Rækkefølgen er min anbefaling: først det, der lukker flest krav pr
 | 12 | **SSO via Entra ID** [Kan] | F-06 | 3,5 | Kan prøves mod DCA's dev-tenant; EVU's tenant først ved go-live |
 | | **I alt** | | **≈ 3,5 d kode (SSO [Kan]) + DCA's beslutninger** (efter 1–11) | |
 
-Venter på kunden (≈ 17 d): C-02-adapteren (e-conomic-login), udgående Dalux-synk + bilag (B-04,
+Venter på kunden (≈ 16,5 d): ~~C-02-adapteren (e-conomic-login)~~ *(kørt mod rigtig aftale 14/9)*, udgående Dalux-synk + bilag (B-04,
 B-05, B-08, B-09-rest), debitor (A-04, C-01-rest, C-03-rest, E-01-rest), momskodernes værdier,
 niveaulisten (C-07), opbevaringstal (D-07).
 
@@ -209,7 +256,7 @@ Rækkefølgen er afhængighedsstyret: hvert punkt låser det næste op.
 4. ~~**Fakturakladde og godkendelse**~~ — bygget 2026-09-12: C-01, C-06 og C-10 er opfyldt, C-07
    og C-08 mangler kun kundens niveauliste og økonomirollen, og fakturanummeret registreres
    manuelt som bro til C-02. Faktureringsgevinsten er dermed i brug uden regnskabsintegrationen.
-   Tilbage i afsnittet: C-02 (afventer systemvalg), C-09 kreditnota, C-03's periodeside (med E-01).
+   Tilbage i afsnittet: ~~C-02 (afventer systemvalg), C-09 kreditnota~~ *(begge kørt mod e-conomic 14/9)*, C-03's periodeside (med E-01).
 5. ~~**Historik for booking**~~ — D-05 og den læsbare før/efter i D-04 er bygget 2026-09-10.
    ~~D-06 eksport af historikken~~ er også bygget (CSV, PDF, Word), og rapport-eksporten fulgte
    med E-03 den 12. september.
@@ -350,14 +397,14 @@ samtidig med, at punkt 1–2 bygges.
 | ID | Krav | Prio | Status | Vurdering | Estimat |
 |-|---|-|--|----------|---|
 | C-01 | Automatisk fakturakladde: lokale × antal dage × pris | Skal | 90 % *(2026-09-12)* | Bygget. **Bookinglisten → Dan fakturakladde** danner kladden ud fra det viste udvalg (markerede rækker, ellers hele det filtrerede sæt) — uden manuel indtastning af linjer, som acceptkriteriet kræver. Linjerne er lokale (takst × dagtælling), kursistniveau (C-07) og hvert tilkøb for sig (C-06). **Prisen er et snapshot** på linjen, så en senere takstændring ikke rører en dannet kladde. Kladden er **Operias egen og systemuafhængig**: `external_system` er 'manual', indtil en adapter sætter sit eget navn, og hele faktureringsgevinsten er derfor i brug, før regnskabsintegrationen findes. Siden **Booking → Fakturakladder** viser linjer, godkendelse, overførsel og annullering. Migration `20260912120000_invoice_drafts.sql`, fixtures `supabase/tests/invoice_drafts.sql` (8 prøver, inkl. regnestykket 3.600 + 11.100 + 5.700 = 20.400). Resten af de 10 %: **debitor** er stadig fri tekst, fordi bookingen kender en medarbejder og ikke en kunde (spørgsmål 3), og halve dage/timepris er en enhed, der kan vælges, men ikke afprøvet mod kundens virkelighed (spørgsmål 4). | 0,5 d (debitor, når svaret findes) |
-| C-02 | Overførsel til regnskabssystem + fakturanummer skrives tilbage | Skal | 95 % *(2026-09-13)* | **Adapteren er bygget** (`economic-transfer`): en godkendt kladde oprettes som fakturakladde i e-conomic ud fra kundens egen skabelon (layout, betalingsbetingelser, momszone), med Operias linjer på de produktnumre, kunden har valgt under Konfigurér → Integrationer → Regnskab (debitor + ét produkt pr. linjetype, hentet fra e-conomic — aldrig tastet). Vores kladdenummer lægges i e-conomics referencefelt, og **fakturanummeret skrives tilbage**, når bogholderen har bogført ("Hent fakturanummer") — eller straks, med *automatisk bogføring* slået til. Kreditnotaer går samme vej (negative linjer). Idempotency-Key = kladdens id, så et netværksudfald ikke giver to kladder derovre. Alle skrivninger i Operia sker med kalderens rettigheder (økonomirollen). Prøvet mod e-conomics demo-aftale helt frem til POST (som demo ikke tillader). **Kørt mod en rigtig aftale 2026-09-13** (prøveaftale 2459977): FK-00003 overført som e-conomic-kladde nr. 1, bookingerne markeret faktureret og låst, `invoice_draft.transferred` i loggen. Første forsøg afslørede en fejl i adapteren (`p_invoice_no` sendt som *undefined* i stedet for *null* → PostgREST fandt ingen funktion), rettet samme dag sammen med genbrug af en allerede oprettet e-conomic-kladde via referencefeltet, så en fejlet overførsel aldrig giver to. Resten af de 5 %: bogføring i e-conomic → "Hent fakturanummer" — samme kald, prøvet mod demo-aftalen, ikke mod den rigtige endnu. Migration `20260913210000_economic_transfer.sql`. | 0,5 d (test mod rigtig aftale) |
+| C-02 | Overførsel til regnskabssystem + fakturanummer skrives tilbage | Skal | 100 % *(2026-09-14)* | **Adapteren er bygget** (`economic-transfer`): en godkendt kladde oprettes som fakturakladde i e-conomic ud fra kundens egen skabelon (layout, betalingsbetingelser, momszone), med Operias linjer på de produktnumre, kunden har valgt under Konfigurér → Integrationer → Regnskab (debitor + ét typeprodukt pr. linjetype, hentet fra e-conomic — og siden 2026-09-14 et valgfrit produktnummer pr. ydelse, ressourcekategori og kursistniveau, som vinder over typeproduktet, så tilkøb med forskellig moms lander på hver sit produkt). Vores kladdenummer lægges i e-conomics referencefelt, og **fakturanummeret skrives tilbage**, når bogholderen har bogført ("Hent fakturanummer") — eller straks, med *automatisk bogføring* slået til. Kreditnotaer går samme vej (negative linjer). Idempotency-Key = kladdens id, så et netværksudfald ikke giver to kladder derovre. Alle skrivninger i Operia sker med kalderens rettigheder (økonomirollen). Prøvet mod e-conomics demo-aftale helt frem til POST (som demo ikke tillader). **Kørt mod en rigtig aftale 2026-09-13** (prøveaftale 2459977): FK-00003 overført som e-conomic-kladde nr. 1, bookingerne markeret faktureret og låst, `invoice_draft.transferred` i loggen. Første forsøg afslørede en fejl i adapteren (`p_invoice_no` sendt som *undefined* i stedet for *null* → PostgREST fandt ingen funktion), rettet samme dag sammen med genbrug af en allerede oprettet e-conomic-kladde via referencefeltet, så en fejlet overførsel aldrig giver to. **Kørt hele vejen 2026-09-14**: FK-00005 overført, bogført i e-conomic af en person, og fakturanummer 1 hentet tilbage til Operia ("Hent fakturanummer" mod den rigtige aftale, `invoice_draft.booked` i loggen). Samme dag: nummeret kommer nu af sig selv (hent ved åbning + cron hver time), momsen følger produktet, og produktnummeret vælges fra e-conomics liste — se ændringsloggen. Tilbage er kun debitor-spørgsmålet (3), som hører under C-01. Migrationer `20260913210000`, `20260914120000/150000/180000`. | 0 d |
 | C-03 | Samlet fakturering af et filtreret udvalg | Skal | 95 % *(2026-09-12)* | Opfyldt med rapporten: periode, ressource, afdeling, status og faktureringsstatus afgrænser udvalget, og **"Dan fakturakladde"** fakturerer det viste (eller markerede) udvalg i én arbejdsgang. Udvalget ER gemt — det står i URL'en. Bookinglistens knap består. Resten: debitor som udvalgskriterium (spørgsmål 3). | 0 d |
 | C-04 | Ingen afsluttet booking kan overses | Skal | 95 % *(2026-09-13)* | Bygget som E-04: rapportens forvalg "Afsluttet, ikke faktureret" + nøgletal, og faktureringskolonnen farver en afsluttet, ufaktureret booking i selve listen. Derfra er "Dan fakturakladde" ét klik. **Forsidens Booking-flise bærer nu tallet** (afsluttet, ikke faktureret, uden kladde) for de roller, der kan handle på det. Resten: en ugentlig påmindelse pr. mail — hører til i beskeddispatcheren og tages, når den alligevel deployes. | 0,25 d |
 | C-05 | Priser pr. ressource og ydelse med tidsafgrænsede takster | Skal | 100 % *(2026-09-13)* | Bygget. `booking_tariffs` bærer takster pr. **ressource**, **tilkøbsydelse** og **kursistniveau** (sidstnævnte er grundlaget for C-07), hver med beløb, enhed, gyldighedsperiode og et frit momskodefelt. **Enheden er data, ikke antagelse** — `dag`, `time`, `kursist`, `kursist pr. dag`, `fast beløb` — så kundens svar på spørgsmål 4, 5 og 6 bliver en indtastning frem for en migration. To takster med samme enhed kan ikke gælde samtidig (exclusion-constraint, samme mekanik som dobbeltbookingsværnet), så prisopslaget har altid ét svar. Skærmen retter ikke en pris: den lukker den gamle takst dagen før og opretter den næste, hvilket ER acceptkriteriet "ændringer påvirker ikke allerede fakturerede bookinger". Fane **Priser** på ressource og ydelse, og en foldbar prisliste pr. niveau i Konfigurér → Booking. Hver ændring i sporet. Migration `20260911180000_booking_tariffs.sql`, fixtures `supabase/tests/booking_tariffs.sql`. Resten af de 15 %: **snapshot ved fakturering** hører til kladden i C-01, momskoden er flyttet fra taksten til kategori/niveau/ydelse (2026-09-13) — den følger tingen, ikke prisen. | 0 d |
 | C-06 | Tilkøb som særskilte fakturalinjer | Skal | 100 % *(2026-09-12)* | Opfyldt. Hver tilkøbsydelse på bookingen bliver til sin egen kladdelinje med ydelsens navn som tekst, sit antal og sin **snapshot-pris** — den pris, der blev låst, da ydelsen blev sat på bookingen, ikke katalogets nuværende. Forplejning, overnatning, rengøring og øvrige tilkøb står dermed som selvstændige linjer, præcis som acceptkriteriet beskriver. | 0 d |
 | C-07 | Beregning pr. kursist, differentieret på niveau | Skal | 90 % *(2026-09-12)* | Bygget. Kursistniveauet har sin egen takst (C-05, scope `level`), og kladden danner en linje pr. niveau med antal = kursister (enhed `kursist`) eller kursister × dage (enhed `kursist pr. dag`). Både antal og niveau indgår dermed i linjebeløbet. Resten af de 10 %: hvilke niveauer og hvilken enhed kunden vil bruge, er stadig spørgsmål 6 — listen er tom, indtil de svarer. | 0 d (afventer niveaulisten fra kunden) |
 | C-08 | Godkendelsestrin før fakturering | Bør | 100 % *(2026-09-13)* | Bygget. En kladde skal godkendes, før den kan overføres: `approve_invoice_draft` sætter status, godkender og tidspunkt, og handlingen står i loggen (`invoice_draft.approved`). Med økonomirollen (F-01, 2026-09-13) er "en ansvarlig frigiver" ikke længere "en bookingansvarlig frigiver": godkendelse og overførsel kræver manager eller finance_manager, og booking_manager afvises server-side. | 0 d |
-| C-09 | Kreditnota ved afbestilling/nedjustering efter fakturering | Skal | 90 % *(2026-09-13)* | Bygget. "Opret kreditnota" på en overført faktura: **hele fakturaen** eller **et udvalg af linjer med antal**. Kreditnotaen er en kladde af arten `credit` (KN-nummer) med reference til fakturaen og negative linjer, og følger samme godkendelse og overførsel — ét spor. Er hele beløbet krediteret, løftes låsen på bookingerne, så de kan rettes og faktureres igen (C-10's "ikke en stille korrektion"); en delvis kreditnota lader fakturaen stå med et fradrag. Én kreditnota ad gangen pr. faktura; en krediteret faktura kan ikke krediteres igen. Vises i afstemningen som negative rækker. Overførslen gennem e-conomic-adapteren (C-02) er den samme som for fakturaer — negative linjer er e-conomics egen kreditnotaform. Resten: én kreditnota overført til den rigtige e-conomic-aftale (fakturaen er derovre nu — det er ét klik). | 0 d |
+| C-09 | Kreditnota ved afbestilling/nedjustering efter fakturering | Skal | 100 % *(2026-09-14)* | Bygget. "Opret kreditnota" på en overført faktura: **hele fakturaen** eller **et udvalg af linjer med antal**. Kreditnotaen er en kladde af arten `credit` (KN-nummer) med reference til fakturaen og negative linjer, og følger samme godkendelse og overførsel — ét spor. Er hele beløbet krediteret, løftes låsen på bookingerne, så de kan rettes og faktureres igen (C-10's "ikke en stille korrektion"); en delvis kreditnota lader fakturaen stå med et fradrag. Én kreditnota ad gangen pr. faktura; en krediteret faktura kan ikke krediteres igen. Vises i afstemningen som negative rækker. Overførslen gennem e-conomic-adapteren (C-02) er den samme som for fakturaer — negative linjer er e-conomics egen kreditnotaform. **Kørt mod den rigtige aftale 2026-09-14**: KN-00006 (hele FK-00005) oprettet, godkendt og overført som negativ kladde i e-conomic; bookingen bag blev frigivet til ny fakturering, som C-10 kræver. Forslag til kunden/revisor: kreditnotaens tekst i e-conomic bør nævne det oprindelige fakturanummer (én linje i adapteren). | 0 d |
 | C-10 | Ændret deltagerantal slår igennem, sporbart | Skal | 100 % *(2026-09-12)* | Opfyldt. Ændres deltagerantallet, skrives før/efter i `booking_events` (A-05/D-04), og fordi kladden dannes **efter** bookingen er afsluttet, regner den på det antal, der står på bookingen på det tidspunkt. Er kladden allerede dannet, er bookingen knyttet til den og kan ikke komme på en ny, før kladden annulleres — så en ændring efter fakturering er en kreditnota (C-09) og ikke en stille korrektion. | 0 d |
 
 ## D. Sporbarhed, ændringslog og dokumentation

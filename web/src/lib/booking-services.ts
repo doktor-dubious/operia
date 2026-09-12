@@ -17,7 +17,7 @@ export type BookingServiceLine = {
   quantity: number
   unit_price: number | string
   price_mode: string
-  service: { id: string; name: string; has_quantity: boolean; is_active: boolean } | null
+  service: { id: string; name: string; has_quantity: boolean; is_active: boolean; vat_code?: string | null } | null
 }
 
 /**
@@ -81,4 +81,4 @@ export function servicePriceLabel(s: ServicePricing, t: TFunction): string {
 }
 
 export const BOOKING_SERVICE_LINE_SELECT =
-  'id, service_id, quantity, unit_price, price_mode, service:booking_services (id, name, has_quantity, is_active)'
+  'id, service_id, quantity, unit_price, price_mode, service:booking_services (id, name, has_quantity, is_active, vat_code)'

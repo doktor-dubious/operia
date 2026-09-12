@@ -77,6 +77,7 @@ export const LINE_EXPORT_COLUMNS: ColumnDef[] = [
   { key: 'starts_at', labelKey: 'bookingExport.colStartsAt' },
   { key: 'ends_at', labelKey: 'bookingExport.colEndsAt' },
   { key: 'service', labelKey: 'bookingExport.colService' },
+  { key: 'vat_code', labelKey: 'bookingExport.colVatCode' },
   { key: 'quantity', labelKey: 'bookingExport.colQuantity' },
   { key: 'unit_price', labelKey: 'bookingExport.colUnitPrice' },
   { key: 'price_mode', labelKey: 'bookingExport.colPriceMode' },
@@ -207,6 +208,7 @@ export function buildLineRows(
         starts_at: fmtDateTime(b.starts_at, opts.dateFormat),
         ends_at: fmtDateTime(b.ends_at, opts.dateFormat),
         service: l.service?.name ?? '',
+        vat_code: l.service?.vat_code ?? '',
         quantity: l.quantity,
         unit_price: fmtAmount(Number(l.unit_price ?? 0), opts.decimal),
         price_mode:

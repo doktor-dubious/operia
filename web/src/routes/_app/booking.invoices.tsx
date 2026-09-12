@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { AlertTriangle, Ban, Check, Plus, RefreshCw, Send, Trash2, Undo2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useAccess } from '@/hooks/use-access'
+import { useAccountingProvider } from '@/hooks/use-accounting-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,6 +53,8 @@ import { supabase } from '@/lib/supabase'
 // er den "skriv fakturanummeret her" — og det er nok til at lukke kredsløbet:
 // bookingerne bliver markeret faktureret og låst, og nummeret står på både
 // kladden og bookingen.
+type VatMismatch = { line: number; description: string; product: string; operia: string; economic: string }
+
 export const Route = createFileRoute('/_app/booking/invoices')({
   component: InvoicesPage,
 })
@@ -214,32 +217,27 @@ function DraftDetailPane({
   // Regnskabsintegrationen (C-02): når e-conomic er koblet på og verificeret,
   // får "Overfør" en søster — kladden sendes derover, og fakturanummeret
   // kommer tilbage, når bogholderen har bogført (eller straks, ved auto-bogføring).
-  const { data: accounting } = useQuery({
-    queryKey: ['company-accounting', companyId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('company_accounting_config')
-        .select('enabled, provider, verified_at')
-        .eq('company_id', companyId)
-        .maybeSingle()
-      return data
-    },
-  })
-  const economicReady = !!accounting?.enabled && accounting.provider === 'economic' && !!accounting.verified_at
+  const economicReady = useAccountingProvider(companyId)?.key === 'economic'
   const [economicBusy, setEconomicBusy] = useState(false)
   // Sidste fejl fra e-conomic-kaldet bliver STÅENDE under knappen: en toast
   // forsvinder, og den, der skal fejlsøge, skal kunne læse beskeden i ro.
   const [economicError, setEconomicError] = useState<string | null>(null)
-  const economic = async (action: 'transfer' | 'sync') => {
+  // Momsafvigelser fundet FØR overførslen: linjens momskode i Operia mod den,
+  // produktets salgskonto i e-conomic giver. Vises med "Overfør alligevel".
+  const [vatMismatch, setVatMismatch] = useState<VatMismatch[] | null>(null)
+  // silent: hentningen ved åbning — ingen toast for "ikke bogført endnu", og
+  // en fejl står kun under knappen, så en åbning aldrig råber.
+  const economic = async (action: 'transfer' | 'sync', ignoreVat = false, silent = false) => {
     setEconomicBusy(true)
     setEconomicError(null)
+    setVatMismatch(null)
     const { data: res, error } = await supabase.functions.invoke('economic-transfer', {
-      body: { companyId, action, draftId: draft.id },
+      body: { companyId, action, draftId: draft.id, ignoreVat },
     })
     setEconomicBusy(false)
     const fail = (msg: string) => {
       setEconomicError(msg)
-      toast.error(msg)
+      if (!silent) toast.error(msg)
     }
     if (error) {
       // Ikke-2xx: læs funktionens egen fejlkode ud af svaret — "non-2xx" siger intet.
@@ -257,6 +255,10 @@ function DraftDetailPane({
       fail(t(`invoiceDrafts.economicError.${res.error}`, String(res.error)) + (res.source ? ` (${res.source})` : ''))
       return
     }
+    if (res?.reason === 'vat_mismatch') {
+      setVatMismatch(res.mismatches as VatMismatch[])
+      return
+    }
     if (!res?.ok) {
       const reason = t(`companyAccounting.test_${res?.reason}`, String(res?.reason))
       fail(res?.detail ? `${reason} — e-conomic: ${res.detail}` : reason)
@@ -266,15 +268,28 @@ function DraftDetailPane({
       toast.success(res.booked
         ? t('invoiceDrafts.economicBooked', { no: res.invoiceNo })
         : t('invoiceDrafts.economicTransferred', { no: res.draftNo }))
-    } else {
-      toast.success(res.booked
-        ? t('invoiceDrafts.economicBooked', { no: res.invoiceNo })
-        : t('invoiceDrafts.economicNotBookedYet'))
+    } else if (res.booked) {
+      toast.success(t('invoiceDrafts.economicBooked', { no: res.invoiceNo }))
+    } else if (!silent) {
+      toast.success(t('invoiceDrafts.economicNotBookedYet'))
     }
-    refresh()
+    if (res.booked || !silent) refresh()
   }
   const canInvoice =
     !!access && (access.isPlatformAdmin || access.isManager || access.roles.has('finance_manager'))
+  // Hent ved åbning: en overført e-conomic-kladde uden fakturanummer spørger
+  // selv, når en økonomibruger åbner den — én gang pr. kladde pr. besøg, så
+  // "Hent fakturanummer" er sjældent nødvendigt at trykke på. Cron-jobbet
+  // 'operia-economic-sync' gør det samme hver time uden nogen bruger.
+  const autoSynced = useRef(new Set<string>())
+  useEffect(() => {
+    if (!economicReady || !canInvoice) return
+    if (draft.status !== 'transferred' || draft.external_system !== 'economic' || draft.invoice_no) return
+    if (autoSynced.current.has(draft.id)) return
+    autoSynced.current.add(draft.id)
+    void economic('sync', false, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.id, draft.status, draft.external_system, draft.invoice_no, economicReady, canInvoice])
   const [newDesc, setNewDesc] = useState('')
   const [newQty, setNewQty] = useState('1')
   const [newPrice, setNewPrice] = useState('')
@@ -338,6 +353,7 @@ function DraftDetailPane({
                       {t('invoiceDrafts.lineQuantity')}
                     </th>
                     <th className="px-3 py-2 text-left font-[450]">{t('invoiceDrafts.lineUnit')}</th>
+                    <th className="px-3 py-2 text-left font-[450]">{t('invoiceDrafts.lineVat')}</th>
                     <th className="px-3 py-2 text-right font-[450]">
                       {t('invoiceDrafts.linePrice')}
                     </th>
@@ -360,6 +376,7 @@ function DraftDetailPane({
                       <td className="px-3 py-2 text-muted-foreground">
                         {l.unit ? t(`invoiceDrafts.unit.${l.unit}`, l.unit) : '—'}
                       </td>
+                      <td className="px-3 py-2 text-muted-foreground">{l.vat_code ?? '—'}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {formatMoney(Number(l.unit_price), draft.currency, i18n.language)}
                       </td>
@@ -650,6 +667,28 @@ function DraftDetailPane({
                   <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
                     {economicError}
                   </p>
+                )}
+                {vatMismatch && (
+                  <div className="flex flex-col gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs">
+                    <p className="font-[450]">{t('invoiceDrafts.vatMismatchTitle', { count: vatMismatch.length })}</p>
+                    <ul className="list-disc pl-4">
+                      {vatMismatch.map((m) => (
+                        <li key={m.line}>
+                          {t('invoiceDrafts.vatMismatchLine', {
+                            line: m.line, description: m.description, product: m.product,
+                            operia: m.operia, economic: m.economic || t('economicMapping.vatNone'),
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-muted-foreground">{t('invoiceDrafts.vatMismatchHint')}</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" disabled={economicBusy} onClick={() => void economic('transfer', true)}>
+                        {t('invoiceDrafts.transferAnyway')}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setVatMismatch(null)}>{t('common.cancel')}</Button>
+                    </div>
+                  </div>
                 )}
 
                 <div className="flex items-center justify-between rounded-md border border-destructive/40 p-4">

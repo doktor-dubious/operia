@@ -2910,7 +2910,10 @@
     "test_rate_limited": "e-conomic afviste forespørgslen midlertidigt (for mange kald) — prøv igen om lidt.",
     "test_timeout": "e-conomic svarede ikke i tide.",
     "test_network": "e-conomic kunne ikke kontaktes.",
-    "test_api_error": "e-conomic svarede med en fejl."
+    "test_api_error": "e-conomic svarede med en fejl.",
+    "test_invoice_number_unreadable": "Fakturaen findes i e-conomic, men fakturanummeret kunne ikke læses ud af svaret — kontakt DCA.",
+    "syncLastOk": "Automatisk hentning af fakturanumre: sidst kørt {{date}}, OK.",
+    "syncLastFailed": "Automatisk hentning af fakturanumre FEJLEDE {{date}}: {{error}}. Kørslen prøver igen hver time."
   },
   "companyAi": {
     "noneOffered": "Der er ingen AI-udbydere tilgængelige for din virksomhed.",
@@ -3240,7 +3243,8 @@
     "active": "Aktiv",
     "deletedToast": "{{name}} er slettet.",
     "errDuplicate": "Niveauet findes allerede.",
-    "errInUse": "Niveauet er i brug på en booking og kan ikke slettes. Deaktivér det i stedet."
+    "errInUse": "Niveauet er i brug på en booking og kan ikke slettes. Deaktivér det i stedet.",
+    "colName": "Niveau"
   },
   "bookingServices": {
     "add": "Tilføj ydelse",
@@ -3347,7 +3351,8 @@
     "colQuantity": "Antal",
     "colUnitPrice": "Enhedspris",
     "colPriceMode": "Pristype",
-    "colLineTotal": "Linjebeløb"
+    "colLineTotal": "Linjebeløb",
+    "colVatCode": "Momskode"
   },
   "bookingHistory": {
     "entity": "ændringer",
@@ -3595,7 +3600,12 @@
       "draft_stale": "Grundlaget er ændret siden kladden blev dannet — dan den igen, før den overføres.",
       "booking_not_completed": "Kladden indeholder en booking, der ikke er afholdt endnu. Dan kladden igen, når bookingen er slut."
     },
-    "generateNone": "Ingen kladde dannet."
+    "generateNone": "Ingen kladde dannet.",
+    "lineVat": "Moms",
+    "vatMismatchTitle": "Momskoden afviger fra e-conomic på {{count}} linje(r)",
+    "vatMismatchLine": "Linje {{line}} · {{description}}: Operia {{operia}}, e-conomic {{economic}} (produkt {{product}})",
+    "vatMismatchHint": "e-conomic bogfører efter produktets salgskonto, ikke efter Operias momskode. Er produktet forkert, ret det på ydelsen, kategorien eller niveauet og dan kladden igen. Er koden i Operia forkert, kan du overføre alligevel.",
+    "transferAnyway": "Overfør alligevel"
   },
   "companyDalux": {
     "intro": "Dalux FM's REST-API. Nøglen udstedes af jeres Dalux-administrator som en API-identitet med afgrænset adgang — begynd på stage-miljøet, så en fejl i opsætningen aldrig rammer produktion.",
@@ -3737,9 +3747,9 @@
   },
   "bookingVat": {
     "label": "Momskode",
-    "placeholder": "fx I25",
+    "placeholder": "fx U25",
     "categoryHint": "Arves af lokalelinjen på fakturakladden for alle ressourcer i kategorien. Koden er den, jeres regnskabssystem bruger.",
-    "serviceHint": "Arves af tilkøbslinjen på fakturakladden. Koden er den, jeres regnskabssystem bruger — Operia regner ikke moms.",
+    "serviceHint": "Arves af tilkøbslinjen på fakturakladden og står i eksporten. Med e-conomic udfyldes den fra det valgte produkt — Operia regner ikke moms.",
     "levelHint": "Arves af kursistlinjen på fakturakladden."
   },
   "bookingRecon": {
@@ -3868,10 +3878,23 @@
     "productRoom": "Produkt for lokalelinjer",
     "productParticipants": "Produkt for kursistlinjer",
     "productService": "Produkt for tilkøb",
-    "productHint": "Linjens tekst, antal og pris kommer fra Operia; produktet afgør konto og moms i e-conomic.",
+    "productHint": "Linjens tekst, antal og pris kommer fra Operia; produktet afgør konto og moms i e-conomic. Disse tre er standard pr. linjetype — en ydelse, kategori eller et niveau kan have sit eget produktnummer, som så vinder.",
     "autoBook": "Bogfør automatisk ved overførsel",
-    "autoBookHint": "Fra: kladden oprettes i e-conomic, og bogholderen bogfører den dér — fakturanummeret hentes bagefter. Til: bogføres straks, og fakturanummeret skrives tilbage med det samme.",
+    "autoBookHint": "Fra: Operia opretter en fakturakladde i e-conomic. En person i e-conomic kontrollerer og bogfører den, så den bliver en rigtig faktura med fakturanummer. Operia henter nummeret bagefter med \"Hent fakturanummer\". Til: Operia bogfører straks i e-conomic og gemmer fakturanummeret i Operia med det samme. Bogføring kan ikke fortrydes; vælg Til kun, når kladden i Operia er den sidste kontrol.",
     "pick": "Vælg …",
-    "notSet": "— ikke sat —"
+    "notSet": "— ikke sat —",
+    "itemProduct": "Produktnr. i {{provider}}",
+    "itemProductPlaceholder": "fx 2010",
+    "itemProductHint": "Tomt = typeproduktet fra mapningen. Et valgt produkt erstatter det for linjen: konto og moms følger produktet i {{provider}}. Momskoden ovenfor udfyldes med produktets, når du vælger — den kan rettes, men så vil overførslen spørge.",
+    "itemProductHintCategory": "Tomt = typeproduktet for lokalelinjer. Et valgt produkt erstatter det for alle ressourcer i kategorien.",
+    "itemDefault": "— standard (mapningens produkt) —",
+    "itemUnknown": "findes ikke i {{provider}}",
+    "itemListUnavailable": "Produktlisten fra {{provider}} kunne ikke hentes — nummeret tastes; det kontrolleres først ved overførslen.",
+    "itemDefaultShort": "Standard (mapningen)",
+    "vatNone": "uden moms",
+    "itemDefaultWith": "— standard: {{product}} —",
+    "vatDiffers": "Momskoden {{operia}} afviger fra den, produktet giver i {{provider}} ({{economic}}). Overførslen spørger, før den sender.",
+    "itemSearch": "Søg produkt (nummer eller navn) …",
+    "itemNoMatch": "Intet produkt matcher."
   }
 }

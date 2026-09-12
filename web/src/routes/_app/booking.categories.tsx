@@ -24,6 +24,8 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useAccountingProvider } from '@/hooks/use-accounting-provider'
+import { AccountingItemField } from '@/components/accounting-item-field'
 import { bookingCategoryColors, invalidateBookingQueries } from '@/lib/booking'
 import { supabase } from '@/lib/supabase'
 
@@ -43,7 +45,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_categories')
-        .select('id, name, is_active, color_index, vat_code')
+        .select('id, name, is_active, color_index, vat_code, accounting_item_ref')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -70,10 +72,13 @@ function CategoryDetailPane({
   const [name, setName] = useState(row.name)
   const [colorIndex, setColorIndex] = useState<number | null>(row.color_index)
   const [vat, setVat] = useState(row.vat_code ?? '')
+  const [eprod, setEprod] = useState(row.accounting_item_ref ?? '')
+  const { companyId: ctxCompanyId } = useCompanyContext()
+  const accounting = useAccountingProvider(ctxCompanyId)
   const [saving, setSaving] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const dirty = name !== row.name || colorIndex !== row.color_index || vat !== (row.vat_code ?? '')
+  const dirty = name !== row.name || colorIndex !== row.color_index || vat !== (row.vat_code ?? '') || eprod !== (row.accounting_item_ref ?? '')
 
   useEffect(() => {
     onDirtyChange(dirty)
@@ -86,7 +91,7 @@ function CategoryDetailPane({
     setSaving(true)
     const { data, error } = await supabase
       .from('booking_categories')
-      .update({ name: name.trim(), color_index: colorIndex, vat_code: vat.trim() || null })
+      .update({ name: name.trim(), color_index: colorIndex, vat_code: vat.trim() || null, accounting_item_ref: eprod.trim() || null })
       .eq('id', row.id)
       .select('id')
     setSaving(false)
@@ -165,6 +170,21 @@ function CategoryDetailPane({
                 onChange={(e) => setVat(e.target.value)}
               />
             </Field>
+            {accounting && (
+              <AccountingItemField
+                companyId={ctxCompanyId}
+                provider={accounting}
+                kind="room"
+                value={eprod}
+                onChange={(v, vatFromProduct) => {
+                  setEprod(v)
+                  if (vatFromProduct !== undefined) setVat(vatFromProduct)
+                }}
+                vatCode={vat}
+                hint={t('economicMapping.itemProductHintCategory', { provider: accounting.label })}
+                className="flex flex-col gap-2"
+              />
+            )}
           </div>
         )}
         {tab === 'actions' && (
@@ -213,6 +233,7 @@ function CategoryDetailPane({
               setName(row.name)
               setColorIndex(row.color_index)
               setVat(row.vat_code ?? '')
+              setEprod(row.accounting_item_ref ?? '')
             }}
           >
             {t('common.cancel')}

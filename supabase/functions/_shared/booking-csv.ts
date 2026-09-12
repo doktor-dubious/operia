@@ -19,7 +19,7 @@ export const BOOKING_COLUMNS = [
   'services_count', 'services_total', 'currency', 'invoiced_at', 'invoice_no', 'cancelled_at', 'created_at',
 ]
 export const LINE_COLUMNS = [
-  'booking_id', 'external_ref', 'resource', 'employee', 'starts_at', 'ends_at', 'service', 'quantity',
+  'booking_id', 'external_ref', 'resource', 'employee', 'starts_at', 'ends_at', 'service', 'vat_code', 'quantity',
   'unit_price', 'price_mode', 'line_total', 'currency',
 ]
 
@@ -39,7 +39,7 @@ export type BookingRow = {
   employee: { full_name: string | null; initials: string | null } | null
   level: { name: string } | null
   draft: { invoice_no: string | null } | null
-  service_lines: { quantity: number; unit_price: number; price_mode: string; service: { name: string } | null }[]
+  service_lines: { quantity: number; unit_price: number; price_mode: string; service: { name: string; vat_code: string | null } | null }[]
 }
 
 export const BOOKING_CSV_SELECT = `id, external_ref, status, starts_at, ends_at, all_day, title, participant_count,
@@ -48,7 +48,7 @@ export const BOOKING_CSV_SELECT = `id, external_ref, status, starts_at, ends_at,
   employee:employees (full_name, initials),
   level:booking_participant_levels (name),
   draft:invoice_drafts!bookings_invoice_draft_id_fkey (invoice_no),
-  service_lines:booking_service_lines (quantity, unit_price, price_mode, service:booking_services (name))`
+  service_lines:booking_service_lines (quantity, unit_price, price_mode, service:booking_services (name, vat_code))`
 
 function lifecycle(b: BookingRow, now = Date.now()): string {
   if (b.status === 'cancelled') return 'cancelled'
@@ -132,7 +132,7 @@ export function bookingsCsv(rows: BookingRow[], shape: Shape, profile: Profile, 
       for (const l of b.service_lines ?? []) {
         out.push([
           b.id, b.external_ref ?? '', b.resource?.name ?? '', b.employee?.full_name ?? '',
-          fmtDate(b.starts_at, p.dateFormat), fmtDate(b.ends_at, p.dateFormat), l.service?.name ?? '',
+          fmtDate(b.starts_at, p.dateFormat), fmtDate(b.ends_at, p.dateFormat), l.service?.name ?? '', l.service?.vat_code ?? '',
           String(l.quantity), amount(Number(l.unit_price), p.decimal), l.price_mode, amount(lineTotal(l), p.decimal), currency,
         ])
       }

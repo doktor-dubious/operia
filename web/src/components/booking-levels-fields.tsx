@@ -12,6 +12,8 @@ import { BookingTariffFields } from '@/components/booking-tariff-fields'
 import { describeError } from '@/lib/errors'
 import { invalidateBookingQueries } from '@/lib/booking'
 import { supabase } from '@/lib/supabase'
+import { useAccountingProvider } from '@/hooks/use-accounting-provider'
+import { AccountingItemField } from '@/components/accounting-item-field'
 
 // Kursistniveauer pr. virksomhed (EVU-krav A-05) — listen bookingdialogens
 // niveau-vælger trækker på, og den taksterne hænges på, når krav C-07 bygges.
@@ -22,7 +24,7 @@ import { supabase } from '@/lib/supabase'
 // tilbage — og at man skulle huske at gemme efter at have trykket på et
 // skraldespandsikon, som tydeligvis allerede har gjort noget.
 
-type LevelRow = { id: string; name: string; is_active: boolean; sort_order: number; vat_code: string | null }
+type LevelRow = { id: string; name: string; is_active: boolean; sort_order: number; vat_code: string | null; accounting_item_ref: string | null }
 
 export function BookingLevelsFields({ companyId }: { companyId: string }) {
   const { t } = useTranslation()
@@ -31,6 +33,7 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
   // Ét niveau ad gangen har sin prisliste foldet ud — listen skal stadig kunne
   // læses som en liste.
   const [priceFor, setPriceFor] = useState<string | null>(null)
+  const accounting = useAccountingProvider(companyId)
   const [busy, setBusy] = useState(false)
 
   const { data: rows } = useQuery({
@@ -38,7 +41,7 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_participant_levels')
-        .select('id, name, is_active, sort_order, vat_code')
+        .select('id, name, is_active, sort_order, vat_code, accounting_item_ref')
         .eq('company_id', companyId)
         .order('sort_order')
         .order('name')
@@ -88,6 +91,19 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
     refresh()
   }
 
+  // Produktet og — når produktets momskode er kendt — momskoden i samme skriv:
+  // e-conomic bogfører efter produktet, så Operias kode skal følge med.
+  const setProduct = async (row: LevelRow, raw: string, vat?: string) => {
+    const value = raw.trim() || null
+    if (value === (row.accounting_item_ref ?? null) && (vat === undefined || vat === (row.vat_code ?? ''))) return
+    const { error } = await supabase
+      .from('booking_participant_levels')
+      .update(vat === undefined ? { accounting_item_ref: value } : { accounting_item_ref: value, vat_code: vat || null })
+      .eq('id', row.id)
+    if (error) return fail(error)
+    refresh()
+  }
+
   const setVat = async (row: LevelRow, raw: string) => {
     const value = raw.trim() || null
     if (value === (row.vat_code ?? null)) return
@@ -121,6 +137,16 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
   return (
     <Field label={t('bookingLevels.title')} info={t('bookingLevels.hint')}>
       <div className="flex flex-col gap-2">
+        {/* Kolonneoverskrifter: rækkens felter har ingen egne etiketter, og
+            momskode + produkt kan ikke gættes ud fra en tom boks. */}
+        {(rows ?? []).length > 0 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex-1">{t('bookingLevels.colName')}</span>
+            <span className="w-24">{t('bookingVat.label')}</span>
+            {accounting && <span className="w-44">{t('economicMapping.itemProduct', { provider: accounting.label })}</span>}
+            <span className="w-[6.5rem]" />
+          </div>
+        )}
         {(rows ?? []).map((row) => (
           <div key={row.id} className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
@@ -136,6 +162,7 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
             />
             {/* Momskoden pr. niveau (A-06/C-07): kursistlinjen arver den. */}
             <Input
+              key={row.vat_code ?? ''}
               defaultValue={row.vat_code ?? ''}
               maxLength={16}
               className="w-24"
@@ -146,6 +173,17 @@ export function BookingLevelsFields({ companyId }: { companyId: string }) {
                 if (e.key === 'Enter') e.currentTarget.blur()
               }}
             />
+            {accounting && (
+              <AccountingItemField
+                compact
+                companyId={companyId}
+                provider={accounting}
+                kind="participants"
+                value={row.accounting_item_ref ?? ''}
+                vatCode={row.vat_code ?? ''}
+                onChange={(v, vat) => void setProduct(row, v, vat)}
+              />
+            )}
             <Label className="flex items-center gap-1.5 px-1 text-xs font-normal text-muted-foreground">
               <Checkbox
                 checked={row.is_active}

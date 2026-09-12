@@ -49,7 +49,7 @@ export function CompanyAccountingFields({ companyId }: { companyId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('company_accounting_config')
-        .select('enabled, provider, token_set, agreement_number, agreement_company_name, verified_at')
+        .select('enabled, provider, token_set, agreement_number, agreement_company_name, verified_at, sync_last_run_at, sync_last_run_status, sync_last_run_error')
         .eq('company_id', companyId)
         .maybeSingle()
       if (error) throw error
@@ -275,6 +275,16 @@ export function CompanyAccountingFields({ companyId }: { companyId: string }) {
                   company: data.agreement_company_name ?? '',
                   date: dateFmt.format(new Date(data.verified_at)),
                 })}
+              </p>
+            )}
+            {/* Den planlagte hentning af fakturanumre (cron) har ingen skærm:
+                dens udfald står her, så en udløbet adgang ikke fejler i det
+                skjulte hver time. */}
+            {data?.sync_last_run_at && (
+              <p className={data.sync_last_run_status === 'failed' ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>
+                {data.sync_last_run_status === 'failed'
+                  ? t('companyAccounting.syncLastFailed', { date: dateFmt.format(new Date(data.sync_last_run_at)), error: data.sync_last_run_error ?? '' })
+                  : t('companyAccounting.syncLastOk', { date: dateFmt.format(new Date(data.sync_last_run_at)) })}
               </p>
             )}
           </div>

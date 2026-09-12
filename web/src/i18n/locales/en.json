@@ -2910,7 +2910,10 @@
     "test_rate_limited": "e-conomic temporarily rejected the request (too many calls) — try again shortly.",
     "test_timeout": "e-conomic did not respond in time.",
     "test_network": "e-conomic could not be reached.",
-    "test_api_error": "e-conomic responded with an error."
+    "test_api_error": "e-conomic responded with an error.",
+    "test_invoice_number_unreadable": "The invoice exists in e-conomic, but the invoice number could not be read from the response — contact DCA.",
+    "syncLastOk": "Automatic invoice-number fetch: last run {{date}}, OK.",
+    "syncLastFailed": "Automatic invoice-number fetch FAILED {{date}}: {{error}}. The run retries every hour."
   },
   "companyAi": {
     "noneOffered": "No AI providers are available for your company.",
@@ -3240,7 +3243,8 @@
     "active": "Active",
     "deletedToast": "{{name}} was deleted.",
     "errDuplicate": "That level already exists.",
-    "errInUse": "The level is used on a booking and cannot be deleted. Deactivate it instead."
+    "errInUse": "The level is used on a booking and cannot be deleted. Deactivate it instead.",
+    "colName": "Level"
   },
   "bookingServices": {
     "add": "Add service",
@@ -3347,7 +3351,8 @@
     "colQuantity": "Quantity",
     "colUnitPrice": "Unit price",
     "colPriceMode": "Price type",
-    "colLineTotal": "Line total"
+    "colLineTotal": "Line total",
+    "colVatCode": "VAT code"
   },
   "bookingHistory": {
     "entity": "changes",
@@ -3595,7 +3600,12 @@
       "draft_stale": "The basis has changed since the draft was generated — regenerate it before transferring.",
       "booking_not_completed": "The draft contains a booking that has not ended yet. Regenerate the draft once the booking is over."
     },
-    "generateNone": "No draft created."
+    "generateNone": "No draft created.",
+    "lineVat": "VAT",
+    "vatMismatchTitle": "The VAT code differs from e-conomic on {{count}} line(s)",
+    "vatMismatchLine": "Line {{line}} · {{description}}: Operia {{operia}}, e-conomic {{economic}} (product {{product}})",
+    "vatMismatchHint": "e-conomic books by the product's sales account, not by Operia's VAT code. If the product is wrong, fix it on the service, category or level and regenerate the draft. If the code in Operia is wrong, you can transfer anyway.",
+    "transferAnyway": "Transfer anyway"
   },
   "companyDalux": {
     "intro": "Dalux FM's REST API. The key is issued by your Dalux administrator as an API identity with scoped access — start on the stage environment so a setup mistake never touches production.",
@@ -3737,9 +3747,9 @@
   },
   "bookingVat": {
     "label": "VAT code",
-    "placeholder": "e.g. I25",
+    "placeholder": "e.g. U25",
     "categoryHint": "Inherited by the room line on the invoice draft for every resource in the category. Use the code your accounting system expects.",
-    "serviceHint": "Inherited by the add-on line on the invoice draft. Use the code your accounting system expects — Operia does not compute VAT.",
+    "serviceHint": "Inherited by the add-on line on the invoice draft and included in the export. With e-conomic it is filled from the chosen product — Operia does not calculate VAT.",
     "levelHint": "Inherited by the participant line on the invoice draft."
   },
   "bookingRecon": {
@@ -3868,10 +3878,23 @@
     "productRoom": "Product for room lines",
     "productParticipants": "Product for participant lines",
     "productService": "Product for add-ons",
-    "productHint": "Line text, quantity and price come from Operia; the product decides account and VAT in e-conomic.",
+    "productHint": "Line text, quantity and price come from Operia; the product decides account and VAT in e-conomic. These three are the defaults per line type — a service, category or level can carry its own product number, which then wins.",
     "autoBook": "Book automatically on transfer",
-    "autoBookHint": "Off: the draft is created in e-conomic and the bookkeeper books it there — the invoice number is fetched afterwards. On: booked immediately and the invoice number written back at once.",
+    "autoBookHint": "Off: Operia creates an invoice draft in e-conomic. Someone in e-conomic checks it and books it, which makes it a real invoice with an invoice number. Operia fetches that number afterwards via \"Fetch invoice number\". On: Operia books it in e-conomic right away and stores the invoice number in Operia at once. Booking cannot be undone; choose On only when the draft in Operia is the final check.",
     "pick": "Choose …",
-    "notSet": "— not set —"
+    "notSet": "— not set —",
+    "itemProduct": "Product no. in {{provider}}",
+    "itemProductPlaceholder": "e.g. 2010",
+    "itemProductHint": "Empty = the type product from the mapping. A chosen product replaces it for the line: account and VAT follow the product in {{provider}}. The VAT code above is filled from the product when you choose — it can be edited, but the transfer will then ask.",
+    "itemProductHintCategory": "Empty = the type product for room lines. A chosen product replaces it for every resource in the category.",
+    "itemDefault": "— default (the mapping's product) —",
+    "itemUnknown": "not found in {{provider}}",
+    "itemListUnavailable": "The product list from {{provider}} could not be fetched — the number is typed; it is checked at transfer.",
+    "itemDefaultShort": "Default (mapping)",
+    "vatNone": "no VAT",
+    "itemDefaultWith": "— default: {{product}} —",
+    "vatDiffers": "The VAT code {{operia}} differs from what the product gives in {{provider}} ({{economic}}). The transfer will ask before sending.",
+    "itemSearch": "Search product (number or name) …",
+    "itemNoMatch": "No product matches."
   }
 }

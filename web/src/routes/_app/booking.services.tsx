@@ -27,6 +27,8 @@ import { DataTable, type ColumnDef } from '@/components/data-table'
 import { DetailTabs } from '@/components/detail-tabs'
 import { Field } from '@/components/detail-field'
 import { useCompanyContext } from '@/hooks/use-company-context'
+import { useAccountingProvider } from '@/hooks/use-accounting-provider'
+import { AccountingItemField } from '@/components/accounting-item-field'
 import { useCompanyCurrency, formatMoney, servicePriceLabel } from '@/lib/booking-services'
 import { supabase } from '@/lib/supabase'
 
@@ -51,6 +53,7 @@ type ServiceValue = {
   price_mode: 'unit' | 'total'
   unit_price: string
   vat_code: string
+  accounting_item_ref: string
 }
 
 function useRows(companyId: string | null) {
@@ -60,7 +63,7 @@ function useRows(companyId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('booking_services')
-        .select('id, company_id, name, description, has_quantity, price_mode, unit_price, vat_code, is_active')
+        .select('id, company_id, name, description, has_quantity, price_mode, unit_price, vat_code, accounting_item_ref, is_active')
         .eq('company_id', companyId!)
         .order('name')
       if (error) throw error
@@ -93,6 +96,7 @@ function toValue(row: Row): ServiceValue {
     price_mode: row.price_mode === 'total' ? 'total' : 'unit',
     unit_price: String(row.unit_price ?? 0),
     vat_code: row.vat_code ?? '',
+    accounting_item_ref: row.accounting_item_ref ?? '',
   }
 }
 
@@ -105,6 +109,7 @@ function toPatch(v: ServiceValue) {
     price_mode: v.has_quantity ? v.price_mode : 'total',
     unit_price: Number(v.unit_price.replace(',', '.')),
     vat_code: v.vat_code.trim() || null,
+    accounting_item_ref: v.accounting_item_ref.trim() || null,
   }
 }
 
@@ -135,6 +140,8 @@ function ServiceConfigFields({
   currency: string
 }) {
   const { t } = useTranslation()
+  const { companyId } = useCompanyContext()
+  const accounting = useAccountingProvider(companyId)
   const set = (patch: Partial<ServiceValue>) => onChange({ ...value, ...patch })
 
   return (
@@ -210,6 +217,22 @@ function ServiceConfigFields({
         />
         <p className="text-xs text-muted-foreground">{t('bookingVat.serviceHint')}</p>
       </div>
+
+      {/* Produktet i e-conomic (C-02): valgfrit pr. ydelse, fordi tilkøb ikke
+          bogføres ens — forplejning og kursusmateriale skal på hver sit
+          produkt. Tomt = mapningens typeprodukt. Vises kun med e-conomic. */}
+      {accounting && (
+        <AccountingItemField
+          id={`${idPrefix}-eprod`}
+          companyId={companyId}
+          provider={accounting}
+          kind="service"
+          value={value.accounting_item_ref}
+          onChange={(v, vat) => set(vat === undefined ? { accounting_item_ref: v } : { accounting_item_ref: v, vat_code: vat })}
+          vatCode={value.vat_code}
+          hint={t('economicMapping.itemProductHint', { provider: accounting.label })}
+        />
+      )}
     </>
   )
 }
@@ -435,6 +458,7 @@ const EMPTY_VALUE: ServiceValue = {
   price_mode: 'unit',
   unit_price: '0',
     vat_code: '',
+    accounting_item_ref: '',
 }
 
 function NewServiceDialog({
